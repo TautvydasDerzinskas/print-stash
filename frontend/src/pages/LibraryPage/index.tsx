@@ -415,10 +415,7 @@ export default function LibraryPage({
     const dir = sortDir === "asc" ? 1 : -1;
     return Object.values(grouping)
       .toSorted((a, b) => a.title.localeCompare(b.title) * dir)
-      .map(group => ({
-        ...group,
-        items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)),
-      }));
+      .map(group => Object.assign({}, group, { items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, folderNames, sortKey, sortDir, i18n.language]);
 
@@ -439,10 +436,7 @@ export default function LibraryPage({
     const dir = sortDir === "asc" ? 1 : -1;
     return Object.values(grouping)
       .toSorted((a, b) => a.title.localeCompare(b.title) * dir)
-      .map(group => ({
-        ...group,
-        items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)),
-      }));
+      .map(group => Object.assign({}, group, { items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, sortKey, sortDir, i18n.language]);
 

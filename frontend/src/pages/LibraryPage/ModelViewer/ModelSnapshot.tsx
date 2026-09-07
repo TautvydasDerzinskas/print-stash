@@ -106,6 +106,9 @@ export function ModelSnapshot({ url, ext, plateId, mode = "automatic" }: ModelSn
       disposed = true;
       observer?.disconnect();
     };
+    // retryToken isn't read in the effect body -- it's a bump counter whose only job is to
+    // force this effect to re-run when the user clicks Retry.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [url, ext, plateId, mode, requested, retryToken]);
 
   return (

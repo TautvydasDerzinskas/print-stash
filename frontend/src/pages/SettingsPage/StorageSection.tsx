@@ -176,8 +176,8 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
             </Typography>
             {examplePaths.length ? (
               <Stack spacing={0.5} sx={{ mt: 0.5 }}>
-                {examplePaths.map((path, idx) => (
-                  <Typography key={idx} variant="caption" sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
+                {examplePaths.map(path => (
+                  <Typography key={path} variant="caption" sx={{ fontFamily: "monospace", wordBreak: "break-all" }}>
                     {path}
                   </Typography>
                 ))}

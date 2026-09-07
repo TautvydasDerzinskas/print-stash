@@ -65,7 +65,7 @@ export default function TagInput({ value, onChange, placeholder }: TagInputProps
       }}
     >
       {value.map((tag, idx) => (
-        <TagBadge key={`${tag}-${idx}`} tag={tag} onRemove={() => removeTag(idx)} />
+        <TagBadge key={tag} tag={tag} onRemove={() => removeTag(idx)} />
       ))}
       <InputBase
         inputRef={inputRef}
