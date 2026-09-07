@@ -7,7 +7,7 @@ import { HttpError, sanitizeFilename, guessMimeFromPath } from "../utils/fileUti
 import { IMPORT_MAX_BYTES } from "../config";
 import { listZipEntries as listRawZipEntries, readZipEntry } from "../utils/zipReader";
 import { validateParentFolder } from "./folderService";
-import { applyCoverThumbnailIfMissing } from "./importService";
+import { applyCoverThumbnailIfMissing, attachGalleryImagesAsSupportingFiles } from "./importService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import type { Print, Plate } from "@prisma/client";
 
@@ -91,7 +91,9 @@ export type ZipExtractOptions = {
   tags?: string[];
   folderId?: string | null;
   creator?: string | null;
+  authorId?: string | null;
   previewImageUrl?: string | null;
+  galleryImages?: { url: string; filename: string }[];
 };
 
 /**
@@ -159,6 +161,7 @@ export async function extractZipEntriesToPrints(
         tags: options.tags ?? [],
         folderId: targetFolderId,
         creator: options.creator ?? null,
+        authorId: options.authorId ?? null,
       };
       const mime = guessMimeFromPath(filename);
       const { print, plates } = await createPrint(meta, path.parse(filename).name, [
@@ -166,6 +169,7 @@ export async function extractZipEntriesToPrints(
       ]);
       tempPath = null;
       await applyCoverThumbnailIfMissing(plates[0]?.id, options.previewImageUrl);
+      await attachGalleryImagesAsSupportingFiles(print.id, options.galleryImages ?? [], options.previewImageUrl);
       prints.push({ ...print, plates });
     } catch {
       if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);

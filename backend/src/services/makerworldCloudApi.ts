@@ -1,5 +1,6 @@
 import { IMPORT_BROWSER_USER_AGENT, IMPORT_TIMEOUT_SECONDS } from "../config";
-import { decodeHtmlEntities, htmlToPlainText, type ImportedPageMetadata } from "./importResolvers";
+import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock } from "./flaresolverr";
+import { decodeHtmlEntities, htmlToPlainText, type ImportedAuthorInfo, type ImportedPageMetadata } from "./importResolvers";
 
 // MakerWorld's own website (makerworld.com) sits behind Cloudflare bot management and a
 // separate Geetest CAPTCHA on its download-resolution endpoints. api.bambulab.com is the
@@ -9,7 +10,12 @@ import { decodeHtmlEntities, htmlToPlainText, type ImportedPageMetadata } from "
 // projects (kloshi-io/makerworld-api-reverse, maziggy/bambuddy, Pr0zak/YASTL).
 const DESIGN_API_BASE = "https://api.bambulab.com/v1/design-service";
 const PROFILE_DOWNLOAD_BASE = "https://api.bambulab.com/v1/iot-service/api/user/profile";
+// This one lives on makerworld.com rather than api.bambulab.com (unlike the two above) -- but
+// like the other makerworld.com /api/v1/* paths already used elsewhere (favorites/collections),
+// it's a clean, unauthenticated, non-Cloudflare-gated JSON endpoint. Confirmed live.
+const AUTHOR_PROFILE_BASE = "https://makerworld.com/api/v1/design-user-service/user/profile";
 const CLOUD_API_TIMEOUT_MS = IMPORT_TIMEOUT_SECONDS * 1000;
+const MAKERWORLD_PROVIDER = "makerworld";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -141,6 +147,91 @@ function pickString(source: Record<string, unknown>, keys: string[]): string | n
   return null;
 }
 
+/** Same defensive fallback used for the other makerworld.com /api/v1/* endpoints (collections):
+ * not seen behind Cloudflare's challenge in practice, but retry once through FlareSolverr
+ * rather than failing outright if that ever changes. No bearer token needed -- author profiles
+ * are public. */
+async function fetchAuthorProfileJson(uid: string): Promise<unknown | null> {
+  const url = `${AUTHOR_PROFILE_BASE}/${uid}`;
+  const headers: Record<string, string> = {
+    "User-Agent": IMPORT_BROWSER_USER_AGENT,
+    Accept: "application/json",
+    Referer: "https://makerworld.com/",
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), CLOUD_API_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers, redirect: "follow", signal: controller.signal });
+    if (res.status === 403 && isFlaresolverrEnabled() && looksLikeCloudflareBlock(res.headers)) {
+      const solved = await fetchViaFlaresolverr(url, null);
+      if (!solved) return null;
+      try {
+        return JSON.parse(solved.body);
+      } catch {
+        return null;
+      }
+    }
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text.trim()) return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Fetches the richer author record (bio, links, background image) for a MakerWorld uid, for
+ * the Author table. Best-effort: a failure here shouldn't fail the import, since `creator`
+ * (plain string, from the design's own embedded designCreator summary) already covers the
+ * simple display case. */
+async function fetchMakerworldAuthorInfo(uid: string): Promise<ImportedAuthorInfo | null> {
+  const data = await fetchAuthorProfileJson(uid);
+  if (!isRecord(data)) return null;
+  const personal = isRecord(data.personal) ? data.personal : {};
+  const links = Array.isArray(personal.links)
+    ? personal.links.filter((link): link is string => typeof link === "string" && link.trim().length > 0)
+    : [];
+  return {
+    provider: MAKERWORLD_PROVIDER,
+    externalId: uid,
+    name: pickString(data, ["name"]),
+    handle: pickString(personal, ["handle"]) ?? pickString(data, ["handle"]),
+    bio: pickString(personal, ["bio"]),
+    bioTranslated: pickString(personal, ["bioTranslated"]),
+    links,
+    avatarUrl: pickString(data, ["avatar"]),
+    backgroundUrl: pickString(personal, ["backgroundUrl"]),
+  };
+}
+
+export type MakerworldGalleryImage = { url: string; filename: string };
+
+/** The model page's photo gallery -- design.designExtension.design_pictures -- distinct from
+ * coverUrl/coverPortrait/coverLandscape, which are just crops of the same single cover image
+ * for different UI contexts. Confirmed live: a model can have several of these (renders and/or
+ * isRealLifePhoto: 1 real-world photos of the print). */
+function extractGalleryImages(design: Record<string, unknown>): MakerworldGalleryImage[] {
+  const extension = design.designExtension;
+  if (!isRecord(extension)) return [];
+  const pictures = extension.design_pictures;
+  if (!Array.isArray(pictures)) return [];
+  const images: MakerworldGalleryImage[] = [];
+  for (const picture of pictures) {
+    if (!isRecord(picture)) continue;
+    const url = typeof picture.url === "string" ? picture.url.trim() : "";
+    if (!url) continue;
+    const filename = typeof picture.name === "string" && picture.name.trim() ? picture.name.trim() : null;
+    images.push({ url, filename: filename ?? url.split("/").pop() ?? "preview.jpg" });
+  }
+  return images;
+}
+
 /**
  * Resolves a MakerWorld design to a real, directly-downloadable (signed S3) URL entirely
  * through api.bambulab.com -- no Cloudflare, no cookie-gated web session, no HTML scraping.
@@ -204,9 +295,13 @@ export async function resolveMakerworldViaCloudApi(
     ? design.tags.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0).map((tag) => tag.trim())
     : [];
   const summary = typeof design.summary === "string" ? design.summary : null;
-  const creator = isRecord(design.designCreator) ? pickString(design.designCreator, ["nickName", "name", "handle"]) : null;
+  const designCreator = isRecord(design.designCreator) ? design.designCreator : null;
+  const creator = designCreator ? pickString(designCreator, ["nickName", "name", "handle"]) : null;
+  const creatorUid = designCreator?.uid != null ? String(designCreator.uid) : null;
   const previewImageUrl = pickString(design, ["coverUrl", "coverPortrait", "coverLandscape"]);
   const title = pickString(design, ["title"]);
+  const galleryImages = extractGalleryImages(design);
+  const author = creatorUid ? await fetchMakerworldAuthorInfo(creatorUid) : null;
 
   return {
     downloadUrl: body.url,
@@ -214,9 +309,11 @@ export async function resolveMakerworldViaCloudApi(
       title: title ? decodeHtmlEntities(title) : null,
       tags,
       description: summary ? htmlToPlainText(summary) : null,
-      creator,
+      creator: author?.name ?? creator,
       previewImageUrl,
       filename: pickString(body, ["filename"]),
+      galleryImages,
+      author,
     },
   };
 }

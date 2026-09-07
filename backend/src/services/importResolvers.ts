@@ -526,10 +526,38 @@ export type ImportedPageMetadata = {
    * (e.g. from the MakerWorld cloud API's own response) rather than needing to guess one from
    * the download URL's path or a Content-Disposition header. */
   filename: string | null;
+  /** The page's photo gallery, if any -- distinct from previewImageUrl (the single cover
+   * image used as the plate thumbnail). Everything here is meant to be attached as supporting
+   * files instead. */
+  galleryImages: { url: string; filename: string }[];
+  /** The richer, structured creator record (for the Author table) -- distinct from `creator`,
+   * which stays a plain display string for backward compatibility and non-provider sources. */
+  author: ImportedAuthorInfo | null;
+};
+
+export type ImportedAuthorInfo = {
+  provider: string;
+  externalId: string;
+  name: string | null;
+  handle: string | null;
+  bio: string | null;
+  bioTranslated: string | null;
+  links: string[];
+  avatarUrl: string | null;
+  backgroundUrl: string | null;
 };
 
 export function emptyImportedPageMetadata(): ImportedPageMetadata {
-  return { title: null, tags: [], description: null, creator: null, previewImageUrl: null, filename: null };
+  return {
+    title: null,
+    tags: [],
+    description: null,
+    creator: null,
+    previewImageUrl: null,
+    filename: null,
+    galleryImages: [],
+    author: null,
+  };
 }
 
 /** Best-effort metadata for a landing page, used to fill in the Print when the caller didn't

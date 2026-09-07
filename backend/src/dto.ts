@@ -1,7 +1,35 @@
 import fs from "node:fs";
-import type { Folder, Plate, Print, PrintFile } from "@prisma/client";
+import type { Author, Folder, Plate, Print, PrintFile } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { preparedFilename } from "./services/preparedPrint";
+
+export type AuthorOut = {
+  id: string;
+  provider: string;
+  external_id: string;
+  name: string | null;
+  handle: string | null;
+  bio: string | null;
+  bio_translated: string | null;
+  links: string[];
+  avatar_url: string | null;
+  background_url: string | null;
+};
+
+export function toAuthorOut(author: Author): AuthorOut {
+  return {
+    id: author.id,
+    provider: author.provider,
+    external_id: author.externalId,
+    name: author.name,
+    handle: author.handle,
+    bio: author.bio,
+    bio_translated: author.bioTranslated,
+    links: author.links,
+    avatar_url: author.avatarUrl,
+    background_url: author.backgroundUrl,
+  };
+}
 
 export type PreparedPrintOut = {
   printer?: string | null;
@@ -38,6 +66,7 @@ export type PrintOut = {
   title: string | null;
   notes: string | null;
   creator: string | null;
+  author: AuthorOut | null;
   collection: string | null;
   tags: string[];
   folder_id: string | null;
@@ -103,6 +132,7 @@ export function toPrintOut(
   plates: Plate[],
   files: PrintFile[],
   preparedFile: PrintFile | null,
+  author?: Author | null,
 ): PrintOut {
   const sortedPlates = plates.toSorted((a, b) => a.position - b.position);
   const plateOuts = sortedPlates.map((p) => toPlateOut(print.id, p));
@@ -149,6 +179,7 @@ export function toPrintOut(
     title: print.title,
     notes: print.notes,
     creator: print.creator,
+    author: author ? toAuthorOut(author) : null,
     collection: print.collection,
     tags: print.tags,
     folder_id: print.folderId,

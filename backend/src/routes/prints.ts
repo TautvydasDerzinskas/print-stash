@@ -115,7 +115,10 @@ router.get(
     }
 
     const where = buildPrintWhere(req);
-    const prints = await prisma.print.findMany({ where, include: { plates: { orderBy: { position: "asc" } } } });
+    const prints = await prisma.print.findMany({
+      where,
+      include: { plates: { orderBy: { position: "asc" } }, author: true },
+    });
     const printIds = prints.map((p) => p.id);
     const files = printIds.length ? await prisma.printFile.findMany({ where: { printId: { in: printIds } } }) : [];
     const filesByPrint = new Map<string, typeof files>();
@@ -147,7 +150,7 @@ router.get(
     const out = paged.map((p) => {
       const printFiles = filesByPrint.get(p.id) ?? [];
       const preparedFile = p.preparedFileId ? printFiles.find((f) => f.id === p.preparedFileId) ?? null : null;
-      return toPrintOut(p, p.plates, printFiles, preparedFile);
+      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author);
     });
     res.json(out);
   }),

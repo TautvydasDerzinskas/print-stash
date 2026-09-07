@@ -37,6 +37,8 @@ export type PrintMetaInput = {
   folderId?: string | null;
   creator?: string | null;
   collection?: string | null;
+  /** Id of an already-upserted Author row (see authorService.ts), e.g. "makerworld:12345". */
+  authorId?: string | null;
 };
 
 async function placeFile(input: NewPlateInput, destAbsPath: string): Promise<string | null> {
@@ -159,6 +161,7 @@ export async function createPrint(
       collection: meta.collection?.trim() || null,
       tags: (meta.tags || []).map((t) => t.trim()).filter(Boolean),
       folderId: meta.folderId ?? null,
+      authorId: meta.authorId ?? null,
     },
   });
 

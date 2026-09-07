@@ -1,12 +1,17 @@
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { toPrintOut, type PrintOut } from "../dto";
-import type { Plate, Print, PrintFile } from "@prisma/client";
+import type { Author, Plate, Print, PrintFile } from "@prisma/client";
 
-export type FullPrint = { print: Print; plates: Plate[]; files: PrintFile[]; preparedFile: PrintFile | null };
+export type FullPrint = {
+  print: Print & { author: Author | null };
+  plates: Plate[];
+  files: PrintFile[];
+  preparedFile: PrintFile | null;
+};
 
 export async function loadFullPrint(printId: string): Promise<FullPrint> {
-  const print = await prisma.print.findUnique({ where: { id: printId } });
+  const print = await prisma.print.findUnique({ where: { id: printId }, include: { author: true } });
   if (!print) throw new HttpError(404, "Print not found");
   const [plates, files] = await Promise.all([
     prisma.plate.findMany({ where: { printId }, orderBy: { position: "asc" } }),
@@ -20,5 +25,5 @@ export async function loadFullPrint(printId: string): Promise<FullPrint> {
 
 export async function printOutById(printId: string): Promise<PrintOut> {
   const full = await loadFullPrint(printId);
-  return toPrintOut(full.print, full.plates, full.files, full.preparedFile);
+  return toPrintOut(full.print, full.plates, full.files, full.preparedFile, full.print.author);
 }

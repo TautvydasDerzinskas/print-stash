@@ -30,12 +30,26 @@ export type PrintFile = {
   url: string; // /print/{printId}/files/{fileId}
 };
 
+export type Author = {
+  id: string;
+  provider: string;
+  external_id: string;
+  name: string | null;
+  handle: string | null;
+  bio: string | null;
+  bio_translated: string | null;
+  links: string[];
+  avatar_url: string | null;
+  background_url: string | null;
+};
+
 export type Print = {
   id: string;
   name: string;
   title?: string | null;
   notes?: string | null;
   creator?: string | null;
+  author?: Author | null;
   collection?: string | null;
   tags: string[];
   folder_id?: string | null;

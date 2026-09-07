@@ -33,6 +33,8 @@ model Print {
   tags           String[]    @default([])
   folderId       String?
   folder         Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  authorId       String?
+  author         Author?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
   sourcePath     String?
   plates         Plate[]
   files          PrintFile[] @relation("PrintFiles")
@@ -45,6 +47,30 @@ model Print {
   @@unique([folderId, nameNormalized])
   @@index([folderId, name])
   @@index([tags], type: Gin)
+  @@index([authorId])
+}
+
+/// A creator/designer on some source platform (MakerWorld today; Printables/Thingiverse etc.
+/// later). `id` is provider-prefixed ("makerworld:3582000380") rather than a generated cuid so
+/// re-importing a model from the same author upserts the same row instead of creating a
+/// duplicate. Print.creator stays as the plain display string for backward compatibility and
+/// non-provider sources; this table is the richer record clickable author pages will use.
+model Author {
+  id            String   @id
+  provider      String
+  externalId    String
+  name          String?
+  handle        String?
+  bio           String?
+  bioTranslated String?
+  links         String[] @default([])
+  avatarUrl     String?
+  backgroundUrl String?
+  prints        Print[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([provider, externalId])
 }
 
 model Plate {

@@ -36,9 +36,11 @@ import {
   parseMakerworldModelUrl,
   resolveMakerworldViaCloudApi,
 } from "./makerworldCloudApi";
+import { upsertAuthorFromImport } from "./authorService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
-import type { Plate, Print } from "@prisma/client";
+import { saveFileFromTemp } from "./printFileService";
+import type { Author, Plate, Print } from "@prisma/client";
 
 export type ImportRequestBody = ImportCookies & {
   url: string;
@@ -229,6 +231,8 @@ export async function openImportResponse(
       creator: extracted.creator ?? inheritedMeta.creator,
       previewImageUrl: extracted.previewImageUrl ?? inheritedMeta.previewImageUrl,
       filename: extracted.filename ?? inheritedMeta.filename,
+      galleryImages: extracted.galleryImages.length ? extracted.galleryImages : inheritedMeta.galleryImages,
+      author: extracted.author ?? inheritedMeta.author,
     };
     if (pageHost.endsWith("makerworld.com")) {
       if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
@@ -353,23 +357,69 @@ export async function applyCoverThumbnailIfMissing(
   }
 }
 
+const GALLERY_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+const GALLERY_IMAGE_MAX_COUNT = 20;
+
+/** Best-effort: downloads a resolved page's remaining gallery photos -- everything besides
+ * whichever one was already used as the plate thumbnail (skipUrl) -- and attaches each as a
+ * supporting file. Every image is independent: one failing doesn't stop the rest or the
+ * import as a whole. */
+export async function attachGalleryImagesAsSupportingFiles(
+  printId: string | undefined,
+  images: { url: string; filename: string }[],
+  skipUrl: string | null | undefined,
+): Promise<void> {
+  if (!printId || !images.length) return;
+  const toSave = images.filter((image) => image.url !== skipUrl).slice(0, GALLERY_IMAGE_MAX_COUNT);
+
+  for (const image of toSave) {
+    let tempPath: string | null = null;
+    try {
+      const res = await rawFetch(image.url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
+      if (!res.ok) {
+        await res.body?.cancel().catch(() => undefined);
+        continue;
+      }
+      const contentLength = res.headers.get("content-length");
+      if (contentLength && Number(contentLength) > GALLERY_IMAGE_MAX_BYTES) {
+        await res.body?.cancel().catch(() => undefined);
+        continue;
+      }
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (buf.length > GALLERY_IMAGE_MAX_BYTES) continue;
+
+      tempPath = path.join(os.tmpdir(), `printstash-gallery-${crypto.randomBytes(8).toString("hex")}`);
+      await fs.writeFile(tempPath, buf);
+      await saveFileFromTemp(printId, tempPath, image.filename, res.headers.get("content-type"));
+      tempPath = null;
+    } catch {
+      // best-effort only
+    } finally {
+      if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);
+    }
+  }
+}
+
 /** Downloads a URL and creates a single-plate Print from it (POST /import). */
 export async function importPrintFromUrl(
   url: string,
   body: ImportRequestBody,
-): Promise<{ print: Print; plates: Plate[] }> {
+): Promise<{ print: Print; plates: Plate[]; author: Author | null }> {
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
+  const author = await upsertAuthorFromImport(meta.author);
   const printMeta: PrintMetaInput = {
     title: body.title ?? meta.title ?? null,
     notes: body.notes ?? meta.description ?? null,
     tags: body.tags && body.tags.length ? body.tags : meta.tags,
     folderId: body.folder_id ?? null,
     creator: meta.creator ?? null,
+    authorId: author?.id ?? null,
   };
   try {
     const result = await createPrint(printMeta, path.parse(filename).name, [{ filename, mime, tempFilePath: tempPath }]);
     await applyCoverThumbnailIfMissing(result.plates[0]?.id, meta.previewImageUrl);
-    return result;
+    await attachGalleryImagesAsSupportingFiles(result.print.id, meta.galleryImages, meta.previewImageUrl);
+    return { ...result, author };
   } finally {
     if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);
   }
