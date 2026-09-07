@@ -8,6 +8,8 @@ import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import { downloadImportToTemp, importPrintFromUrl, inspectImportLink, type ImportRequestBody } from "../services/importService";
+import { resolveMakerworldCookie } from "../services/importResolvers";
+import { extractMakerworldBearerToken } from "../services/makerworldCloudApi";
 import {
   fetchMakerworldCollectionEntries,
   fetchMakerworldCollectionTitle,
@@ -98,10 +100,11 @@ router.post(
     const url = await normalizeImportUrl(body.url);
     const parsed = parseMakerworldCollectionUrl(url);
     if (!parsed) throw new HttpError(400, "Not a MakerWorld collection URL");
+    const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
 
     const [title, listing] = await Promise.all([
-      fetchMakerworldCollectionTitle(parsed.collectionId),
-      fetchMakerworldCollectionEntries(parsed.collectionId),
+      fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken),
+      fetchMakerworldCollectionEntries(parsed.collectionId, bearerToken),
     ]);
     if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
 
