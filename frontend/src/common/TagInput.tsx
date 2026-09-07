@@ -9,11 +9,13 @@ type TagInputProps = {
   placeholder?: string;
 };
 
+function normalized(t: string) {
+  return t.trim().replace(/\s+/g, " ");
+}
+
 export default function TagInput({ value, onChange, placeholder }: TagInputProps) {
   const [draft, setDraft] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement | null>(null);
-
-  const normalized = (t: string) => t.trim().replace(/\s+/g, " ");
 
   const addTag = (raw: string) => {
     const tag = normalized(raw);

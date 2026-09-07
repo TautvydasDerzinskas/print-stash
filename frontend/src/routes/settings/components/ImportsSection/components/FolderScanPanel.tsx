@@ -148,6 +148,10 @@ export default function FolderScanPanel({ onAssetsChanged, onFoldersChanged, onU
 
   const totalSelected = scanRawEntries.length;
   const supportedSelected = scanEntries.length;
+  // uploadedKeysRef is an intentionally non-reactive dedupe set for the incremental rescan
+  // feature; this count can lag a render behind a ref mutation, an acceptable tradeoff for
+  // this display-only figure.
+  // oxlint-disable-next-line react/refs
   const newSelected = scanEntries.length ? filterNewEntries(scanEntries).length : 0;
 
   return (

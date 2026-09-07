@@ -70,7 +70,7 @@ export default function PrintPreviewModal({
   }, [print.id]);
 
   const sortedPlates = useMemo(
-    () => [...print.plates].sort((a, b) => a.position - b.position),
+    () => print.plates.toSorted((a, b) => a.position - b.position),
     [print.plates]
   );
   const activePlate = sortedPlates.find(p => p.id === activePlateId) || sortedPlates[0];
@@ -81,7 +81,7 @@ export default function PrintPreviewModal({
     try {
       const { print: updated } = await addPlates(print.id, files);
       onPrintChanged(updated);
-      const newest = [...updated.plates].sort((a, b) => a.position - b.position).slice(-1)[0];
+      const newest = updated.plates.toSorted((a, b) => a.position - b.position).slice(-1)[0];
       if (newest) setActivePlateId(newest.id);
     } catch (err) {
       if (err instanceof UnauthorizedError) {
@@ -104,7 +104,7 @@ export default function PrintPreviewModal({
       onPrintChanged(updated);
       setActivePlateId(current => {
         if (current !== plate.id) return current;
-        const ordered = [...updated.plates].sort((a, b) => a.position - b.position);
+        const ordered = updated.plates.toSorted((a, b) => a.position - b.position);
         return ordered[0]?.id || null;
       });
     } catch (err) {

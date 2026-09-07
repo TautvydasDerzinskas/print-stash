@@ -31,6 +31,9 @@ export default function App() {
     [settings.theme.selected]
   );
   const muiTheme = React.useMemo(() => buildTheme(resolvedTheme), [resolvedTheme]);
+  // Re-check health whenever the API base (driven by the public URL override) changes, even
+  // though apiHealth() takes no args.
+  // oxlint-disable-next-line react/exhaustive-effect-dependencies
   React.useEffect(() => { (async ()=> setHealth(await apiHealth()))(); }, [settings.network.publicUrl]);
   React.useEffect(() => {
     saveSettings(settings);

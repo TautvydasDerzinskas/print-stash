@@ -67,6 +67,9 @@ export default function FolderEditorPanel({
   return (
     <Paper
       elevation={0}
+      // Deliberately an inline non-modal Paper panel (not MUI Dialog / native <dialog>), just
+      // labeled for a11y.
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
       role="dialog"
       aria-label={title}
       sx={{ m: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2 }}

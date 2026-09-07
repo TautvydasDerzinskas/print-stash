@@ -52,9 +52,9 @@ jobs:
         working-directory: ${{ inputs.project_dir }}
         run: npm ci --no-audit --no-fund
 
-      # - name: Lint (quality gate — blocks the image build on failure)
-      #   working-directory: ${{ inputs.project_dir }}
-      #   run: npm run lint
+      - name: Lint (quality gate — blocks the image build on failure)
+        working-directory: ${{ inputs.project_dir }}
+        run: npm run lint
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

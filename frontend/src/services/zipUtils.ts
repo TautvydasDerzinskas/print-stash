@@ -56,7 +56,7 @@ export async function readZipEntries(file: File): Promise<{ entries: ZipEntry[];
     data[normalized] = content;
   }
   const entries = Object.keys(data)
-    .sort((a, b) => a.localeCompare(b))
+    .toSorted((a, b) => a.localeCompare(b))
     .map(path => ({ path, size: data[path].length }));
   return { entries, data };
 }

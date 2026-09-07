@@ -15,7 +15,9 @@ services:
       retries: 10
 
   backend:
-    image: ${BACKEND_IMAGE:-printstash-backend:latest}
+    # Pin to a specific build instead of :latest, e.g.:
+    #   BACKEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-backend:sha-a8fef7d
+    image: ${BACKEND_IMAGE:-ghcr.io/tautvydasderzinskas/printstash-backend:latest}
     restart: unless-stopped
     environment:
       - PUID=${PUID:-1000}
@@ -27,6 +29,10 @@ services:
       - FILE_STORAGE=/app/storage
       - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
       - PUBLIC_URL=${PUBLIC_URL:-}
+      # Running the frontend as its own service on its own domain (e.g. behind an external
+      # reverse proxy mapping printstash.mylan -> frontend, printstash-api.mylan -> backend)
+      # makes every browser call to the API cross-origin, so the frontend's *own* origin must be
+      # allowed here explicitly -- e.g. CORS_ORIGINS=http://printstash.mylan
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - IMPORT_MOUNT_PATH=${IMPORT_MOUNT_PATH:-}
       - IMPORT_MOUNT_EXTS=${IMPORT_MOUNT_EXTS:-stl,3mf,step,stp,obj,svg,png,jpg,jpeg,webp,bmp,lbrn,lbrn2,zip}
@@ -41,6 +47,26 @@ services:
       - ${IMPORT_MOUNT_PATH_HOST:-./imports}:/imports:ro
     ports:
       - "${API_PORT:-8000}:8000"
+
+  # Standalone UI, published separately from the backend (see frontend/Dockerfile) -- no nginx,
+  # no /api proxying, it just serves the built static app and calls the backend directly. Only
+  # needed if you want to run the UI as its own service/domain; the backend image alone already
+  # serves the bundled UI at its own address if you'd rather run one service instead of two (see
+  # docker-compose.yml).
+  #
+  # Because this image is published generically (no backend address baked in), point it at your
+  # backend's address once after deploying: open the app, go to Settings -> Network, and set the
+  # API address (e.g. http://printstash-api.mylan). That's stored per-browser and survives
+  # restarts/updates -- no rebuild needed.
+  frontend:
+    # Pin to a specific build instead of :latest, e.g.:
+    #   FRONTEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-frontend:sha-a8fef7d
+    image: ${FRONTEND_IMAGE:-ghcr.io/tautvydasderzinskas/printstash-frontend:latest}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      - backend
 
 volumes:
   printstash_storage:

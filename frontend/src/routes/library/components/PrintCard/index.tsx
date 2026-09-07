@@ -30,6 +30,14 @@ import TagInput from "../../../../common/TagInput";
 import PreparedPrintSummary from "../PreparedPrintSummary";
 import { renderPreviewContent } from "../renderPreviewContent";
 import SupportingFilesPanel from "./components/SupportingFilesPanel";
+import { isFileDrag } from "../../../../utils/dragEvents";
+
+function handleCardDragOver(e: React.DragEvent<HTMLDivElement>) {
+  if (!isFileDrag(e)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = "copy";
+}
 
 export default function PrintCard({
   item,
@@ -221,26 +229,16 @@ export default function PrintCard({
   const currentFolderName = folderOptions.find(opt => (opt.id || null) === (item.folder_id || null))?.name
     || t("common:unassigned");
 
-  const isFileDragCard = (e: React.DragEvent<HTMLDivElement>) =>
-    Array.from(e.dataTransfer?.types || []).includes("Files");
-
   const handleCardDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragCard(e)) return;
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
     plateDragDepth.current += 1;
     setPlateDropActive(true);
   };
 
-  const handleCardDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragCard(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
-  };
-
   const handleCardDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragCard(e)) return;
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
     plateDragDepth.current -= 1;
@@ -251,7 +249,7 @@ export default function PrintCard({
   };
 
   const handleCardDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragCard(e)) return;
+    if (!isFileDrag(e)) return;
     e.preventDefault();
     // Stop this from also bubbling up to the grid's "drop anywhere uploads a
     // new item" handler -- dropping onto an existing print card always means
@@ -452,6 +450,8 @@ export default function PrintCard({
               onClick={e => e.stopPropagation()}
               size="small"
               fullWidth
+              // Deliberate: focus the field the moment rename mode is entered.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
               autoFocus
             />
           ) : (

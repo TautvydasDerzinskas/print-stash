@@ -23,6 +23,10 @@ export type ModelPalette = {
 // a component-level ThemeProvider is mounted above every caller, and threading the resolved
 // theme.printstash values through as extra params would ripple through every call site for no
 // benefit since ResolvedTheme -> Theme is already a pure, cheap lookup.
+function toFloat32(data: ArrayLike<number>): Float32Array {
+  return Float32Array.from(data);
+}
+
 export function paletteForTheme(theme: ResolvedTheme): ModelPalette {
   const { modelColor, modelEmissive } = buildTheme(theme).printstash;
   return {
@@ -470,7 +474,6 @@ async function loadStepGroup(url: string) {
     if (!pos || !pos.length) continue;
 
     const geom = new THREE.BufferGeometry();
-    const toFloat32 = (data: ArrayLike<number>) => Float32Array.from(data);
 
     geom.setAttribute("position", new THREE.Float32BufferAttribute(toFloat32(pos), 3));
 

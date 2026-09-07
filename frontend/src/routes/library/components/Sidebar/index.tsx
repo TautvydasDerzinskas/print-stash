@@ -27,6 +27,8 @@ import { useImportModePrompt, type ImportMode } from "../ImportModeModal";
 import FolderTreeRow, { type FolderTreeContext } from "./components/FolderTreeRow";
 import FolderActionMenu from "./components/FolderActionMenu";
 import FolderEditorPanel, { type FolderOption } from "./components/FolderEditorPanel";
+import { isFileDrag } from "../../../../utils/dragEvents";
+import { saveResponseToDisk } from "../../../../utils/downloadResponse";
 
 // Every dropped entry's relativePath equals its bare filename when the
 // selection has no folder structure -- that's the signal for the
@@ -34,6 +36,11 @@ import FolderEditorPanel, { type FolderOption } from "./components/FolderEditorP
 // relativePaths and skips this prompt).
 function isFlatFileSet(entries: { file: File; relativePath: string }[]) {
   return entries.length > 1 && entries.every(entry => entry.relativePath === entry.file.name);
+}
+
+function handleSidebarDragOver(e: React.DragEvent<HTMLElement>) {
+  if (!isFileDrag(e)) return;
+  e.preventDefault();
 }
 
 type Props = {
@@ -162,11 +169,6 @@ export default function Sidebar({
     }
   };
 
-  const isFileDrag = (e: React.DragEvent<HTMLElement>) => {
-    const types = Array.from(e.dataTransfer?.types || []);
-    return types.includes("Files");
-  };
-
   const handleDragOverTarget = (targetId: string) => (e: React.DragEvent<HTMLElement>) => {
     if (!isFileDrag(e)) return;
     e.preventDefault();
@@ -193,11 +195,6 @@ export default function Sidebar({
     }
     await uploadWithZipPrompt(entries, folderId);
     setDropUploading(false);
-  };
-
-  const handleSidebarDragOver = (e: React.DragEvent<HTMLElement>) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
   };
 
   const handleSidebarDragLeave = (e: React.DragEvent<HTMLElement>) => {
@@ -228,25 +225,6 @@ export default function Sidebar({
     })();
   };
 
-  const filenameFromDisposition = (res: Response, fallback: string) => {
-    const dispo = res.headers.get("content-disposition") || "";
-    const match = dispo.match(/filename="?([^";]+)"?/i);
-    return (match && match[1]) || fallback;
-  };
-
-  const saveResponseToDisk = async (res: Response, fallback: string) => {
-    const filename = filenameFromDisposition(res, fallback);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const handleError = (err: unknown, message: string) => {
     if (err instanceof UnauthorizedError) {
       onUnauthorized?.();
@@ -263,6 +241,8 @@ export default function Sidebar({
       handleError(err, t("sidebar.errors.loadFolders"));
     }
   };
+  // Intentionally re-run only when foldersVersion changes, not on every re-render of `refresh`.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, [foldersVersion]);
 
   const startCreate = (parentId: string | null = null) => {
@@ -389,7 +369,7 @@ export default function Sidebar({
 
   const folderOptions: FolderOption[] = React.useMemo(() => {
     const opts: FolderOption[] = [{ id: null, name: t("sidebar.rootOption") }];
-    const sorted = [...folders].sort((a, b) => folderPath(a).localeCompare(folderPath(b)));
+    const sorted = folders.toSorted((a, b) => folderPath(a).localeCompare(folderPath(b)));
     sorted.forEach(f => opts.push({ id: f.id, name: folderPath(f) }));
     return opts;
   }, [folders, folderPath, t]);
@@ -401,6 +381,9 @@ export default function Sidebar({
       map[key].push(f);
     };
     folders.forEach(f => push(f.parent_id || "__root", f));
+    // Sorting in place is fine here: `map`'s arrays were just built by `push` a few lines above
+    // and are owned exclusively by this memo, so there's nothing else to observe the mutation.
+    // oxlint-disable-next-line unicorn/no-array-sort
     Object.values(map).forEach(list => list.sort((a, b) => a.name.localeCompare(b.name)));
     return map;
   }, [folders]);

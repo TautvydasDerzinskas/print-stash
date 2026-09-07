@@ -44,6 +44,8 @@ import { buildUploadEntriesFromZip, isZipFile, readZipEntries } from "../../serv
 import { useZipImportPrompt } from "./components/ZipImportModal";
 import { useImportModePrompt, type ImportMode } from "./components/ImportModeModal";
 import { extOf } from "../../utils/fileExtensions";
+import { isFileDrag } from "../../utils/dragEvents";
+import { saveResponseToDisk } from "../../utils/downloadResponse";
 
 const ROWS_PER_BATCH = 5;
 const CARD_MIN_WIDTH_PX = 260;
@@ -73,7 +75,21 @@ type Props = {
 };
 
 type RefreshOpts = { tags?: string[]; search?: string };
+
+function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
+  if (!isFileDrag(e)) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+}
 type GroupBucket = { id: string; title: string; items: Print[] };
+
+function totalSize(print: Print) {
+  return print.plates.reduce((sum, plate) => sum + (plate.size || 0), 0);
+}
+
+function primaryExt(print: Print) {
+  return extOf(print.plates[0]?.filename || "");
+}
 
 export default function PrintGrid({
   folderId,
@@ -192,23 +208,12 @@ export default function PrintGrid({
     }
   };
 
-  const isFileDrag = (e: React.DragEvent<HTMLDivElement>) => {
-    const types = Array.from(e.dataTransfer?.types || []);
-    return types.includes("Files");
-  };
-
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     if (!isFileDrag(e)) return;
     e.preventDefault();
     e.stopPropagation();
     dragDepth.current += 1;
     setDragActive(true);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
@@ -313,7 +318,12 @@ export default function PrintGrid({
     setDropUploading(false);
   };
 
+  // Intentionally re-run only when folderId changes, not on every re-render of `refresh`.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { refresh(); }, [folderId]);
+  // Intentionally re-run only when foldersVersion changes; `t`/`handleApiError` are stable
+  // enough in practice here.
+  /* oxlint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     (async () => {
       try {
@@ -323,6 +333,7 @@ export default function PrintGrid({
       }
     })();
   }, [foldersVersion]);
+  /* oxlint-enable react-hooks/exhaustive-deps */
 
   useEffect(() => {
     const present = new Set(items.map(i => i.id));
@@ -375,19 +386,16 @@ export default function PrintGrid({
       { id: null as string | null, name: t("common:unassigned") },
       ...folders
         .map(f => ({ id: f.id, name: folderNames[f.id] || f.name || t("library:grid.groupUntitled") }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
+        .toSorted((a, b) => a.name.localeCompare(b.name)),
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [folders, folderNames, i18n.language]);
 
-  const totalSize = (print: Print) => print.plates.reduce((sum, plate) => sum + (plate.size || 0), 0);
-  const primaryExt = (print: Print) => extOf(print.plates[0]?.filename || "");
 
   const sortedItems = useMemo(() => {
-    const copy = [...items];
     const dir = sortDir === "asc" ? 1 : -1;
     const nameForFolder = (a: Print) => (a.folder_id ? folderNames[a.folder_id] || "" : "");
-    copy.sort((a, b) => {
+    return items.toSorted((a, b) => {
       if (sortKey === "size") {
         return (totalSize(a) - totalSize(b)) * dir;
       }
@@ -400,7 +408,6 @@ export default function PrintGrid({
       // default name
       return a.name.localeCompare(b.name) * dir;
     });
-    return copy;
   }, [items, sortKey, sortDir, folderNames]);
 
   const folderGroups = useMemo<GroupBucket[]>(() => {
@@ -419,10 +426,10 @@ export default function PrintGrid({
     }
     const dir = sortDir === "asc" ? 1 : -1;
     return Object.values(grouping)
-      .sort((a, b) => a.title.localeCompare(b.title) * dir)
+      .toSorted((a, b) => a.title.localeCompare(b.title) * dir)
       .map(group => ({
         ...group,
-        items: group.items.sort((a, b) => a.name.localeCompare(b.name)),
+        items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)),
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, folderNames, sortKey, sortDir, i18n.language]);
@@ -443,10 +450,10 @@ export default function PrintGrid({
     }
     const dir = sortDir === "asc" ? 1 : -1;
     return Object.values(grouping)
-      .sort((a, b) => a.title.localeCompare(b.title) * dir)
+      .toSorted((a, b) => a.title.localeCompare(b.title) * dir)
       .map(group => ({
         ...group,
-        items: group.items.sort((a, b) => a.name.localeCompare(b.name)),
+        items: group.items.toSorted((a, b) => a.name.localeCompare(b.name)),
       }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, sortKey, sortDir, i18n.language]);
@@ -477,24 +484,6 @@ export default function PrintGrid({
     });
   };
 
-  const filenameFromDisposition = (res: Response, fallback: string) => {
-    const dispo = res.headers.get("content-disposition") || "";
-    const match = dispo.match(/filename="?([^";]+)"?/i);
-    return (match && match[1]) || fallback || "download";
-  };
-
-  const saveResponseToDisk = async (res: Response, fallback: string) => {
-    const filename = filenameFromDisposition(res, fallback);
-    const blob = await res.blob();
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(blobUrl);
-  };
 
   const onSaveTags = async (id: string, tags: string[]) => {
     const bulkEdit = selectedIds.has(id) && selectedIds.size > 1;

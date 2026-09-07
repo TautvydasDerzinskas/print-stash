@@ -7,7 +7,13 @@
     "perf": "warn"
   },
   "rules": {
-    "no-await-in-loop": "off"
+    "no-await-in-loop": "off",
+    "react-in-jsx-scope": "off",
+    "jsx-no-new-function-as-prop": "off",
+    "jsx-no-new-object-as-prop": "off",
+    "jsx-no-jsx-as-prop": "off",
+    "jsx-no-new-array-as-prop": "off",
+    "set-state-in-effect": "off"
   },
   "env": {
     "builtin": true,
