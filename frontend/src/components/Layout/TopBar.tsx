@@ -19,7 +19,6 @@ type Props = {
    *  nothing currently populates it, but the header supports it the same way it will once a
    *  page needs one. */
   actions?: React.ReactNode;
-  showAddMenu: boolean;
   folderId: string | null;
   makerworldCookie: string;
   thingiverseCookie: string;
@@ -38,7 +37,6 @@ export default function TopBar({
   title,
   onBack,
   actions,
-  showAddMenu,
   folderId,
   makerworldCookie,
   thingiverseCookie,
@@ -65,15 +63,13 @@ export default function TopBar({
         {actions}
       </Stack>
       <Stack direction="row" alignItems="center" spacing={1}>
-        {showAddMenu && (
-          <AddMenu
-            folderId={folderId}
-            makerworldCookie={makerworldCookie}
-            thingiverseCookie={thingiverseCookie}
-            onUploaded={onUploaded}
-            onUnauthorized={onUnauthorized}
-          />
-        )}
+        <AddMenu
+          folderId={folderId}
+          makerworldCookie={makerworldCookie}
+          thingiverseCookie={thingiverseCookie}
+          onUploaded={onUploaded}
+          onUnauthorized={onUnauthorized}
+        />
         <NotificationBell />
         <UserMenu
           user={user}

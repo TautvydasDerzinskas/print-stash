@@ -1,5 +1,6 @@
 import React from "react";
 import Box from "@mui/material/Box";
+import { DISPLAY_FONT_STACK } from "../theme";
 
 type Props = {
   size?: "lg" | "md" | "sm";
@@ -42,7 +43,7 @@ export default function Wordmark({ size = "md" }: Props) {
         component="span"
         sx={{
           fontSize,
-          fontFamily: '"PrintStash Display", sans-serif',
+          fontFamily: DISPLAY_FONT_STACK,
           letterSpacing: "0.01em",
           color: "text.primary",
         }}

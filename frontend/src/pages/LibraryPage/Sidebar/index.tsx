@@ -5,8 +5,6 @@ import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
-import TextField from "@mui/material/TextField";
-import InputAdornment from "@mui/material/InputAdornment";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -16,8 +14,6 @@ import Divider from "@mui/material/Divider";
 import Collapse from "@mui/material/Collapse";
 import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
-import SearchIcon from "@mui/icons-material/Search";
-import CloseIcon from "@mui/icons-material/Close";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import EditIcon from "@mui/icons-material/Edit";
 import LayersIcon from "@mui/icons-material/Layers";
@@ -129,7 +125,6 @@ export default function Sidebar({
   const [editParent, setEditParent] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [dropUploading, setDropUploading] = useState(false);
-  const [query, setQuery] = useState("");
   const [menuState, setMenuState] = useState<{ folderId: string; anchorEl: HTMLElement } | null>(null);
   const zipPrompt = useZipImportPrompt();
   const importModePrompt = useImportModePrompt();
@@ -452,24 +447,6 @@ export default function Sidebar({
     return map;
   }, [folders]);
 
-  const visibleFolderIds = React.useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase();
-    if (!normalizedQuery) return null;
-
-    const visible = new Set<string>();
-    folders.forEach(folder => {
-      if (!folderPath(folder).toLocaleLowerCase().includes(normalizedQuery)) return;
-      let current: Folder | undefined = folder;
-      const guard = new Set<string>();
-      while (current && !guard.has(current.id)) {
-        visible.add(current.id);
-        guard.add(current.id);
-        current = current.parent_id ? folderById[current.parent_id] : undefined;
-      }
-    });
-    return visible;
-  }, [folderById, folderPath, folders, query]);
-
   // Default-expand root folders so they are visible
   useEffect(() => {
     const roots = childrenMap["__root"] || [];
@@ -494,11 +471,9 @@ export default function Sidebar({
 
   const treeCtx: FolderTreeContext = {
     childrenMap,
-    visibleFolderIds,
     expanded,
     dropTargetId,
     selectedId,
-    query,
     untitledLabel,
     collapseLabel: t("sidebar.collapse"),
     expandLabel: t("sidebar.expand"),
@@ -587,8 +562,8 @@ export default function Sidebar({
         {!collapsed && (
           <>
             <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pt: 1, pb: 1 }}>
-              <Typography variant="h6" noWrap>
-                {t("sidebar.foldersHeadingWithCount", { count: visibleFolderIds ? visibleFolderIds.size : folders.length })}
+              <Typography variant="h6" noWrap sx={{ fontFamily: "unset" }}>
+                {t("sidebar.foldersHeadingWithCount", { count: folders.length })}
               </Typography>
               <Button
                 size="small"
@@ -601,35 +576,6 @@ export default function Sidebar({
               </Button>
             </Stack>
 
-            <Box sx={{ px: 1, pb: 1 }}>
-              <TextField
-                fullWidth
-                size="small"
-                value={query}
-                onChange={event => setQuery(event.target.value)}
-                placeholder={t("sidebar.searchPlaceholder") ?? undefined}
-                inputProps={{ "aria-label": t("sidebar.searchAriaLabel") ?? undefined }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: query ? (
-                    <InputAdornment position="end">
-                      <IconButton
-                        size="small"
-                        onClick={() => setQuery("")}
-                        aria-label={t("sidebar.clearSearchAria") ?? undefined}
-                      >
-                        <CloseIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : undefined,
-                }}
-              />
-            </Box>
-
             <List disablePadding>
               {(childrenMap["__root"] || []).map(f => (
                 <FolderTreeRow key={f.id} folder={f} depth={0} ctx={treeCtx} />
@@ -640,13 +586,6 @@ export default function Sidebar({
                 <CreateNewFolderIcon />
                 <Typography variant="body2">{t("sidebar.noFoldersYet")}</Typography>
                 <Button size="small" onClick={() => startCreate(null)}>{t("sidebar.createFirstFolder")}</Button>
-              </Stack>
-            )}
-            {!!folders.length && visibleFolderIds?.size === 0 && (
-              <Stack alignItems="center" spacing={1} sx={{ py: 4, color: "text.secondary" }}>
-                <SearchIcon />
-                <Typography variant="body2">{t("sidebar.noMatchingFolders")}</Typography>
-                <Button size="small" onClick={() => setQuery("")}>{t("sidebar.clearSearch")}</Button>
               </Stack>
             )}
 

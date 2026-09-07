@@ -62,12 +62,25 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = parseBody(loginSchema, req.body);
     const email = body.email.toLowerCase();
-    const user = await prisma.user.findUnique({ where: { email } });
+    let user = await prisma.user.findUnique({ where: { email } });
     // Same generic message whether the email doesn't exist or the password is wrong -- don't
     // let a login attempt be used to enumerate registered addresses.
     if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
       throw new HttpError(401, "Invalid email or password");
     }
+
+    // Mirrors /register's bootstrap exception: if this account registered as the initial-admin
+    // address before INITIAL_ADMIN_EMAIL was actually visible to the process (a common ordering
+    // issue -- e.g. a compose .env added after the container was first created), it would be
+    // stuck as MEMBER forever since role is otherwise only ever set at creation. Promote it here
+    // too, under the same "only while no admin exists yet" guard.
+    if (user.role !== "ADMIN" && Boolean(INITIAL_ADMIN_EMAIL) && email === INITIAL_ADMIN_EMAIL) {
+      const adminExists = (await prisma.user.count({ where: { role: "ADMIN" } })) > 0;
+      if (!adminExists) {
+        user = await prisma.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
+      }
+    }
+
     const token = createToken(user.id, user.role);
     res.json({ token, expires_in: AUTH_TOKEN_TTL, user: toUserOut(user) });
   }),

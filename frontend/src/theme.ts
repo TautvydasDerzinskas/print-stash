@@ -5,6 +5,12 @@ export type { ResolvedTheme };
 
 export const THEME_IDS: ResolvedTheme[] = ["light", "dark"];
 
+const BODY_FONT_STACK =
+  '"Open Sans", "system-ui", "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif';
+/** The brand/display face used for h5/h6 (page and section titles) and the Wordmark -- kept as
+ *  one exported constant so both stay in sync. */
+export const DISPLAY_FONT_STACK = '"PrintStash Display", sans-serif';
+
 /**
  * Extra design tokens MUI's Theme doesn't model natively: the page background (a plain color
  * for light/dark, a layered radial-gradient CSS value for the neon/purple/blue themes) and the
@@ -112,9 +118,10 @@ export function buildTheme(id: ResolvedTheme): Theme {
     shape: { borderRadius: 10 },
     typography: {
       fontSize: 13,
+      fontFamily: BODY_FONT_STACK,
       button: { textTransform: "none", fontWeight: 600 },
-      h5: { fontFamily: '"PrintStash Display", sans-serif' },
-      h6: { fontFamily: '"PrintStash Display", sans-serif' },
+      h5: { fontFamily: DISPLAY_FONT_STACK },
+      h6: { fontFamily: DISPLAY_FONT_STACK },
     },
     components: {
       MuiPaper: { styleOverrides: { root: { backgroundImage: "none", backgroundColor: d.panel } } },

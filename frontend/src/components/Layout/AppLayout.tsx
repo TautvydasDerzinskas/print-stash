@@ -102,7 +102,6 @@ export default function AppLayout({
             <TopBar
               title={t(VIEW_TITLE_KEYS[activeView])}
               onBack={activeView === "settings" ? onBack : undefined}
-              showAddMenu={activeView === "library"}
               folderId={folderId}
               makerworldCookie={makerworldCookie}
               thingiverseCookie={thingiverseCookie}

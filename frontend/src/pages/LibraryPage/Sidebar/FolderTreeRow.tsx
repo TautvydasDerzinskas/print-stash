@@ -17,11 +17,9 @@ import type { Folder } from "../../../api/folders";
  *  function of its props. */
 export type FolderTreeContext = {
   childrenMap: Record<string, Folder[]>;
-  visibleFolderIds: Set<string> | null;
   expanded: Set<string>;
   dropTargetId: string | null;
   selectedId: string | null | undefined;
-  query: string;
   untitledLabel: string;
   collapseLabel: string;
   expandLabel: string;
@@ -43,13 +41,10 @@ type Props = {
 /** One row of the recursive folder tree, plus (via a nested Collapse + List) its own
  *  children rendered as more FolderTreeRow instances. */
 export default function FolderTreeRow({ folder, depth, ctx }: Props) {
-  const { visibleFolderIds, childrenMap, expanded, dropTargetId, selectedId, query, untitledLabel } = ctx;
-  if (visibleFolderIds && !visibleFolderIds.has(folder.id)) return null;
-  const children = (childrenMap[folder.id] || []).filter(
-    child => !visibleFolderIds || visibleFolderIds.has(child.id)
-  );
+  const { childrenMap, expanded, dropTargetId, selectedId, untitledLabel } = ctx;
+  const children = childrenMap[folder.id] || [];
   const isSelected = selectedId === folder.id;
-  const isOpen = !!query.trim() || expanded.has(folder.id);
+  const isOpen = expanded.has(folder.id);
   const isDropTarget = dropTargetId === folder.id;
 
   return (
