@@ -472,7 +472,7 @@ function makerworldCoverUrlFromNextData(data: unknown): string | null {
   return null;
 }
 
-function decodeHtmlEntities(value: string): string {
+export function decodeHtmlEntities(value: string): string {
   return value
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
@@ -485,7 +485,7 @@ function decodeHtmlEntities(value: string): string {
 /** MakerWorld's design summary is a small HTML fragment (paragraphs, links, embedded figures).
  * Converts it to plain text for Print.notes: turns block-level closing tags into line breaks,
  * strips every remaining tag, decodes entities, and collapses the resulting whitespace. */
-function htmlToPlainText(html: string): string | null {
+export function htmlToPlainText(html: string): string | null {
   const withBreaks = html
     .replace(/<\s*(br|\/p|\/li|\/div|\/h[1-6])\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "");
@@ -522,10 +522,14 @@ export type ImportedPageMetadata = {
   description: string | null;
   creator: string | null;
   previewImageUrl: string | null;
+  /** A known-clean filename for the resolved download, when the resolver already has one
+   * (e.g. from the MakerWorld cloud API's own response) rather than needing to guess one from
+   * the download URL's path or a Content-Disposition header. */
+  filename: string | null;
 };
 
 export function emptyImportedPageMetadata(): ImportedPageMetadata {
-  return { title: null, tags: [], description: null, creator: null, previewImageUrl: null };
+  return { title: null, tags: [], description: null, creator: null, previewImageUrl: null, filename: null };
 }
 
 /** Best-effort metadata for a landing page, used to fill in the Print when the caller didn't

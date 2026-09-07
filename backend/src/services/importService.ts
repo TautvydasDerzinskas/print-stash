@@ -29,6 +29,13 @@ import {
   type ImportCookies,
   type ImportedPageMetadata,
 } from "./importResolvers";
+import {
+  extractMakerworldBearerToken,
+  MakerworldAuthError,
+  MakerworldCaptchaError,
+  parseMakerworldModelUrl,
+  resolveMakerworldViaCloudApi,
+} from "./makerworldCloudApi";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
 import type { Plate, Print } from "@prisma/client";
@@ -125,6 +132,29 @@ async function fetchWithGuard(url: string, headers: Record<string, string>): Pro
 
 export type OpenImportResult = { response: Response; finalUrl: string; meta: ImportedPageMetadata };
 
+type MakerworldCloudShortcut = { downloadUrl: string; meta: ImportedPageMetadata };
+
+/** Attempts the api.bambulab.com resolution path for a MakerWorld model URL. Returns null
+ * for anything that should fall back to the existing page-scraping resolver (not a model
+ * URL, no usable token, or an unexpected upstream shape); rethrows the two failures worth
+ * telling the user about directly (expired session, CAPTCHA challenge) as HttpErrors instead
+ * of silently falling through to a resolver that would just fail the same way again. */
+async function tryMakerworldCloudApi(url: string, body: ImportRequestBody): Promise<MakerworldCloudShortcut | null> {
+  const parsed = parseMakerworldModelUrl(url);
+  if (!parsed) return null;
+  const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
+  if (!bearerToken) return null;
+
+  try {
+    const resolved = await resolveMakerworldViaCloudApi(parsed.designId, parsed.requestedInstanceId, bearerToken);
+    return resolved;
+  } catch (err) {
+    if (err instanceof MakerworldCaptchaError) throw new HttpError(429, err.message);
+    if (err instanceof MakerworldAuthError) throw new HttpError(401, err.message);
+    throw err;
+  }
+}
+
 /**
  * Fetches `url`, following HTML "landing pages" recursively (MakerWorld/Printables/Thingiverse
  * page scraping, or generic <a href>/JSON link sniffing) until it lands on the actual model file
@@ -143,13 +173,25 @@ export async function openImportResponse(
   if (depth > 3) throw new HttpError(400, "Too many redirects while resolving download link");
   const validatedUrl = await validateRemoteUrl(url);
 
-  const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
   let host = "";
   try {
     host = (new URL(validatedUrl).hostname || "").toLowerCase();
   } catch {
     host = "";
   }
+
+  // MakerWorld model pages: try resolving straight through api.bambulab.com first (no
+  // Cloudflare, no cookie-gated web session, no HTML scraping -- see makerworldCloudApi.ts).
+  // Only at the top of the chain, so a URL this already resolved down to (e.g. the signed S3
+  // download link) doesn't get reinterpreted as a fresh model page on the recursive call.
+  if (depth === 0 && host.endsWith("makerworld.com")) {
+    const cloudResolved = await tryMakerworldCloudApi(validatedUrl, body);
+    if (cloudResolved) {
+      return openImportResponse(cloudResolved.downloadUrl, body, validatedUrl, depth + 1, cloudResolved.meta);
+    }
+  }
+
+  const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
   let makerworldCookie: string | null = null;
   let thingiverseCookie: string | null = null;
   if (host.endsWith("makerworld.com")) {
@@ -186,6 +228,7 @@ export async function openImportResponse(
       description: extracted.description ?? inheritedMeta.description,
       creator: extracted.creator ?? inheritedMeta.creator,
       previewImageUrl: extracted.previewImageUrl ?? inheritedMeta.previewImageUrl,
+      filename: extracted.filename ?? inheritedMeta.filename,
     };
     if (pageHost.endsWith("makerworld.com")) {
       if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
@@ -253,7 +296,7 @@ export async function downloadImportToTemp(
     await response.body?.cancel().catch(() => undefined);
     throw new HttpError(413, "Imported file exceeds size limit");
   }
-  const filename = buildImportFilename(finalUrl, response.headers, body.filename);
+  const filename = buildImportFilename(finalUrl, response.headers, body.filename ?? meta.filename);
   const mime = mimeFromContentType(response.headers.get("content-type"), filename);
   const suffix = path.extname(filename) || "";
   const tempPath = path.join(os.tmpdir(), `printstash-import-${crypto.randomBytes(8).toString("hex")}${suffix}`);
@@ -274,7 +317,7 @@ export async function inspectImportLink(
 ): Promise<{ filename: string; mime: string; is_zip: boolean; title: string | null }> {
   const { response, finalUrl, meta } = await openImportResponse(url, body);
   await response.body?.cancel().catch(() => undefined);
-  const filename = buildImportFilename(finalUrl, response.headers, body.filename);
+  const filename = buildImportFilename(finalUrl, response.headers, body.filename ?? meta.filename);
   const mime = mimeFromContentType(response.headers.get("content-type"), filename);
   const isZip = path.extname(filename).toLowerCase() === ".zip";
   return { filename, mime, is_zip: isZip, title: meta.title };
