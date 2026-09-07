@@ -93,6 +93,22 @@
       "importError": "Import failed",
       "selectAtLeastOne": "Select at least one file to import."
     },
+    "collectionImport": {
+      "title": "Import collection",
+      "loading": "Loading collection...",
+      "loadError": "Unable to load this collection",
+      "selectedCount": "{{selected}} of {{total}} selected",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "noEntries": "No models found in this collection.",
+      "importSelected": "Import selected",
+      "importing": "Importing...",
+      "cancel": "Cancel",
+      "close": "Close",
+      "importError": "Import failed",
+      "selectAtLeastOne": "Select at least one model to import.",
+      "truncatedNotice": "Loaded the first {{loaded}} of {{total}} models in this collection."
+    },
     "importMode": {
       "title": "Import {{count}} files",
       "prompt": "How should these files be imported?",

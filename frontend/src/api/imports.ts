@@ -18,6 +18,24 @@ export type ImportZipResult = {
   failed: string[];
 };
 
+export type ImportCollectionEntry = {
+  design_id: string;
+  title: string;
+  cover: string | null;
+};
+
+export type ImportCollectionEntriesResult = {
+  title: string | null;
+  total: number;
+  truncated: boolean;
+  entries: ImportCollectionEntry[];
+};
+
+export type ImportCollectionResult = {
+  prints: Print[];
+  failed: string[];
+};
+
 type ImportLinkPayload = {
   url: string;
   title?: string;
@@ -95,6 +113,38 @@ export const importsApi = {
     }
     if (!res.ok) {
       const message = await readErrorMessage(res, "Zip import failed");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  listCollectionEntries: async (payload: ImportLinkPayload): Promise<ImportCollectionEntriesResult> => {
+    const res = await fetch(`${apiBase()}/import/collection/entries`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Could not load collection");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  fromCollection: async (payload: ImportLinkPayload & { design_ids: string[] }): Promise<ImportCollectionResult> => {
+    const res = await fetch(`${apiBase()}/import/collection`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Collection import failed");
       throw new Error(message);
     }
     return res.json();

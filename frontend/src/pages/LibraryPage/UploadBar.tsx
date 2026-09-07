@@ -12,7 +12,20 @@ import { printsApi } from "../../api/prints";
 import { entriesFromFileList, uploadEntriesToFolder } from "../../utils/uploadTree";
 import { buildUploadEntriesFromZip, isZipFile, readZipEntries } from "../../utils/zipUtils";
 import { useZipImportPrompt } from "./ZipImportModal";
+import { useCollectionImportPrompt } from "./CollectionImportModal";
 import { useImportModePrompt, type ImportMode } from "./ImportModeModal";
+
+/** MakerWorld collection URLs (`/en/collections/{id}-{slug}`) list many models rather than
+ * being one model page -- route those to the collection picker instead of the single-link
+ * inspect/zip flow. */
+function isMakerworldCollectionUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    return parsed.hostname.toLowerCase().endsWith("makerworld.com") && /\/collections\/\d+/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
 
 // Every dropped/picked entry's relativePath equals its bare filename when the
 // selection has no folder structure. A webkitdirectory folder pick always
@@ -38,8 +51,9 @@ export default function UploadBar({ onUploaded, folderId, makerworldCookie, thin
   const [importing, setImporting] = useState(false);
   const [linkValue, setLinkValue] = useState("");
   const zipPrompt = useZipImportPrompt();
+  const collectionPrompt = useCollectionImportPrompt();
   const importModePrompt = useImportModePrompt();
-  const isBusy = uploading || importing || zipPrompt.isOpen || importModePrompt.isOpen;
+  const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
     try {
@@ -158,6 +172,39 @@ export default function UploadBar({ onUploaded, folderId, makerworldCookie, thin
         makerworld_cookie: cookie || undefined,
         thingiverse_cookie: thingiverse || undefined,
       };
+
+      if (isMakerworldCollectionUrl(url)) {
+        setImporting(false);
+        await collectionPrompt.prompt({
+          label: url,
+          loadEntries: async () => {
+            try {
+              return await importsApi.listCollectionEntries(payload);
+            } catch (err) {
+              if (err instanceof UnauthorizedError) onUnauthorized?.();
+              throw err;
+            }
+          },
+          onImportSelected: async (designIds: string[]) => {
+            try {
+              const result = await importsApi.fromCollection({ ...payload, design_ids: designIds });
+              if (result.failed.length) {
+                alert(t("uploadBar.importFailedList", { files: result.failed.join(", ") }));
+              }
+            } catch (err) {
+              if (err instanceof UnauthorizedError) {
+                onUnauthorized?.();
+                return;
+              }
+              throw err;
+            }
+            setLinkValue("");
+            onUploaded();
+          },
+        });
+        return;
+      }
+
       const inspect = await importsApi.inspectLink(payload);
       if (!inspect.is_zip) {
         await importsApi.fromLink(payload);
@@ -277,6 +324,7 @@ export default function UploadBar({ onUploaded, folderId, makerworldCookie, thin
         </Box>
       </Box>
       {zipPrompt.modal}
+      {collectionPrompt.modal}
       {importModePrompt.modal}
     </>
   );

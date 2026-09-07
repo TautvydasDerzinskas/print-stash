@@ -7,9 +7,14 @@ import { HttpError } from "../utils/fileUtils";
 import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { downloadImportToTemp, importPrintFromUrl, inspectImportLink } from "../services/importService";
+import { downloadImportToTemp, importPrintFromUrl, inspectImportLink, type ImportRequestBody } from "../services/importService";
+import {
+  fetchMakerworldCollectionEntries,
+  fetchMakerworldCollectionTitle,
+  parseMakerworldCollectionUrl,
+} from "../services/makerworldCollections";
 import { extractZipEntriesToPrints, listZipEntries } from "../services/zipService";
-import { toPrintOut } from "../dto";
+import { toPrintOut, type PrintOut } from "../dto";
 
 const router = Router();
 router.use(requireAuth);
@@ -83,6 +88,83 @@ router.post(
     } finally {
       await fs.rm(tempPath, { force: true }).catch(() => undefined);
     }
+  }),
+);
+
+router.post(
+  "/import/collection/entries",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(importRequestSchema, req.body);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parseMakerworldCollectionUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a MakerWorld collection URL");
+
+    const [title, listing] = await Promise.all([
+      fetchMakerworldCollectionTitle(parsed.collectionId),
+      fetchMakerworldCollectionEntries(parsed.collectionId),
+    ]);
+    if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
+
+    res.json({
+      title,
+      total: listing.total,
+      truncated: listing.truncated,
+      entries: listing.entries.map((e) => ({ design_id: e.designId, title: e.title, cover: e.cover })),
+    });
+  }),
+);
+
+/** Runs `worker` over `items` with at most `limit` in flight at once, preserving item order
+ * in the returned results. Used to import a batch of MakerWorld designs without either running
+ * hundreds of downloads fully sequentially (slow) or firing them all at once (hammers the
+ * upstream API right after we specifically built cool-off handling to avoid that). */
+async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = Array.from({ length: items.length });
+  let next = 0;
+  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await worker(items[index]);
+    }
+  });
+  await Promise.all(runners);
+  return results;
+}
+
+const COLLECTION_IMPORT_CONCURRENCY = 3;
+const collectionImportRequestSchema = importRequestSchema.extend({ design_ids: z.array(z.string()).min(1) });
+
+router.post(
+  "/import/collection",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(collectionImportRequestSchema, req.body);
+
+    const results = await mapWithConcurrency(body.design_ids, COLLECTION_IMPORT_CONCURRENCY, async (designId) => {
+      const modelUrl = `https://makerworld.com/en/models/${designId}`;
+      const itemBody: ImportRequestBody = {
+        url: modelUrl,
+        notes: body.notes ?? null,
+        tags: body.tags ?? [],
+        folder_id: body.folder_id ?? null,
+        makerworld_cookie: body.makerworld_cookie,
+        thingiverse_cookie: body.thingiverse_cookie,
+      };
+      try {
+        const { print, plates } = await importPrintFromUrl(modelUrl, itemBody);
+        return { ok: true as const, print: toPrintOut(print, plates, [], null) };
+      } catch {
+        return { ok: false as const, designId };
+      }
+    });
+
+    const prints: PrintOut[] = [];
+    const failed: string[] = [];
+    for (const result of results) {
+      if (result.ok) prints.push(result.print);
+      else failed.push(result.designId);
+    }
+    res.json({ prints, failed });
   }),
 );
 

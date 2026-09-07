@@ -93,6 +93,22 @@
       "importError": "Importuoti nepavyko",
       "selectAtLeastOne": "Pasirinkite bent vieną failą importavimui."
     },
+    "collectionImport": {
+      "title": "Importuoti kolekciją",
+      "loading": "Kraunama kolekcija...",
+      "loadError": "Nepavyko įkelti šios kolekcijos",
+      "selectedCount": "Pažymėta {{selected}} iš {{total}}",
+      "selectAll": "Pažymėti visus",
+      "clear": "Išvalyti",
+      "noEntries": "Šioje kolekcijoje modelių nerasta.",
+      "importSelected": "Importuoti pažymėtus",
+      "importing": "Importuojama...",
+      "cancel": "Atšaukti",
+      "close": "Uždaryti",
+      "importError": "Importuoti nepavyko",
+      "selectAtLeastOne": "Pasirinkite bent vieną modelį importavimui.",
+      "truncatedNotice": "Įkelti pirmieji {{loaded}} iš {{total}} šios kolekcijos modelių."
+    },
     "importMode": {
       "title": "Importuoti {{count}} failų",
       "prompt": "Kaip turėtų būti importuojami šie failai?",
