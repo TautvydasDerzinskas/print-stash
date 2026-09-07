@@ -1,0 +1,59 @@
+import path from "node:path";
+
+function envInt(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function envBool(name: string, fallback: boolean): boolean {
+  const raw = process.env[name];
+  if (raw === undefined) return fallback;
+  return ["1", "true", "yes", "y", "on"].includes(raw.trim().toLowerCase());
+}
+
+export const STORAGE = path.resolve(process.env.FILE_STORAGE || "./storage");
+export const THUMBS = path.join(STORAGE, "thumbs");
+export const BUNDLES = path.join(STORAGE, "bundles");
+
+export const AUTH_USERNAME = process.env.AUTH_USERNAME || "admin";
+export const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "super-secret";
+export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
+export const AUTH_TOKEN_TTL = envInt("AUTH_TOKEN_TTL", 43200);
+export const AUTH_ALGO = "HS256" as const;
+export const AUTH_ENABLED = Boolean(AUTH_USERNAME && AUTH_PASSWORD);
+
+export const IMPORT_ALLOWED_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj", ".lbrn", ".lbrn2", ".zip"]);
+export const IMPORT_EXT_PRIORITY = [".3mf", ".stl", ".step", ".stp", ".lbrn2", ".lbrn", ".zip"];
+export const IMPORT_BLOCKED_EXTS = new Set([
+  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".jfif", ".tif", ".tiff",
+  ".css", ".js", ".mjs", ".map", ".json", ".ico", ".woff", ".woff2", ".ttf", ".eot",
+]);
+export const IMPORT_TIMEOUT_SECONDS = envInt("IMPORT_TIMEOUT_SECONDS", 30);
+export const IMPORT_MAX_MB = envInt("IMPORT_MAX_MB", 512);
+export const IMPORT_MAX_BYTES = Math.max(1, IMPORT_MAX_MB) * 1024 * 1024;
+export const IMPORT_HTML_MAX_KB = envInt("IMPORT_HTML_MAX_KB", 4096);
+export const IMPORT_HTML_MAX_BYTES = Math.max(64, IMPORT_HTML_MAX_KB) * 1024;
+export const IMPORT_USER_AGENT = "PrintStash/1.0";
+export const IMPORT_BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
+
+export const MOUNT_IMPORT_PATH = (process.env.IMPORT_MOUNT_PATH || "").trim();
+export const MOUNT_IMPORT_EXTS_RAW = (process.env.IMPORT_MOUNT_EXTS || "").trim();
+export const MOUNT_IMPORT_INCLUDE_HIDDEN = envBool("IMPORT_MOUNT_INCLUDE_HIDDEN", false);
+export const MOUNT_IMPORT_ENABLED = envBool("IMPORT_MOUNT_ON_STARTUP", true);
+export const MOUNT_IMPORT_COPY = envBool("IMPORT_MOUNT_COPY", true);
+export const DEFAULT_MOUNT_IMPORT_EXTS = new Set([
+  ".stl", ".3mf", ".step", ".stp", ".obj", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".bmp",
+  ".lbrn", ".lbrn2", ".zip",
+]);
+
+export const API_PORT = envInt("API_PORT", 8000);
+
+/**
+ * Where the frontend's built static files (index.html, assets/*) live, if present. Populated by
+ * the Docker image's build (see Dockerfile); absent in local `npm run dev` — express.static()
+ * simply serves nothing and every request falls through to the API routes / 404 handler.
+ */
+export const FRONTEND_DIST = path.resolve(process.env.FRONTEND_DIST || path.join(__dirname, "../public"));

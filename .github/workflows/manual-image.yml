@@ -1,0 +1,49 @@
+name: Manual image publish
+
+# One place to build+push either (or both) images on demand, regardless of what actually
+# changed — e.g. to re-publish after a registry hiccup, or force a rebuild after a base-image
+# security update. The automatic, path-filtered publishes still live in backend-image.yml and
+# frontend-image.yml.
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which image(s) to build and publish"
+        required: true
+        type: choice
+        options:
+          - backend
+          - frontend
+          - both
+        default: both
+
+jobs:
+  backend:
+    if: inputs.target == 'backend' || inputs.target == 'both'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-image.yml
+    with:
+      project_dir: backend
+      image_name: ghcr.io/${{ github.repository_owner }}/printstash-backend
+      context: .
+      dockerfile: backend/Dockerfile
+      cache_scope: backend
+      push: true
+    secrets: inherit
+
+  frontend:
+    if: inputs.target == 'frontend' || inputs.target == 'both'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-image.yml
+    with:
+      project_dir: frontend
+      image_name: ghcr.io/${{ github.repository_owner }}/printstash-frontend
+      context: ./frontend
+      dockerfile: frontend/Dockerfile
+      cache_scope: frontend
+      push: true
+    secrets: inherit

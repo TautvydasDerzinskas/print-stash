@@ -1,0 +1,34 @@
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
+# Node and Vite
+node_modules/
+dist/
+.vite/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Prisma
+backend/prisma/dev.db*
+
+# PrintStash runtime content
+data/
+imports/
+backend/storage/
+
+# IDE, operating-system, and temporary files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.temp
+*.log

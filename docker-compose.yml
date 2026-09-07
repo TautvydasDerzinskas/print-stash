@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-printstash}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-printstash}
+      - POSTGRES_DB=${POSTGRES_DB:-printstash}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printstash}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - FILE_STORAGE=/app/storage
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-super-secret}
+      - AUTH_SECRET=${AUTH_SECRET:-changeme-secret}
+      - AUTH_TOKEN_TTL=${AUTH_TOKEN_TTL:-43200}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data/storage:/app/storage

@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-printstash}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-printstash}
+      - POSTGRES_DB=${POSTGRES_DB:-printstash}
+    volumes:
+      - printstash_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printstash}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    image: ${BACKEND_IMAGE:-printstash-backend:latest}
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-super-secret}
+      - AUTH_SECRET=${AUTH_SECRET:-changeme-secret}
+      - AUTH_TOKEN_TTL=${AUTH_TOKEN_TTL:-43200}
+      - FILE_STORAGE=/app/storage
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - IMPORT_MOUNT_PATH=${IMPORT_MOUNT_PATH:-}
+      - IMPORT_MOUNT_EXTS=${IMPORT_MOUNT_EXTS:-stl,3mf,step,stp,obj,svg,png,jpg,jpeg,webp,bmp,lbrn,lbrn2,zip}
+      - IMPORT_MOUNT_INCLUDE_HIDDEN=${IMPORT_MOUNT_INCLUDE_HIDDEN:-false}
+      - IMPORT_MOUNT_ON_STARTUP=${IMPORT_MOUNT_ON_STARTUP:-false}
+      - IMPORT_MOUNT_COPY=${IMPORT_MOUNT_COPY:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - printstash_storage:/app/storage
+      - ${IMPORT_MOUNT_PATH_HOST:-./imports}:/imports:ro
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+volumes:
+  printstash_storage:
+  printstash_db:

@@ -1,0 +1,41 @@
+name: Backend image
+
+# Only runs when backend/ (or the build workflow) changes — a frontend-only commit never
+# triggers a backend publish, and vice versa (see frontend-image.yml). To build+publish either
+# image on demand regardless of what changed, use the "Manual image publish" workflow instead.
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-image.yml"
+      - ".github/workflows/build-image.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-image.yml"
+      - ".github/workflows/build-image.yml"
+
+concurrency:
+  group: backend-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/build-image.yml
+    with:
+      # Build context is the repo root: backend/Dockerfile builds the frontend in its own stage
+      # and bundles the static output into the backend image, so it needs to see both backend/
+      # and frontend/ regardless of which one changed.
+      project_dir: backend
+      image_name: ghcr.io/${{ github.repository_owner }}/printstash-backend
+      context: .
+      dockerfile: backend/Dockerfile
+      cache_scope: backend
+      push: ${{ github.event_name != 'pull_request' }}
+    secrets: inherit

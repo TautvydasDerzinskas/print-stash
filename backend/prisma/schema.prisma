@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  tags      String[] @default([])
+  parentId  String?
+  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Folder[] @relation("FolderTree")
+  prints    Print[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([tags], type: Gin)
+}
+
+model Print {
+  id             String      @id @default(cuid())
+  name           String
+  nameNormalized String
+  title          String?
+  notes          String?
+  creator        String?
+  collection     String?
+  tags           String[]    @default([])
+  folderId       String?
+  folder         Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  sourcePath     String?
+  plates         Plate[]
+  files          PrintFile[] @relation("PrintFiles")
+  preparedFileId String?     @unique
+  preparedFile   PrintFile?  @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
+  preparedMetadata Json?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([folderId, nameNormalized])
+  @@index([folderId, name])
+  @@index([tags], type: Gin)
+}
+
+model Plate {
+  id          String   @id @default(cuid())
+  printId     String
+  print       Print    @relation(fields: [printId], references: [id], onDelete: Cascade)
+  position    Int
+  filename    String
+  mime        String
+  size        Int      @default(0)
+  storagePath String   @unique
+  sourcePath  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([printId, position])
+  @@index([printId])
+}
+
+enum PrintFileRole {
+  SUPPORTING
+  PREPARED
+}
+
+model PrintFile {
+  id          String        @id @default(cuid())
+  printId     String
+  print       Print         @relation("PrintFiles", fields: [printId], references: [id], onDelete: Cascade)
+  role        PrintFileRole
+  filename    String
+  mime        String
+  size        Int           @default(0)
+  storagePath String        @unique
+  metadata    Json?
+  createdAt   DateTime      @default(now())
+  preparedFor Print?        @relation("PreparedFile")
+
+  @@index([printId, role])
+}
+
+model Setting {
+  key   String @id
+  value Json
+}

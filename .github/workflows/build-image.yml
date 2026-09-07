@@ -1,0 +1,90 @@
+name: Build image (reusable)
+
+# Shared build+push logic used by backend-image.yml, frontend-image.yml, and
+# manual-image.yml — not triggered on its own (workflow_call only).
+on:
+  workflow_call:
+    inputs:
+      project_dir:
+        description: "The npm project directory to lint, e.g. backend or frontend"
+        required: true
+        type: string
+      image_name:
+        description: "Fully-qualified image name, e.g. ghcr.io/owner/printstash-backend"
+        required: true
+        type: string
+      context:
+        description: "Docker build context"
+        required: true
+        type: string
+      dockerfile:
+        description: "Path to the Dockerfile"
+        required: true
+        type: string
+      cache_scope:
+        description: "GHA cache scope, so backend/frontend caches don't collide"
+        required: true
+        type: string
+      push:
+        description: "Whether to log in and push (false for PR validation builds)"
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ inputs.project_dir }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.project_dir }}
+        run: npm ci --no-audit --no-fund
+
+      # - name: Lint (quality gate — blocks the image build on failure)
+      #   working-directory: ${{ inputs.project_dir }}
+      #   run: npm run lint
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: inputs.push
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ inputs.image_name }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-,format=short
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build (and push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ inputs.cache_scope }}
+          cache-to: type=gha,mode=max,scope=${{ inputs.cache_scope }}
