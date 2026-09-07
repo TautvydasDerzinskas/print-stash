@@ -6,7 +6,7 @@ import Typography from "@mui/material/Typography";
 import ButtonBase from "@mui/material/ButtonBase";
 import CheckIcon from "@mui/icons-material/Check";
 import { SUPPORTED_LANGUAGES } from "../../constants/languages";
-import SectionHeader from "./SectionHeader";
+import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   onBack: () => void;

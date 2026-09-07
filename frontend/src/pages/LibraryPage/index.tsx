@@ -23,7 +23,8 @@ import { type Folder, foldersApi } from "../../api/folders";
 import PrintCard from "./PrintCard";
 import PrintPreviewModal from "./PrintPreviewModal";
 import { colorForTag } from "../../utils/tagColors";
-import { EngravingSettings, PreviewSettings, SlicerSettings } from "../../utils/settings";
+import { EngravingSettings, SlicerSettings } from "../../utils/settings";
+import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { engraverLabelFor, slicerLabelFor } from "../../utils/settingsHelpers";
 import { SLICER_BRIDGE_ENABLED } from "../../constants/featureFlags";
@@ -34,6 +35,7 @@ import { useImportModePrompt, type ImportMode } from "./ImportModeModal";
 import { extOf } from "../../utils/fileExtensions";
 import { isFileDrag } from "../../utils/dragEvents";
 import { saveResponseToDisk } from "../../utils/downloadResponse";
+import { useConfirm } from "../../components/ConfirmProvider";
 
 const ROWS_PER_BATCH = 5;
 const CARD_MIN_WIDTH_PX = 260;
@@ -58,7 +60,7 @@ type Props = {
   onUnauthorized?: () => void;
   slicerSettings?: SlicerSettings;
   engravingSettings?: EngravingSettings;
-  previewSettings?: PreviewSettings;
+  previewMode: PreviewMode;
   theme: ResolvedTheme;
 };
 
@@ -85,7 +87,7 @@ export default function LibraryPage({
   onUnauthorized,
   slicerSettings,
   engravingSettings,
-  previewSettings,
+  previewMode,
   theme,
 }: Props) {
   const { t, i18n } = useTranslation(["library", "common"]);
@@ -120,6 +122,7 @@ export default function LibraryPage({
   const engraverLabel = engraverLabelFor(engravingSettings?.selected);
   const zipPrompt = useZipImportPrompt();
   const importModePrompt = useImportModePrompt();
+  const confirmDialog = useConfirm();
 
   const handleApiError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -620,10 +623,10 @@ export default function LibraryPage({
     const targets = selectedIds.has(print.id) && selectedIds.size > 1
       ? Array.from(selectedIds)
       : [print.id];
-    const confirmLabel = targets.length > 1
+    const confirmMessage = targets.length > 1
       ? t("library:confirm.deleteMultiple", { count: targets.length })
       : t("library:confirm.deleteSingle", { name: print.title || print.name });
-    if (!confirm(confirmLabel)) {
+    if (!(await confirmDialog({ message: confirmMessage, destructive: true }))) {
       return;
     }
     setDeletingId(print.id);
@@ -827,7 +830,7 @@ export default function LibraryPage({
                                 engraverLabel={engraverLabel}
                                 onOpenInEngraving={openInEngraving}
                                 theme={theme}
-                                previewMode={previewSettings?.mode || "automatic"}
+                                previewMode={previewMode}
                                 onPrintChanged={replacePrint}
                                 onUnauthorized={onUnauthorized}
                               />
@@ -881,7 +884,7 @@ export default function LibraryPage({
                   engraverLabel={engraverLabel}
                   onOpenInEngraving={openInEngraving}
                   theme={theme}
-                  previewMode={previewSettings?.mode || "automatic"}
+                  previewMode={previewMode}
                   onPrintChanged={replacePrint}
                   onUnauthorized={onUnauthorized}
                 />

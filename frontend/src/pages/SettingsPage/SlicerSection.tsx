@@ -12,7 +12,7 @@ import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
 import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import type { SlicerSettings } from "../../utils/settings";
-import SectionHeader from "./SectionHeader";
+import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   slicer: SlicerSettings;

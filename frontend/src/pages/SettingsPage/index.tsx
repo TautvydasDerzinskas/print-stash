@@ -9,9 +9,6 @@ import type { AppSettings } from "../../utils/settings";
 import { SLICER_BRIDGE_ENABLED } from "../../constants/featureFlags";
 import SlicerSection from "./SlicerSection";
 import EngravingSection from "./EngravingSection";
-import ThemeSection from "./ThemeSection";
-import PreviewsSection from "./PreviewsSection";
-import StorageSection from "./StorageSection";
 import ImportsSection from "./ImportsSection";
 import LanguageSection from "./LanguageSection";
 
@@ -24,7 +21,7 @@ type Props = {
   onSelectFolder?: (id: string | null) => void;
 };
 
-type Section = "root" | "slicer" | "engraving" | "theme" | "previews" | "storage" | "imports" | "language";
+type Section = "root" | "slicer" | "engraving" | "imports" | "language";
 
 export default function SettingsPage({
   settings,
@@ -58,32 +55,8 @@ export default function SettingsPage({
     );
   }
 
-  if (section === "theme") {
-    return (
-      <ThemeSection
-        selected={settings.theme.selected}
-        onSelect={selected => onChange({ ...settings, theme: { selected } })}
-        onBack={backToRoot}
-      />
-    );
-  }
-
   if (section === "language") {
     return <LanguageSection onBack={backToRoot} />;
-  }
-
-  if (section === "storage") {
-    return <StorageSection onUnauthorized={onUnauthorized} onBack={backToRoot} />;
-  }
-
-  if (section === "previews") {
-    return (
-      <PreviewsSection
-        mode={settings.previews.mode}
-        onSelect={mode => onChange({ ...settings, previews: { mode } })}
-        onBack={backToRoot}
-      />
-    );
   }
 
   if (section === "imports") {
@@ -116,24 +89,6 @@ export default function SettingsPage({
       heading: t("settings.root.engravingHeading"),
       desc: t("settings.root.engravingDesc"),
       onClick: () => setSection("engraving"),
-    },
-    {
-      eyebrow: t("settings.root.themeTitle"),
-      heading: t("settings.root.themeHeading"),
-      desc: t("settings.root.themeDesc"),
-      onClick: () => setSection("theme"),
-    },
-    {
-      eyebrow: t("settings.root.previewsTitle"),
-      heading: t("settings.root.previewsHeading"),
-      desc: t("settings.root.previewsDesc"),
-      onClick: () => setSection("previews"),
-    },
-    {
-      eyebrow: t("settings.root.storageTitle"),
-      heading: t("settings.root.storageHeading"),
-      desc: t("settings.root.storageDesc"),
-      onClick: () => setSection("storage"),
     },
     {
       eyebrow: t("settings.root.importsTitle"),

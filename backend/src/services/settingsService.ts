@@ -25,3 +25,27 @@ export async function getAllowRegistrations(fallback: boolean): Promise<boolean>
 export async function setAllowRegistrations(value: boolean): Promise<void> {
   await setBoolSetting(ALLOW_REGISTRATIONS_KEY, value);
 }
+
+export type PreviewMode = "automatic" | "on-demand" | "disabled";
+const PREVIEW_MODES = new Set<PreviewMode>(["automatic", "on-demand", "disabled"]);
+const PREVIEW_MODE_KEY = "preview_mode";
+const DEFAULT_PREVIEW_MODE: PreviewMode = "automatic";
+
+// Instance-wide (not per-user): every browser hitting this API generates/serves previews
+// against the same storage, so letting each user pick their own mode would just mean the last
+// save wins anyway. Admin-configured instead, like the storage template above.
+export async function getPreviewMode(): Promise<PreviewMode> {
+  const row = await prisma.setting.findUnique({ where: { key: PREVIEW_MODE_KEY } });
+  const value = row?.value;
+  return typeof value === "string" && PREVIEW_MODES.has(value as PreviewMode)
+    ? (value as PreviewMode)
+    : DEFAULT_PREVIEW_MODE;
+}
+
+export async function setPreviewMode(value: PreviewMode): Promise<void> {
+  await prisma.setting.upsert({
+    where: { key: PREVIEW_MODE_KEY },
+    create: { key: PREVIEW_MODE_KEY, value },
+    update: { value },
+  });
+}

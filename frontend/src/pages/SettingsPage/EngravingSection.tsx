@@ -12,7 +12,7 @@ import InputLabel from "@mui/material/InputLabel";
 import Link from "@mui/material/Link";
 import { ENGRAVER_OPTIONS } from "../../constants/settingsOptions";
 import type { EngravingSettings } from "../../utils/settings";
-import SectionHeader from "./SectionHeader";
+import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   engraving: EngravingSettings;

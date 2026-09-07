@@ -10,7 +10,7 @@ import Checkbox from "@mui/material/Checkbox";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import { UnauthorizedError } from "../../api/client";
 import { settingsApi } from "../../api/settings";
-import SectionHeader from "./SectionHeader";
+import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   onUnauthorized?: () => void;
@@ -71,7 +71,7 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
         setStoragePlatePaths(data.plate_paths || []);
       } catch (err) {
         if (err instanceof UnauthorizedError) onUnauthorized?.();
-        else setStorageStatus(t("settings.storage.failed"));
+        else setStorageStatus(t("adminSettings.storage.failed"));
       } finally {
         if (active) setStorageLoading(false);
       }
@@ -94,17 +94,17 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
       setStorageApplyExisting(false);
       setStorageStatus(
         storageApplyExisting
-          ? t("settings.storage.savedApplied", {
+          ? t("adminSettings.storage.savedApplied", {
               moved: data.moved,
-              skippedSuffix: data.skipped ? t("settings.storage.skippedSuffix", { skipped: data.skipped }) : "",
+              skippedSuffix: data.skipped ? t("adminSettings.storage.skippedSuffix", { skipped: data.skipped }) : "",
             })
-          : t("settings.storage.savedNoApply")
+          : t("adminSettings.storage.savedNoApply")
       );
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         onUnauthorized?.();
       } else {
-        setStorageStatus(err instanceof Error ? err.message : t("settings.storage.failed"));
+        setStorageStatus(err instanceof Error ? err.message : t("adminSettings.storage.failed"));
       }
     } finally {
       setStorageSaving(false);
@@ -126,26 +126,26 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
   return (
     <Stack spacing={3}>
       <SectionHeader
-        title={t("settings.storage.heading")}
-        subtitle={t("settings.storage.subtitle")}
+        title={t("adminSettings.storage.heading")}
+        subtitle={t("adminSettings.storage.subtitle")}
         onBack={onBack}
-        backLabel={t("settings.back")}
+        backLabel={t("adminSettings.back")}
       />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <Box>
-            <Typography variant="subtitle1" fontWeight={600}>{t("settings.storage.templateHeading")}</Typography>
+            <Typography variant="subtitle1" fontWeight={600}>{t("adminSettings.storage.templateHeading")}</Typography>
             <Typography variant="body2" color="text.secondary">
-              {t("settings.storage.templateDesc")}
+              {t("adminSettings.storage.templateDesc")}
             </Typography>
           </Box>
           <TextField
             size="small"
-            label={t("settings.storage.templateLabel")}
+            label={t("adminSettings.storage.templateLabel")}
             value={storageTemplate}
             onChange={e => { setStorageTemplate(e.target.value); setStorageStatus(null); }}
-            placeholder={t("settings.storage.templatePlaceholder") ?? undefined}
+            placeholder={t("adminSettings.storage.templatePlaceholder") ?? undefined}
             disabled={storageLoading || storageSaving}
             InputProps={{ sx: { fontFamily: "monospace" } }}
           />
@@ -172,7 +172,7 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
           </Stack>
           <Paper variant="outlined" sx={{ p: 1.5, borderStyle: "dashed" }}>
             <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-              {t("settings.storage.examplePathsHeading")}
+              {t("adminSettings.storage.examplePathsHeading")}
             </Typography>
             {examplePaths.length ? (
               <Stack spacing={0.5} sx={{ mt: 0.5 }}>
@@ -184,7 +184,7 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
               </Stack>
             ) : (
               <Typography variant="caption" sx={{ fontFamily: "monospace", display: "block", mt: 0.5 }}>
-                {t("settings.storage.examplePathsEmpty")}
+                {t("adminSettings.storage.examplePathsEmpty")}
               </Typography>
             )}
           </Paper>
@@ -200,8 +200,8 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
             }
             label={
               <Box>
-                <Typography variant="body2">{t("settings.storage.reorganizeLabel")}</Typography>
-                <Typography variant="caption" color="text.secondary">{t("settings.storage.reorganizeHint")}</Typography>
+                <Typography variant="body2">{t("adminSettings.storage.reorganizeLabel")}</Typography>
+                <Typography variant="caption" color="text.secondary">{t("adminSettings.storage.reorganizeHint")}</Typography>
               </Box>
             }
           />
@@ -211,7 +211,7 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
               disabled={storageLoading || storageSaving || (!isDirty && !storageApplyExisting)}
               onClick={saveStorageSettings}
             >
-              {storageSaving ? t("settings.storage.saving") : t("settings.storage.save")}
+              {storageSaving ? t("adminSettings.storage.saving") : t("adminSettings.storage.save")}
             </Button>
             {storageStatus && (
               <Typography variant="caption" color="text.secondary">{storageStatus}</Typography>

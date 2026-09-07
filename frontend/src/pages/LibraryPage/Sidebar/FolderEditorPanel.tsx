@@ -1,6 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import Paper from "@mui/material/Paper";
+import Dialog from "@mui/material/Dialog";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -65,14 +65,13 @@ export default function FolderEditorPanel({
   const { t } = useTranslation(["app", "common"]);
   const locationLabelId = `${mode}-folder-location-label`;
   return (
-    <Paper
-      elevation={0}
-      // Deliberately an inline non-modal Paper panel (not MUI Dialog / native <dialog>), just
-      // labeled for a11y.
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
-      role="dialog"
+    <Dialog
+      open
+      onClose={onCancel}
+      fullWidth
+      maxWidth="xs"
       aria-label={title}
-      sx={{ m: 1.5, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+      slotProps={{ paper: { sx: { p: 1.5, borderRadius: 2 } } }}
     >
       <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ mb: 1.5 }}>
         <Box sx={{ mt: 0.25, display: "flex" }}>{icon}</Box>
@@ -86,7 +85,6 @@ export default function FolderEditorPanel({
       </Stack>
       <Stack spacing={1.5}>
         <TextField
-          autoFocus
           size="small"
           label={t("sidebar.nameLabel")}
           value={name}
@@ -129,6 +127,6 @@ export default function FolderEditorPanel({
           </Button>
         </Stack>
       </Stack>
-    </Paper>
+    </Dialog>
   );
 }

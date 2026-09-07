@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import { type Print, type Plate, printsApi } from "../../api/prints";
-import { type PreviewSettings } from "../../utils/settings";
+import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { MODEL_EXTS, LIGHTBURN_EXTS } from "../../constants/fileTypes";
 import { extOf } from "../../utils/fileExtensions";
@@ -28,7 +28,7 @@ export function renderPreviewContent(
   variant: PreviewVariant,
   theme: ResolvedTheme,
   t: TFunction,
-  previewMode: PreviewSettings["mode"] = "automatic",
+  previewMode: PreviewMode = "automatic",
   activePlate?: Plate
 ) {
   const plate = variant === "modal" ? (activePlate || print.plates[0]) : print.plates[0];

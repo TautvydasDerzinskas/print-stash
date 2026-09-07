@@ -21,13 +21,14 @@ import FolderIcon from "@mui/icons-material/Folder";
 import EditIcon from "@mui/icons-material/Edit";
 import { UnauthorizedError } from "../../../api/client";
 import { type Print, printsApi } from "../../../api/prints";
-import { type PreviewSettings } from "../../../utils/settings";
+import { type PreviewMode } from "../../../api/settings";
 import { type ResolvedTheme } from "../../../constants/settingsOptions";
 import { MODEL_EXTS, ENGRAVING_EXTS } from "../../../constants/fileTypes";
 import { extOf } from "../../../utils/fileExtensions";
 import { entriesFromDataTransfer } from "../../../utils/uploadTree";
 import TagBadge from "../../../components/TagBadge";
 import TagInput from "../../../components/TagInput";
+import { useConfirm } from "../../../components/ConfirmProvider";
 import PreparedPrintSummary from "../PreparedPrintSummary";
 import { renderPreviewContent } from "../renderPreviewContent";
 import SupportingFilesPanel from "./SupportingFilesPanel";
@@ -95,11 +96,12 @@ export default function PrintCard({
   engraverLabel: string;
   onOpenInEngraving: (print: Print) => void;
   theme: ResolvedTheme;
-  previewMode: PreviewSettings["mode"];
+  previewMode: PreviewMode;
   onPrintChanged: (print: Print) => void;
   onUnauthorized?: () => void;
 }) {
   const { t } = useTranslation(["library", "common"]);
+  const confirmDialog = useConfirm();
   const [editingTags, setEditingTags] = useState(false);
   const [tagList, setTagList] = useState<string[]>(item.tags);
   const [editingNotes, setEditingNotes] = useState(false);
@@ -140,7 +142,7 @@ export default function PrintCard({
   }, [item.name, renaming]);
 
   const clearPreparedPrint = async () => {
-    if (!window.confirm(t("library:confirm.clearPrepared"))) return;
+    if (!(await confirmDialog({ message: t("library:confirm.clearPrepared"), destructive: true }))) return;
     setPreparedClearing(true);
     try {
       onPrintChanged(await printsApi.deletePreparedPrint(item.id));

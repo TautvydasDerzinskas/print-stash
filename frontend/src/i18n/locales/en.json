@@ -3,7 +3,6 @@
     "shell": {
       "apiUnreachable": "API unreachable. Ensure the API container is running and reachable.",
       "backToLibrary": "Back to library",
-      "confirmLogout": "Are you sure you want to log out?",
       "sessionExpired": "Your session has expired. Please sign in again."
     },
     "auth": {
@@ -33,9 +32,7 @@
       }
     },
     "sidebar": {
-      "brand": "PrintStash",
       "libraryTitle": "Library",
-      "folderCountTitle": "{{count}} folders",
       "newFolder": "New",
       "newFolderTitle": "New folder",
       "searchPlaceholder": "Search folders",
@@ -68,7 +65,6 @@
       "create": "Create",
       "saveChanges": "Save changes",
       "addFolderTagsPlaceholder": "Add folder tags",
-      "settings": "Settings",
       "errors": {
         "loadFolders": "Unable to load folders.",
         "createFolder": "Folder creation failed. Please try again.",
@@ -78,14 +74,16 @@
         "uploadFailed": "Failed to upload: {{files}}"
       },
       "multiplateImportFailedWithMessage": "Multi-plate import ({{message}})",
-      "multiplateImportFailed": "Multi-plate import"
+      "multiplateImportFailed": "Multi-plate import",
+      "dashboard": "Dashboard",
+      "administration": "Administration",
+      "expandSidebar": "Expand sidebar",
+      "collapseSidebar": "Collapse sidebar",
+      "foldersHeadingWithCount": "Folders ({{count}})"
     },
     "uploadBar": {
-      "upload": "Upload",
       "uploading": "Uploading…",
-      "uploadFolder": "Upload folder",
       "linkPlaceholder": "Paste model link (MakerWorld, Printables, Thingiverse...)",
-      "importLink": "Import link",
       "importing": "Importing…",
       "importFailed": "Import failed",
       "uploadFailed": "Failed to upload: {{files}}",
@@ -148,15 +146,6 @@
         "engravingTitle": "Engraving",
         "engravingHeading": "Open in Engraving Software",
         "engravingDesc": "Pick a laser app for vector and image files.",
-        "themeTitle": "Theme",
-        "themeHeading": "Appearance",
-        "themeDesc": "Switch between light, dark, and neon colors.",
-        "previewsTitle": "Performance",
-        "previewsHeading": "Model Previews",
-        "previewsDesc": "Choose automatic, on-demand, or disabled preview generation.",
-        "storageTitle": "Files",
-        "storageHeading": "Storage Structure",
-        "storageDesc": "Organize files with folders, model names, creators, tags, and collections.",
         "importsTitle": "Imports",
         "importsHeading": "Imports & Folder Scan",
         "importsDesc": "Manage import cookies and scan local folders.",
@@ -184,39 +173,6 @@
         "enableLabel": "Enable Open in Engraving Software",
         "preferredLabel": "Preferred engraving software",
         "footerNote": "The Open in Engraving Software button launches the custom protocol with a signed download URL."
-      },
-      "theme": {
-        "heading": "Theme",
-        "subtitle": "Choose how PrintStash looks and feels."
-      },
-      "storage": {
-        "heading": "Storage Structure",
-        "subtitle": "Choose how managed model files are organized on disk.",
-        "templateHeading": "Path template",
-        "templateDesc": "The model name is unique inside its PrintStash folder. Renaming a model also renames its file while preserving the extension.",
-        "templateLabel": "Template",
-        "templatePlaceholder": "{folder}/{model}/{filename}",
-        "examplePathsHeading": "Example paths (two plates of one print)",
-        "examplePathsEmpty": "Enter a template to preview its path",
-        "reorganizeLabel": "Reorganize existing managed files now",
-        "reorganizeHint": "Mounted no-copy files are skipped. Existing URLs continue to use stable print IDs.",
-        "save": "Save storage structure",
-        "saving": "Saving…",
-        "savedApplied": "Saved. Moved {{moved}} file(s){{skippedSuffix}}.",
-        "skippedSuffix": "; skipped {{skipped}}",
-        "savedNoApply": "Storage structure saved for new and updated models.",
-        "failed": "Failed to save storage settings."
-      },
-      "previews": {
-        "heading": "Model Previews",
-        "subtitle": "Control background preview work on this browser.",
-        "automaticLabel": "Automatic",
-        "automaticDesc": "Load missing previews only as cards enter view, then save them for future visits.",
-        "onDemandLabel": "On demand",
-        "onDemandDesc": "Show saved previews immediately and generate missing ones only when requested.",
-        "disabledLabel": "Disabled",
-        "disabledDesc": "Never generate card previews. Interactive viewing remains available by opening a model.",
-        "footerNote": "Embedded 3MF thumbnails and previously generated server thumbnails are always used when available."
       },
       "imports": {
         "heading": "Imports",
@@ -256,6 +212,64 @@
       "language": {
         "heading": "Interface Language",
         "subtitle": "Choose the language used throughout PrintStash."
+      }
+    },
+    "addMenu": {
+      "importTitle": "Import from link"
+    },
+    "userMenu": {
+      "theme": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "serviceConnected": "{{service}}: connected",
+      "serviceNotConnected": "{{service}}: not connected"
+    },
+    "notifications": {
+      "label": "Notifications"
+    },
+    "dashboard": {
+      "comingSoon": "Dashboard panels are coming soon."
+    },
+    "adminSettings": {
+      "pageTitle": "Admin Settings",
+      "back": "Back",
+      "root": {
+        "storageTitle": "Files",
+        "storageHeading": "Storage Structure",
+        "storageDesc": "Organize files with folders, model names, creators, tags, and collections.",
+        "previewsTitle": "Performance",
+        "previewsHeading": "Model Previews",
+        "previewsDesc": "Choose automatic, on-demand, or disabled preview generation."
+      },
+      "storage": {
+        "heading": "Storage Structure",
+        "subtitle": "Choose how managed model files are organized on disk.",
+        "templateHeading": "Path template",
+        "templateDesc": "The model name is unique inside its PrintStash folder. Renaming a model also renames its file while preserving the extension.",
+        "templateLabel": "Template",
+        "templatePlaceholder": "{folder}/{model}/{filename}",
+        "examplePathsHeading": "Example paths (two plates of one print)",
+        "examplePathsEmpty": "Enter a template to preview its path",
+        "reorganizeLabel": "Reorganize existing managed files now",
+        "reorganizeHint": "Mounted no-copy files are skipped. Existing URLs continue to use stable print IDs.",
+        "save": "Save storage structure",
+        "saving": "Saving…",
+        "savedApplied": "Saved. Moved {{moved}} file(s){{skippedSuffix}}.",
+        "skippedSuffix": "; skipped {{skipped}}",
+        "savedNoApply": "Storage structure saved for new and updated models.",
+        "failed": "Failed to save storage settings."
+      },
+      "previews": {
+        "heading": "Model Previews",
+        "subtitle": "Control background preview generation for the whole instance.",
+        "automaticLabel": "Automatic",
+        "automaticDesc": "Load missing previews only as cards enter view, then save them for future visits.",
+        "onDemandLabel": "On demand",
+        "onDemandDesc": "Show saved previews immediately and generate missing ones only when requested.",
+        "disabledLabel": "Disabled",
+        "disabledDesc": "Never generate card previews. Interactive viewing remains available by opening a model.",
+        "footerNote": "Embedded 3MF thumbnails and previously generated server thumbnails are always used when available.",
+        "failed": "Failed to save preview settings."
       }
     }
   },

@@ -10,6 +10,7 @@ import Typography from "@mui/material/Typography";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import { useTranslation } from "react-i18next";
 import { type Print, type PrintFile, printsApi } from "../../../api/prints";
+import { useConfirm } from "../../../components/ConfirmProvider";
 
 // The "Supporting files" list/upload/remove panel on a PrintCard -- self-contained state (its own
 // expanded/loading/uploading flags and file list) that only PrintCard renders, so it lives under
@@ -22,6 +23,7 @@ export default function SupportingFilesPanel({
   onPrintChanged: (print: Print) => void;
 }) {
   const { t } = useTranslation(["library"]);
+  const confirmDialog = useConfirm();
   const [filesExpanded, setFilesExpanded] = useState(false);
   const [supportingFiles, setSupportingFiles] = useState<PrintFile[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
@@ -67,7 +69,8 @@ export default function SupportingFilesPanel({
   };
 
   const removeRelatedFile = async (file: PrintFile) => {
-    if (!window.confirm(t("library:confirm.removeFile", { filename: file.filename }))) return;
+    const message = t("library:confirm.removeFile", { filename: file.filename });
+    if (!(await confirmDialog({ message, confirmLabel: t("common:remove"), destructive: true }))) return;
     try {
       const updated = await printsApi.deleteFile(item.id, file.id);
       onPrintChanged(updated);

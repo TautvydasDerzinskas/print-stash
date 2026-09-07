@@ -7,19 +7,18 @@ import Typography from "@mui/material/Typography";
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import Alert from "@mui/material/Alert";
-import { type ResolvedTheme } from "../../constants/settingsOptions";
+import type { AuthUser } from "../../api/auth";
 import Wordmark from "../../components/Wordmark";
 import SignInPanel from "./SignInPanel";
 import RegisterPanel from "./RegisterPanel";
 
 type Props = {
-  onSuccess: (token: string, expires_in: number) => void;
+  onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
   apiUp: boolean | null;
-  theme: ResolvedTheme;
   allowRegistrations: boolean;
 };
 
-export default function AuthPage({ onSuccess, apiUp, theme, allowRegistrations }: Props) {
+export default function AuthPage({ onSuccess, apiUp, allowRegistrations }: Props) {
   const { t } = useTranslation("app");
   const [tab, setTab] = React.useState<"signIn" | "register">("signIn");
 
@@ -37,7 +36,7 @@ export default function AuthPage({ onSuccess, apiUp, theme, allowRegistrations }
     >
       <Stack spacing={3} sx={{ mb: 3, textAlign: "center" }}>
         <Box sx={{ display: "flex", justifyContent: "center" }}>
-          <Wordmark theme={theme} size="lg" />
+          <Wordmark size="lg" />
         </Box>
         <Typography variant="body2" color="text.secondary">
           {t("auth.subtitle")}

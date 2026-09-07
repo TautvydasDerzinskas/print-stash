@@ -5,10 +5,10 @@ import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
-import { authApi } from "../../api/auth";
+import { authApi, type AuthUser } from "../../api/auth";
 
 type Props = {
-  onSuccess: (token: string, expires_in: number) => void;
+  onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
 };
 
 export default function SignInPanel({ onSuccess }: Props) {
@@ -24,7 +24,7 @@ export default function SignInPanel({ onSuccess }: Props) {
     setLoading(true);
     try {
       const res = await authApi.login(email, password);
-      onSuccess(res.token, res.expires_in);
+      onSuccess(res.token, res.expires_in, res.user);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t("auth.signIn.failed"));

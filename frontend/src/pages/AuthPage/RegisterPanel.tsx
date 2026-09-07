@@ -6,12 +6,12 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
-import { authApi } from "../../api/auth";
+import { authApi, type AuthUser } from "../../api/auth";
 
 const MIN_PASSWORD_LENGTH = 8;
 
 type Props = {
-  onSuccess: (token: string, expires_in: number) => void;
+  onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
   allowRegistrations: boolean;
 };
 
@@ -38,7 +38,7 @@ export default function RegisterPanel({ onSuccess, allowRegistrations }: Props) 
     setLoading(true);
     try {
       const res = await authApi.register({ displayName, email, password });
-      onSuccess(res.token, res.expires_in);
+      onSuccess(res.token, res.expires_in, res.user);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t("auth.register.failed"));

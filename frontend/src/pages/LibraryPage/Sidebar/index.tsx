@@ -12,13 +12,22 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Chip from "@mui/material/Chip";
+import Divider from "@mui/material/Divider";
+import Collapse from "@mui/material/Collapse";
+import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import CloseIcon from "@mui/icons-material/Close";
 import CreateNewFolderIcon from "@mui/icons-material/CreateNewFolder";
 import EditIcon from "@mui/icons-material/Edit";
-import SettingsIcon from "@mui/icons-material/Settings";
 import LayersIcon from "@mui/icons-material/Layers";
+import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
+import SettingsIcon from "@mui/icons-material/Settings";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { UnauthorizedError } from "../../../api/client";
 import { type Folder, foldersApi } from "../../../api/folders";
 import { printsApi } from "../../../api/prints";
@@ -31,6 +40,9 @@ import FolderActionMenu from "./FolderActionMenu";
 import FolderEditorPanel, { type FolderOption } from "./FolderEditorPanel";
 import { isFileDrag } from "../../../utils/dragEvents";
 import { saveResponseToDisk } from "../../../utils/downloadResponse";
+import Wordmark from "../../../components/Wordmark";
+import { useConfirm } from "../../../components/ConfirmProvider";
+import type { ActiveView } from "../../../constants/views";
 
 // Every dropped entry's relativePath equals its bare filename when the
 // selection has no folder structure -- that's the signal for the
@@ -45,15 +57,44 @@ function handleSidebarDragOver(e: React.DragEvent<HTMLElement>) {
   e.preventDefault();
 }
 
+const SIDEBAR_WIDTH = 280;
+const SIDEBAR_COLLAPSED_WIDTH = 72;
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "printstash_sidebar_collapsed";
+
+/** Icon-only rail row used for every top-level nav item (Dashboard, All files, Administration)
+ *  once the sidebar is collapsed -- a tooltip stands in for the label. */
+function CollapsedNavIcon({ icon, label, selected, onClick }: {
+  icon: React.ReactNode;
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Tooltip title={label} placement="right">
+      <ListItemButton
+        selected={selected}
+        onClick={onClick}
+        sx={{ borderRadius: 1, mb: 0.5, justifyContent: "center", px: 0 }}
+      >
+        <ListItemIcon sx={{ minWidth: 0, color: selected ? "primary.main" : "text.secondary" }}>
+          {icon}
+        </ListItemIcon>
+      </ListItemButton>
+    </Tooltip>
+  );
+}
+
 type Props = {
   selectedId?: string | null;
   onSelect: (id: string | null) => void;
   onFoldersChanged?: () => void;
   foldersVersion?: number;
   onUnauthorized?: () => void;
-  onOpenSettings?: () => void;
-  activeView?: "library" | "settings";
   onAssetsChanged?: () => void;
+  activeView: ActiveView;
+  isAdmin: boolean;
+  onOpenDashboard: () => void;
+  onOpenAdminSettings: () => void;
 };
 
 const DROP_ALL_ID = "__all";
@@ -64,12 +105,19 @@ export default function Sidebar({
   onFoldersChanged,
   foldersVersion,
   onUnauthorized,
-  onOpenSettings,
-  activeView = "library",
   onAssetsChanged,
+  activeView,
+  isAdmin,
+  onOpenDashboard,
+  onOpenAdminSettings,
 }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(SIDEBAR_COLLAPSED_STORAGE_KEY) === "true";
+  });
+  const [adminExpanded, setAdminExpanded] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newParent, setNewParent] = useState<string | null>(null);
@@ -85,8 +133,22 @@ export default function Sidebar({
   const [menuState, setMenuState] = useState<{ folderId: string; anchorEl: HTMLElement } | null>(null);
   const zipPrompt = useZipImportPrompt();
   const importModePrompt = useImportModePrompt();
+  const confirmDialog = useConfirm();
 
   const untitledLabel = t("sidebar.untitled");
+  const adminOpen = adminExpanded || activeView === "adminSettings";
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(SIDEBAR_COLLAPSED_STORAGE_KEY, String(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
 
   const uploadFlatAsMultiplate = async (files: File[], folderId: string | null) => {
     try {
@@ -288,7 +350,7 @@ export default function Sidebar({
   };
 
   const remove = async (id: string) => {
-    if (!confirm(t("sidebar.confirmDeleteFolder"))) return;
+    if (!(await confirmDialog({ message: t("sidebar.confirmDeleteFolder"), destructive: true }))) return;
     setBusy(true);
     try {
       await foldersApi.delete(id);
@@ -457,6 +519,9 @@ export default function Sidebar({
     [folderOptions, editing, isDescendant]
   );
 
+  const currentWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+  const allFilesSelected = activeView === "library" && !selectedId;
+
   return (
     <Box
       component="aside"
@@ -464,7 +529,7 @@ export default function Sidebar({
       onDragLeave={handleSidebarDragLeave}
       onDrop={handleSidebarDrop}
       sx={{
-        width: 280,
+        width: currentWidth,
         flexShrink: 0,
         height: "100vh",
         position: "sticky",
@@ -475,111 +540,191 @@ export default function Sidebar({
         borderColor: "divider",
         bgcolor: "background.paper",
         overflow: "hidden",
+        transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
       }}
     >
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 2, pt: 2, pb: 1 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {t("sidebar.brand")}
-          </Typography>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="h6" noWrap>{t("sidebar.libraryTitle")}</Typography>
-            <Chip size="small" label={folders.length} title={t("sidebar.folderCountTitle", { count: folders.length }) ?? undefined} />
-          </Stack>
-        </Box>
-        <Button
-          size="small"
-          variant="outlined"
-          startIcon={<AddIcon fontSize="small" />}
-          onClick={() => startCreate(null)}
-          title={t("sidebar.newFolderTitle") ?? undefined}
-        >
-          {t("sidebar.newFolder")}
-        </Button>
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent={collapsed ? "center" : "space-between"}
+        sx={{ px: collapsed ? 1 : 2, pt: 2, pb: 1.5 }}
+      >
+        {!collapsed && <Wordmark size="sm" />}
+        <Tooltip title={collapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}>
+          <IconButton size="small" onClick={toggleCollapsed}>
+            {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
       </Stack>
 
-      <Box sx={{ px: 2, pb: 1 }}>
-        <TextField
-          fullWidth
-          size="small"
-          value={query}
-          onChange={event => setQuery(event.target.value)}
-          placeholder={t("sidebar.searchPlaceholder") ?? undefined}
-          inputProps={{ "aria-label": t("sidebar.searchAriaLabel") ?? undefined }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon fontSize="small" />
-              </InputAdornment>
-            ),
-            endAdornment: query ? (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={() => setQuery("")}
-                  aria-label={t("sidebar.clearSearchAria") ?? undefined}
-                >
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              </InputAdornment>
-            ) : undefined,
-          }}
-        />
-      </Box>
-
-      <Box component="nav" aria-label={t("sidebar.foldersHeading") ?? undefined} sx={{ flex: 1, overflow: "auto", px: 1 }}>
-        <List disablePadding>
+      <List disablePadding sx={{ px: collapsed ? 0.5 : 1 }}>
+        {collapsed ? (
+          <CollapsedNavIcon
+            icon={<SpaceDashboardIcon fontSize="small" />}
+            label={t("sidebar.dashboard")}
+            selected={activeView === "dashboard"}
+            onClick={onOpenDashboard}
+          />
+        ) : (
           <ListItemButton
-            selected={!selectedId}
-            onClick={() => onSelect(null)}
-            onDragOver={handleDragOverTarget(DROP_ALL_ID)}
-            onDrop={handleDropFiles(null)}
-            sx={{
-              borderRadius: 1,
-              mb: 0.5,
-              ...(dropTargetId === DROP_ALL_ID && {
-                outline: "2px dashed",
-                outlineColor: "primary.main",
-                outlineOffset: -2,
-              }),
-            }}
+            selected={activeView === "dashboard"}
+            onClick={onOpenDashboard}
+            sx={{ borderRadius: 1, mb: 0.5 }}
           >
             <ListItemIcon sx={{ minWidth: 30 }}>
-              <LayersIcon fontSize="small" />
+              <SpaceDashboardIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary={t("sidebar.allFiles")} primaryTypographyProps={{ variant: "body2" }} />
-            <Chip size="small" variant="outlined" label={t("sidebar.root")} />
+            <ListItemText primary={t("sidebar.dashboard")} primaryTypographyProps={{ variant: "body2" }} />
           </ListItemButton>
-        </List>
+        )}
+      </List>
 
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, py: 0.75 }}>
-          <Typography variant="caption" color="text.secondary" sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
-            {t("sidebar.foldersHeading")}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {visibleFolderIds ? visibleFolderIds.size : folders.length}
-          </Typography>
-        </Stack>
+      <Box
+        component="nav"
+        aria-label={t("sidebar.foldersHeading") ?? undefined}
+        sx={{ flex: 1, overflow: "auto", px: collapsed ? 0.5 : 1 }}
+      >
+        {!collapsed && (
+          <>
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 1, pt: 1, pb: 1 }}>
+              <Typography variant="h6" noWrap>
+                {t("sidebar.foldersHeadingWithCount", { count: visibleFolderIds ? visibleFolderIds.size : folders.length })}
+              </Typography>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon fontSize="small" />}
+                onClick={() => startCreate(null)}
+                title={t("sidebar.newFolderTitle") ?? undefined}
+              >
+                {t("sidebar.newFolder")}
+              </Button>
+            </Stack>
+
+            <Box sx={{ px: 1, pb: 1 }}>
+              <TextField
+                fullWidth
+                size="small"
+                value={query}
+                onChange={event => setQuery(event.target.value)}
+                placeholder={t("sidebar.searchPlaceholder") ?? undefined}
+                inputProps={{ "aria-label": t("sidebar.searchAriaLabel") ?? undefined }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: query ? (
+                    <InputAdornment position="end">
+                      <IconButton
+                        size="small"
+                        onClick={() => setQuery("")}
+                        aria-label={t("sidebar.clearSearchAria") ?? undefined}
+                      >
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ) : undefined,
+                }}
+              />
+            </Box>
+
+            <List disablePadding>
+              {(childrenMap["__root"] || []).map(f => (
+                <FolderTreeRow key={f.id} folder={f} depth={0} ctx={treeCtx} />
+              ))}
+            </List>
+            {folders.length === 0 && (
+              <Stack alignItems="center" spacing={1} sx={{ py: 4, color: "text.secondary" }}>
+                <CreateNewFolderIcon />
+                <Typography variant="body2">{t("sidebar.noFoldersYet")}</Typography>
+                <Button size="small" onClick={() => startCreate(null)}>{t("sidebar.createFirstFolder")}</Button>
+              </Stack>
+            )}
+            {!!folders.length && visibleFolderIds?.size === 0 && (
+              <Stack alignItems="center" spacing={1} sx={{ py: 4, color: "text.secondary" }}>
+                <SearchIcon />
+                <Typography variant="body2">{t("sidebar.noMatchingFolders")}</Typography>
+                <Button size="small" onClick={() => setQuery("")}>{t("sidebar.clearSearch")}</Button>
+              </Stack>
+            )}
+
+            <Divider sx={{ my: 1 }} />
+          </>
+        )}
 
         <List disablePadding>
-          {(childrenMap["__root"] || []).map(f => (
-            <FolderTreeRow key={f.id} folder={f} depth={0} ctx={treeCtx} />
-          ))}
+          {collapsed ? (
+            <CollapsedNavIcon
+              icon={<LayersIcon fontSize="small" />}
+              label={t("sidebar.allFiles")}
+              selected={allFilesSelected}
+              onClick={() => onSelect(null)}
+            />
+          ) : (
+            <ListItemButton
+              selected={allFilesSelected}
+              onClick={() => onSelect(null)}
+              onDragOver={handleDragOverTarget(DROP_ALL_ID)}
+              onDrop={handleDropFiles(null)}
+              sx={{
+                borderRadius: 1,
+                mb: 0.5,
+                ...(dropTargetId === DROP_ALL_ID && {
+                  outline: "2px dashed",
+                  outlineColor: "primary.main",
+                  outlineOffset: -2,
+                }),
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <LayersIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={t("sidebar.allFiles")} primaryTypographyProps={{ variant: "body2" }} />
+              <Chip size="small" variant="outlined" label={t("sidebar.root")} />
+            </ListItemButton>
+          )}
+
+          {isAdmin && (
+            collapsed ? (
+              <CollapsedNavIcon
+                icon={<AdminPanelSettingsIcon fontSize="small" />}
+                label={t("sidebar.administration")}
+                selected={activeView === "adminSettings"}
+                onClick={onOpenAdminSettings}
+              />
+            ) : (
+              <>
+                <ListItemButton
+                  selected={false}
+                  onClick={() => setAdminExpanded(v => !v)}
+                  sx={{ borderRadius: 1, mb: 0.5 }}
+                >
+                  <ListItemIcon sx={{ minWidth: 30 }}>
+                    <AdminPanelSettingsIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={t("sidebar.administration")} primaryTypographyProps={{ variant: "body2" }} />
+                  {adminOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                </ListItemButton>
+                <Collapse in={adminOpen}>
+                  <List disablePadding>
+                    <ListItemButton
+                      selected={activeView === "adminSettings"}
+                      onClick={onOpenAdminSettings}
+                      sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 30 }}>
+                        <SettingsIcon fontSize="small" />
+                      </ListItemIcon>
+                      <ListItemText primary={t("common:settings")} primaryTypographyProps={{ variant: "body2" }} />
+                    </ListItemButton>
+                  </List>
+                </Collapse>
+              </>
+            )
+          )}
         </List>
-        {folders.length === 0 && (
-          <Stack alignItems="center" spacing={1} sx={{ py: 4, color: "text.secondary" }}>
-            <CreateNewFolderIcon />
-            <Typography variant="body2">{t("sidebar.noFoldersYet")}</Typography>
-            <Button size="small" onClick={() => startCreate(null)}>{t("sidebar.createFirstFolder")}</Button>
-          </Stack>
-        )}
-        {!!folders.length && visibleFolderIds?.size === 0 && (
-          <Stack alignItems="center" spacing={1} sx={{ py: 4, color: "text.secondary" }}>
-            <SearchIcon />
-            <Typography variant="body2">{t("sidebar.noMatchingFolders")}</Typography>
-            <Button size="small" onClick={() => setQuery("")}>{t("sidebar.clearSearch")}</Button>
-          </Stack>
-        )}
       </Box>
 
       <FolderActionMenu
@@ -640,19 +785,6 @@ export default function Sidebar({
         />
       )}
 
-      <Box sx={{ borderTop: "1px solid", borderColor: "divider", p: 1 }}>
-        <ListItemButton
-          selected={activeView === "settings"}
-          onClick={onOpenSettings}
-          aria-label={t("common:settings") ?? undefined}
-          sx={{ borderRadius: 1 }}
-        >
-          <ListItemIcon sx={{ minWidth: 30 }}>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary={t("common:settings")} primaryTypographyProps={{ variant: "body2" }} />
-        </ListItemButton>
-      </Box>
       {zipPrompt.modal}
       {importModePrompt.modal}
     </Box>

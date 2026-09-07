@@ -31,14 +31,9 @@ export function paletteForTheme(theme: ResolvedTheme): ModelPalette {
   return {
     color: new THREE.Color(modelColor),
     emissive: new THREE.Color(modelEmissive),
-    emissiveIntensity:
-      theme === "neon" || theme === "purple" || theme === "blue"
-        ? 0.35
-        : theme === "dark"
-          ? 0.08
-          : 0.05,
+    emissiveIntensity: theme === "dark" ? 0.08 : 0.05,
     metalness: 0.2,
-    roughness: theme === "neon" || theme === "purple" || theme === "blue" ? 0.6 : 0.8,
+    roughness: 0.8,
   };
 }
 

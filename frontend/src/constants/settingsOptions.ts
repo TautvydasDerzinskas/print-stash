@@ -25,17 +25,14 @@ export const ENGRAVER_OPTIONS: EngraverOption[] = [
   { id: "other", label: "Other / Manual" },
 ];
 
-/** The user's persisted theme choice — "system" defers to the OS preference. */
-export type ThemeSelection = "system" | "light" | "dark" | "neon" | "purple" | "blue";
-/** A theme choice after "system" has been resolved to light/dark — what buildTheme() consumes. */
-export type ResolvedTheme = "light" | "dark" | "neon" | "purple" | "blue";
+/** The user's persisted theme choice. There's no "system" option -- the user picks explicitly. */
+export type ThemeSelection = "light" | "dark";
+/** Alias kept for call sites written against the pre-reduction light/dark/neon/purple/blue
+ *  palette -- now identical to ThemeSelection since every selection is already resolved. */
+export type ResolvedTheme = ThemeSelection;
 export type ThemeOption = { id: ThemeSelection; label: string; description: string };
 
 export const THEME_OPTIONS: ThemeOption[] = [
-  { id: "system", label: "System", description: "Match your device preference." },
   { id: "light", label: "Light", description: "Bright backgrounds, dark text." },
   { id: "dark", label: "Dark", description: "Dimmed panels for low light." },
-  { id: "neon", label: "Neon Green", description: "Black UI with neon green accents." },
-  { id: "purple", label: "Neon Purple", description: "Black UI with purple glow highlights." },
-  { id: "blue", label: "Neon Blue", description: "Black UI with blue glow highlights." },
 ];

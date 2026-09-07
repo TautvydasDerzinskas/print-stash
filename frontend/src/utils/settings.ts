@@ -22,19 +22,12 @@ export type ThingiverseSettings = {
   cookie: string;
 };
 
-export type PreviewMode = "automatic" | "on-demand" | "disabled";
-
-export type PreviewSettings = {
-  mode: PreviewMode;
-};
-
 export type AppSettings = {
   slicer: SlicerSettings;
   engraving: EngravingSettings;
   theme: ThemeSettings;
   makerworld: MakerWorldSettings;
   thingiverse: ThingiverseSettings;
-  previews: PreviewSettings;
 };
 
 const STORAGE_KEY = "printstash_settings";
@@ -49,16 +42,13 @@ const DEFAULT_SETTINGS: AppSettings = {
     selected: "lightburn",
   },
   theme: {
-    selected: "system",
+    selected: "light",
   },
   makerworld: {
     cookie: "",
   },
   thingiverse: {
     cookie: "",
-  },
-  previews: {
-    mode: "automatic",
   },
 };
 
@@ -88,10 +78,6 @@ export function loadSettings(): AppSettings {
     const thingiverseCookie = typeof thingiverse.cookie === "string"
       ? thingiverse.cookie
       : DEFAULT_SETTINGS.thingiverse.cookie;
-    const previews = parsed.previews || {};
-    const previewMode = ["automatic", "on-demand", "disabled"].includes(previews.mode)
-      ? previews.mode as PreviewMode
-      : DEFAULT_SETTINGS.previews.mode;
     return {
       slicer: {
         enabled,
@@ -109,9 +95,6 @@ export function loadSettings(): AppSettings {
       },
       thingiverse: {
         cookie: thingiverseCookie,
-      },
-      previews: {
-        mode: previewMode,
       },
     };
   } catch {

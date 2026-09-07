@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   engraverLabelFor,
-  resolveTheme,
   slicerLabelFor,
 } from "./settingsHelpers";
 
@@ -16,10 +15,5 @@ describe("application settings helpers", () => {
   it("uses safe fallback labels for unknown applications", () => {
     expect(slicerLabelFor("unknown")).toBe("Slicer");
     expect(engraverLabelFor(null)).toBe("Engraving");
-  });
-
-  it("resolves system theme safely without a browser window", () => {
-    expect(resolveTheme("system")).toBe("light");
-    expect(resolveTheme("purple")).toBe("purple");
   });
 });

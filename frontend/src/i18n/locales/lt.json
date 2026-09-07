@@ -3,7 +3,6 @@
     "shell": {
       "apiUnreachable": "API nepasiekiamas. Įsitikinkite, kad API konteineris veikia ir pasiekiamas.",
       "backToLibrary": "Grįžti į biblioteką",
-      "confirmLogout": "Ar tikrai norite atsijungti?",
       "sessionExpired": "Jūsų sesija baigėsi. Prašome prisijungti iš naujo."
     },
     "auth": {
@@ -33,9 +32,7 @@
       }
     },
     "sidebar": {
-      "brand": "PrintStash",
       "libraryTitle": "Biblioteka",
-      "folderCountTitle": "{{count}} aplankų",
       "newFolder": "Naujas",
       "newFolderTitle": "Naujas aplankas",
       "searchPlaceholder": "Ieškoti aplankų",
@@ -68,7 +65,6 @@
       "create": "Sukurti",
       "saveChanges": "Išsaugoti pakeitimus",
       "addFolderTagsPlaceholder": "Pridėti aplanko žymas",
-      "settings": "Nustatymai",
       "errors": {
         "loadFolders": "Nepavyko įkelti aplankų.",
         "createFolder": "Nepavyko sukurti aplanko. Bandykite dar kartą.",
@@ -78,14 +74,16 @@
         "uploadFailed": "Nepavyko įkelti: {{files}}"
       },
       "multiplateImportFailedWithMessage": "Kelių plokščių importas ({{message}})",
-      "multiplateImportFailed": "Kelių plokščių importas"
+      "multiplateImportFailed": "Kelių plokščių importas",
+      "dashboard": "Valdymo skydas",
+      "administration": "Administravimas",
+      "expandSidebar": "Išskleisti šoninę juostą",
+      "collapseSidebar": "Suskleisti šoninę juostą",
+      "foldersHeadingWithCount": "Aplankai ({{count}})"
     },
     "uploadBar": {
-      "upload": "Įkelti",
       "uploading": "Įkeliama…",
-      "uploadFolder": "Įkelti aplanką",
       "linkPlaceholder": "Įklijuokite modelio nuorodą (MakerWorld, Printables, Thingiverse...)",
-      "importLink": "Importuoti nuorodą",
       "importing": "Importuojama…",
       "importFailed": "Importuoti nepavyko",
       "uploadFailed": "Nepavyko įkelti: {{files}}",
@@ -148,15 +146,6 @@
         "engravingTitle": "Graviravimas",
         "engravingHeading": "Atverti graviravimo programoje",
         "engravingDesc": "Pasirinkite lazerio programą vektoriniams ir vaizdo failams.",
-        "themeTitle": "Tema",
-        "themeHeading": "Išvaizda",
-        "themeDesc": "Perjunkite tarp šviesios, tamsios ir neoninių spalvų.",
-        "previewsTitle": "Našumas",
-        "previewsHeading": "Modelių peržiūros",
-        "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą.",
-        "storageTitle": "Failai",
-        "storageHeading": "Saugojimo struktūra",
-        "storageDesc": "Tvarkykite failus pagal aplankus, modelių pavadinimus, autorius, žymas ir kolekcijas.",
         "importsTitle": "Importas",
         "importsHeading": "Importas ir aplankų skenavimas",
         "importsDesc": "Tvarkykite importo slapukus ir skenuokite vietinius aplankus.",
@@ -184,39 +173,6 @@
         "enableLabel": "Įjungti „Atverti graviravimo programoje“",
         "preferredLabel": "Pageidaujama graviravimo programa",
         "footerNote": "Mygtukas „Atverti graviravimo programoje“ paleidžia pasirinktinį protokolą su pasirašytu atsisiuntimo adresu."
-      },
-      "theme": {
-        "heading": "Tema",
-        "subtitle": "Pasirinkite, kaip PrintStash atrodo ir jaučiasi."
-      },
-      "storage": {
-        "heading": "Saugojimo struktūra",
-        "subtitle": "Pasirinkite, kaip valdomi modelių failai tvarkomi diske.",
-        "templateHeading": "Kelio šablonas",
-        "templateDesc": "Modelio pavadinimas yra unikalus jo PrintStash aplanke. Modelio pervadinimas taip pat pervadina jo failą, išsaugant plėtinį.",
-        "templateLabel": "Šablonas",
-        "templatePlaceholder": "{folder}/{model}/{filename}",
-        "examplePathsHeading": "Kelių pavyzdžiai (dvi vieno modelio plokštės)",
-        "examplePathsEmpty": "Įveskite šabloną, kad pamatytumėte kelio pavyzdį",
-        "reorganizeLabel": "Pertvarkyti esamus valdomus failus dabar",
-        "reorganizeHint": "Prijungti be kopijavimo failai praleidžiami. Esami adresai toliau naudoja stabilius modelio ID.",
-        "save": "Išsaugoti saugojimo struktūrą",
-        "saving": "Saugoma…",
-        "savedApplied": "Išsaugota. Perkelta {{moved}} failų{{skippedSuffix}}.",
-        "skippedSuffix": "; praleista {{skipped}}",
-        "savedNoApply": "Saugojimo struktūra išsaugota naujiems ir atnaujintiems modeliams.",
-        "failed": "Nepavyko išsaugoti saugojimo nustatymų."
-      },
-      "previews": {
-        "heading": "Modelių peržiūros",
-        "subtitle": "Valdykite fono peržiūrų generavimą šioje naršyklėje.",
-        "automaticLabel": "Automatinis",
-        "automaticDesc": "Trūkstamas peržiūras įkelti tik joms atsiradus ekrane, tada išsaugoti ateičiai.",
-        "onDemandLabel": "Pagal poreikį",
-        "onDemandDesc": "Iš karto rodyti išsaugotas peržiūras, o trūkstamas generuoti tik paprašius.",
-        "disabledLabel": "Išjungta",
-        "disabledDesc": "Niekada negeneruoti kortelių peržiūrų. Interaktyvi peržiūra vis tiek pasiekiama atidarius modelį.",
-        "footerNote": "Įtaisytosios 3MF miniatiūros ir anksčiau sugeneruotos serverio miniatiūros visada naudojamos, kai jos yra."
       },
       "imports": {
         "heading": "Importas",
@@ -256,6 +212,64 @@
       "language": {
         "heading": "Sąsajos kalba",
         "subtitle": "Pasirinkite kalbą, naudojamą visame PrintStash."
+      }
+    },
+    "addMenu": {
+      "importTitle": "Importuoti iš nuorodos"
+    },
+    "userMenu": {
+      "theme": "Tema",
+      "light": "Šviesi",
+      "dark": "Tamsi",
+      "serviceConnected": "{{service}}: prijungta",
+      "serviceNotConnected": "{{service}}: neprijungta"
+    },
+    "notifications": {
+      "label": "Pranešimai"
+    },
+    "dashboard": {
+      "comingSoon": "Valdymo skydo panelės netrukus atsiras."
+    },
+    "adminSettings": {
+      "pageTitle": "Administravimo nustatymai",
+      "back": "Atgal",
+      "root": {
+        "storageTitle": "Failai",
+        "storageHeading": "Saugojimo struktūra",
+        "storageDesc": "Tvarkykite failus pagal aplankus, modelių pavadinimus, autorius, žymas ir kolekcijas.",
+        "previewsTitle": "Našumas",
+        "previewsHeading": "Modelių peržiūros",
+        "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą."
+      },
+      "storage": {
+        "heading": "Saugojimo struktūra",
+        "subtitle": "Pasirinkite, kaip valdomi modelių failai tvarkomi diske.",
+        "templateHeading": "Kelio šablonas",
+        "templateDesc": "Modelio pavadinimas yra unikalus jo PrintStash aplanke. Modelio pervadinimas taip pat pervadina jo failą, išsaugant plėtinį.",
+        "templateLabel": "Šablonas",
+        "templatePlaceholder": "{folder}/{model}/{filename}",
+        "examplePathsHeading": "Kelių pavyzdžiai (dvi vieno modelio plokštės)",
+        "examplePathsEmpty": "Įveskite šabloną, kad pamatytumėte kelio pavyzdį",
+        "reorganizeLabel": "Pertvarkyti esamus valdomus failus dabar",
+        "reorganizeHint": "Prijungti be kopijavimo failai praleidžiami. Esami adresai toliau naudoja stabilius modelio ID.",
+        "save": "Išsaugoti saugojimo struktūrą",
+        "saving": "Saugoma…",
+        "savedApplied": "Išsaugota. Perkelta {{moved}} failų{{skippedSuffix}}.",
+        "skippedSuffix": "; praleista {{skipped}}",
+        "savedNoApply": "Saugojimo struktūra išsaugota naujiems ir atnaujintiems modeliams.",
+        "failed": "Nepavyko išsaugoti saugojimo nustatymų."
+      },
+      "previews": {
+        "heading": "Modelių peržiūros",
+        "subtitle": "Valdykite fono peržiūrų generavimą visai sistemai.",
+        "automaticLabel": "Automatinis",
+        "automaticDesc": "Trūkstamas peržiūras įkelti tik joms atsiradus ekrane, tada išsaugoti ateičiai.",
+        "onDemandLabel": "Pagal poreikį",
+        "onDemandDesc": "Iš karto rodyti išsaugotas peržiūras, o trūkstamas generuoti tik paprašius.",
+        "disabledLabel": "Išjungta",
+        "disabledDesc": "Niekada negeneruoti kortelių peržiūrų. Interaktyvi peržiūra vis tiek pasiekiama atidarius modelį.",
+        "footerNote": "Įtaisytosios 3MF miniatiūros ir anksčiau sugeneruotos serverio miniatiūros visada naudojamos, kai jos yra.",
+        "failed": "Nepavyko išsaugoti peržiūrų nustatymų."
       }
     }
   },

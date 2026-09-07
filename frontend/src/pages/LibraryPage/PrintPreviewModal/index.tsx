@@ -23,6 +23,7 @@ import TagBadge from "../../../components/TagBadge";
 import PreparedPrintSummary from "../PreparedPrintSummary";
 import { renderPreviewContent } from "../renderPreviewContent";
 import PlateSwitcher from "./PlateSwitcher";
+import { useConfirm } from "../../../components/ConfirmProvider";
 
 export default function PrintPreviewModal({
   print,
@@ -50,6 +51,7 @@ export default function PrintPreviewModal({
   onUnauthorized?: () => void;
 }) {
   const { t } = useTranslation(["library", "common"]);
+  const confirmDialog = useConfirm();
   const [activePlateId, setActivePlateId] = useState<string | null>(print.plates[0]?.id || null);
   const [addingPlate, setAddingPlate] = useState(false);
   const [removingPlateId, setRemovingPlateId] = useState<string | null>(null);
@@ -90,7 +92,8 @@ export default function PrintPreviewModal({
 
   const handleRemovePlate = async (plate: Plate) => {
     if (print.plates.length <= 1) return;
-    if (!window.confirm(t("library:confirm.removePlate", { filename: plate.filename }))) return;
+    const message = t("library:confirm.removePlate", { filename: plate.filename });
+    if (!(await confirmDialog({ message, confirmLabel: t("common:remove"), destructive: true }))) return;
     setRemovingPlateId(plate.id);
     try {
       const { print: updated } = await printsApi.deletePlate(print.id, plate.id);

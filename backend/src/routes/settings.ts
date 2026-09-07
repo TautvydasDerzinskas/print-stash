@@ -3,7 +3,12 @@ import { z } from "zod";
 import { requireAdmin, requireAuth } from "../auth";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { getAllowRegistrations, setAllowRegistrations } from "../services/settingsService";
+import {
+  getAllowRegistrations,
+  getPreviewMode,
+  setAllowRegistrations,
+  setPreviewMode,
+} from "../services/settingsService";
 import {
   DEFAULT_STORAGE_TEMPLATE,
   STORAGE_TEMPLATE_TOKENS,
@@ -28,8 +33,11 @@ function storageSettingsOut(template: string, moved = 0, skipped = 0) {
   };
 }
 
+// Admin-only end to end now: the storage template affects every user's files, and the only UI
+// that reads this lives in the admin settings panel.
 router.get(
   "/settings/storage",
+  requireAdmin,
   asyncHandler(async (_req, res) => {
     const template = validateStorageTemplate(await getStorageTemplate());
     res.json(storageSettingsOut(template));
@@ -68,6 +76,26 @@ router.post(
     const body = parseBody(registrationsSchema, req.body);
     await setAllowRegistrations(body.allow_registrations);
     res.json({ allow_registrations: body.allow_registrations });
+  }),
+);
+
+// Read is open to every user -- LibraryPage needs the current mode to know whether to generate
+// previews at all. Only admins can change it (see getPreviewMode's instance-wide rationale).
+router.get(
+  "/settings/previews",
+  asyncHandler(async (_req, res) => {
+    res.json({ mode: await getPreviewMode() });
+  }),
+);
+
+const previewsSchema = z.object({ mode: z.enum(["automatic", "on-demand", "disabled"]) });
+router.post(
+  "/settings/previews",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(previewsSchema, req.body);
+    await setPreviewMode(body.mode);
+    res.json({ mode: body.mode });
   }),
 );
 

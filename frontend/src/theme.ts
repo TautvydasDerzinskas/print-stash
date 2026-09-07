@@ -1,9 +1,9 @@
-import { createTheme, type Theme, type ThemeOptions } from "@mui/material/styles";
+import { alpha, createTheme, darken, lighten, type Theme, type ThemeOptions } from "@mui/material/styles";
 import type { ResolvedTheme } from "./constants/settingsOptions";
 
 export type { ResolvedTheme };
 
-export const THEME_IDS: ResolvedTheme[] = ["light", "dark", "neon", "purple", "blue"];
+export const THEME_IDS: ResolvedTheme[] = ["light", "dark"];
 
 /**
  * Extra design tokens MUI's Theme doesn't model natively: the page background (a plain color
@@ -16,6 +16,10 @@ declare module "@mui/material/styles" {
       pageBackground: string;
       modelColor: string;
       modelEmissive: string;
+      /** A separate accent used for things that shouldn't compete with the primary green
+       *  (e.g. an attention/alert-style label) -- not one of MUI's error/warning palette
+       *  roles, just a second brand-adjacent color for cases that call for it. */
+      altText: string;
     };
   }
   interface ThemeOptions {
@@ -23,6 +27,7 @@ declare module "@mui/material/styles" {
       pageBackground: string;
       modelColor: string;
       modelEmissive: string;
+      altText: string;
     };
   }
 }
@@ -38,9 +43,11 @@ type ThemeDef = {
   textMuted: string;
   textSubtle: string;
   accent: string;
+  accentLight: string;
   accentStrong: string;
   accentSoft: string;
   accentContrast: string;
+  altText: string;
   modelColor: string;
   modelEmissive: string;
 };
@@ -50,18 +57,20 @@ type ThemeDef = {
 const THEME_DEFS: Record<ResolvedTheme, ThemeDef> = {
   light: {
     mode: "light",
-    pageBackground: "#f8fafc",
-    panel: "rgba(255, 255, 255, 0.92)",
+    pageBackground: "#f7f7f7",
+    panel: "#ffffff",
     panelStrong: "#ffffff",
-    border: "#e5e7eb",
-    borderStrong: "#d1d5db",
-    text: "#0f172a",
-    textMuted: "#64748b",
-    textSubtle: "#94a3b8",
-    accent: "#10b981",
-    accentStrong: "#059669",
-    accentSoft: "rgba(16, 185, 129, 0.16)",
+    border: "#ebebeb",
+    borderStrong: "#ebebeb",
+    text: "#1f1f1f",
+    textMuted: "#858585",
+    textSubtle: "#858585",
+    accent: "#00b800",
+    accentLight: "#5be584",
+    accentStrong: darken("#00b800", 0.15),
+    accentSoft: alpha("#00b800", 0.16),
     accentContrast: "#ffffff",
+    altText: "rgb(255, 114, 32)",
     modelColor: "#cbd5e1",
     modelEmissive: "#94a3b8",
   },
@@ -76,68 +85,13 @@ const THEME_DEFS: Record<ResolvedTheme, ThemeDef> = {
     textMuted: "#94a3b8",
     textSubtle: "#64748b",
     accent: "#34d399",
+    accentLight: lighten("#34d399", 0.25),
     accentStrong: "#10b981",
     accentSoft: "rgba(16, 185, 129, 0.2)",
     accentContrast: "#ffffff",
+    altText: "rgb(255, 114, 32)",
     modelColor: "#e2e8f0",
     modelEmissive: "#475569",
-  },
-  neon: {
-    mode: "dark",
-    pageBackground:
-      "radial-gradient(1200px circle at 15% 10%, rgba(182, 255, 43, 0.2), transparent 60%)," +
-      "radial-gradient(900px circle at 85% 0%, rgba(120, 255, 66, 0.14), transparent 55%), #050b05",
-    panel: "rgba(8, 18, 9, 0.9)",
-    panelStrong: "#0a1508",
-    border: "#1d2f1a",
-    borderStrong: "#2f4a25",
-    text: "#e5ffd2",
-    textMuted: "#9ad48a",
-    textSubtle: "#6fa662",
-    accent: "#b6ff2b",
-    accentStrong: "#d7ff6f",
-    accentSoft: "rgba(182, 255, 43, 0.18)",
-    accentContrast: "#071308",
-    modelColor: "#b6ff2b",
-    modelEmissive: "#3a7a1a",
-  },
-  purple: {
-    mode: "dark",
-    pageBackground:
-      "radial-gradient(1200px circle at 18% 10%, rgba(199, 125, 255, 0.22), transparent 60%)," +
-      "radial-gradient(900px circle at 82% 0%, rgba(146, 88, 255, 0.16), transparent 55%), #080510",
-    panel: "rgba(16, 10, 27, 0.9)",
-    panelStrong: "#12091f",
-    border: "#2b1e44",
-    borderStrong: "#3b2961",
-    text: "#f3e8ff",
-    textMuted: "#c4b5fd",
-    textSubtle: "#8b79b8",
-    accent: "#c77dff",
-    accentStrong: "#e4c8ff",
-    accentSoft: "rgba(199, 125, 255, 0.18)",
-    accentContrast: "#12071a",
-    modelColor: "#c77dff",
-    modelEmissive: "#6a2da8",
-  },
-  blue: {
-    mode: "dark",
-    pageBackground:
-      "radial-gradient(1200px circle at 20% 8%, rgba(116, 212, 255, 0.2), transparent 60%)," +
-      "radial-gradient(900px circle at 80% 0%, rgba(66, 145, 255, 0.16), transparent 55%), #050b12",
-    panel: "rgba(8, 16, 28, 0.9)",
-    panelStrong: "#0a1324",
-    border: "#1b2a42",
-    borderStrong: "#274166",
-    text: "#e0f2ff",
-    textMuted: "#93c5fd",
-    textSubtle: "#6b8dbb",
-    accent: "#74d4ff",
-    accentStrong: "#b6ecff",
-    accentSoft: "rgba(116, 212, 255, 0.18)",
-    accentContrast: "#061019",
-    modelColor: "#74d4ff",
-    modelEmissive: "#1f5c9a",
   },
 };
 
@@ -147,14 +101,20 @@ export function buildTheme(id: ResolvedTheme): Theme {
     palette: {
       mode: d.mode,
       background: { default: d.mode === "light" ? d.pageBackground : d.panelStrong, paper: d.panel },
-      primary: { main: d.accent, dark: d.accentStrong, contrastText: d.accentContrast },
+      primary: { main: d.accent, light: d.accentLight, dark: d.accentStrong, contrastText: d.accentContrast },
       text: { primary: d.text, secondary: d.textMuted },
       divider: d.border,
+      action: {
+        selected: alpha(d.accentLight, 0.2),
+        hover: alpha(d.accent, 0.08),
+      },
     },
     shape: { borderRadius: 10 },
     typography: {
       fontSize: 13,
       button: { textTransform: "none", fontWeight: 600 },
+      h5: { fontFamily: '"PrintStash Display", sans-serif' },
+      h6: { fontFamily: '"PrintStash Display", sans-serif' },
     },
     components: {
       MuiPaper: { styleOverrides: { root: { backgroundImage: "none", backgroundColor: d.panel } } },
@@ -168,6 +128,7 @@ export function buildTheme(id: ResolvedTheme): Theme {
       pageBackground: d.pageBackground,
       modelColor: d.modelColor,
       modelEmissive: d.modelEmissive,
+      altText: d.altText,
     },
   };
   return createTheme(options);

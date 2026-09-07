@@ -11,8 +11,8 @@ type Props = {
   backLabel: string;
 };
 
-/** Shared heading row for every Settings section: title/subtitle on the left, a "Back" button
- *  on the right that returns to the root menu grid. */
+/** Shared heading row for every Settings (and Admin Settings) section: title/subtitle on the
+ *  left, a "Back" button on the right that returns to the root menu grid. */
 export default function SectionHeader({ title, subtitle, onBack, backLabel }: Props) {
   return (
     <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} flexWrap="wrap">

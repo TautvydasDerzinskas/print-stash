@@ -2,7 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import Stack from "@mui/material/Stack";
 import type { MakerWorldSettings, ThingiverseSettings } from "../../../utils/settings";
-import SectionHeader from "../SectionHeader";
+import SectionHeader from "../../../components/SectionHeader";
 import FolderScanPanel from "./FolderScanPanel";
 import CookiePanel from "./CookiePanel";
 
