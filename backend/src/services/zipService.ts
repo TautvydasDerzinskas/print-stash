@@ -7,9 +7,9 @@ import { HttpError, sanitizeFilename, guessMimeFromPath } from "../utils/fileUti
 import { IMPORT_MAX_BYTES } from "../config";
 import { listZipEntries as listRawZipEntries, readZipEntry } from "../utils/zipReader";
 import { validateParentFolder } from "./folderService";
-import { applyCoverThumbnailIfMissing, attachGalleryImagesAsSupportingFiles } from "./importService";
+import { attachImportedPreviewImages } from "./importService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
-import type { Print, Plate } from "@prisma/client";
+import type { Print, Plate, PreviewImage } from "@prisma/client";
 
 export type ZipEntrySummary = { path: string; size: number };
 
@@ -109,7 +109,7 @@ export async function extractZipEntriesToPrints(
   zipPath: string,
   selections: string[],
   options: ZipExtractOptions,
-): Promise<{ prints: (Print & { plates: Plate[] })[]; failed: string[] }> {
+): Promise<{ prints: (Print & { plates: Plate[]; previewImages: PreviewImage[] })[]; failed: string[] }> {
   const normalized = selections.map((s) => normalizeZipEntryPath(s));
   const ordered: string[] = [];
   const seen = new Set<string>();
@@ -132,7 +132,7 @@ export async function extractZipEntriesToPrints(
     entryMap.set(name, { isDirectory: entry.isDirectory, size: entry.size });
   }
 
-  const prints: (Print & { plates: Plate[] })[] = [];
+  const prints: (Print & { plates: Plate[]; previewImages: PreviewImage[] })[] = [];
   const failed: string[] = [];
   const folderCache: FolderCache = new Map();
 
@@ -171,9 +171,9 @@ export async function extractZipEntriesToPrints(
         { filename, mime, tempFilePath: tempPath },
       ]);
       tempPath = null;
-      await applyCoverThumbnailIfMissing(plates[0]?.id, options.previewImageUrl);
-      await attachGalleryImagesAsSupportingFiles(userId, print.id, options.galleryImages ?? [], options.previewImageUrl);
-      prints.push({ ...print, plates });
+      await attachImportedPreviewImages(print.id, plates[0]?.id, options.previewImageUrl, options.galleryImages ?? []);
+      const previewImages = await prisma.previewImage.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
+      prints.push({ ...print, plates, previewImages });
     } catch {
       if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);
       failed.push(entryName);

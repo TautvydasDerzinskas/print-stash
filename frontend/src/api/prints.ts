@@ -30,6 +30,12 @@ export type PrintFile = {
   url: string; // /print/{printId}/files/{fileId}
 };
 
+export type PreviewImage = {
+  id: string;
+  position: number; // dense, 0-based, ordered; 0 is the default/main image
+  url: string; // /preview-image/{id}/file.jpg?v=...
+};
+
 export type Author = {
   id: string;
   provider: string;
@@ -55,6 +61,7 @@ export type Print = {
   folder_id?: string | null;
   storage_path?: string | null;
   plates: Plate[]; // ordered by position, length >= 1
+  preview_images: PreviewImage[]; // ordered by position; [0] is the default/main gallery image
   thumb_url?: string | null; // denormalized = plates[0].thumb_url
   supporting_file_count: number;
   prepared_print?: PreparedPrint | null;
@@ -101,6 +108,13 @@ export const printsApi = {
     const nextOffsetRaw = res.headers.get("X-Next-Offset");
     const nextOffset = nextOffsetRaw ? Number(nextOffsetRaw) : undefined;
     return { items, hasMore, nextOffset };
+  },
+
+  get: async (id: string): Promise<Print> => {
+    const res = await fetch(`${apiBase()}/print/${id}`, { headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    assertOk(res, "Failed to load model");
+    return res.json();
   },
 
   listTags: async (params: {

@@ -21,11 +21,12 @@
     "fflate": "0.8.3",
     "i18next": "^23.15.0",
     "i18next-browser-languagedetector": "^8.0.0",
+    "occt-import-js": "0.0.23",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-i18next": "^15.0.0",
-    "three": "^0.160.0",
-    "occt-import-js": "0.0.23"
+    "react-router-dom": "^6.30.6",
+    "three": "^0.160.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
@@ -33,7 +34,7 @@
     "@types/three": "^0.160.0",
     "oxlint": "^1.81.0",
     "typescript": "5.6.3",
-    "vitest": "3.2.6",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "vitest": "3.2.6"
   }
 }

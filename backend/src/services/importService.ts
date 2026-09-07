@@ -39,8 +39,9 @@ import {
 import { upsertAuthorFromImport } from "./authorService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
-import { saveFileFromTemp } from "./printFileService";
-import type { Author, Plate, Print } from "@prisma/client";
+import { addPreviewImage } from "./previewImageService";
+import { prisma } from "../db";
+import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
 
 export type ImportRequestBody = ImportCookies & {
   url: string;
@@ -327,76 +328,62 @@ export async function inspectImportLink(
   return { filename, mime, is_zip: isZip, title: meta.title };
 }
 
-const COVER_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+const PREVIEW_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
+const PREVIEW_IMAGE_MAX_COUNT = 20;
 
-/** Best-effort: downloads a resolved page's cover/preview image and uses it as the plate's
- * thumbnail, but only when nothing better (e.g. an embedded .3mf thumbnail extracted from the
- * file itself during createPrint) was already set. Never throws -- a broken cover image
- * shouldn't fail the import. */
-export async function applyCoverThumbnailIfMissing(
-  plateId: string | undefined,
-  imageUrl: string | null | undefined,
-): Promise<void> {
-  if (!plateId || !imageUrl || plateThumbExists(plateId)) return;
+async function fetchImageBytes(url: string): Promise<Buffer | null> {
   try {
-    const res = await rawFetch(imageUrl, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
+    const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
-      return;
+      return null;
     }
     const contentLength = res.headers.get("content-length");
-    if (contentLength && Number(contentLength) > COVER_IMAGE_MAX_BYTES) {
+    if (contentLength && Number(contentLength) > PREVIEW_IMAGE_MAX_BYTES) {
       await res.body?.cancel().catch(() => undefined);
-      return;
+      return null;
     }
     const buf = Buffer.from(await res.arrayBuffer());
-    if (buf.length > COVER_IMAGE_MAX_BYTES) return;
-    await saveThumbFromBytes(plateId, buf);
+    return buf.length > PREVIEW_IMAGE_MAX_BYTES ? null : buf;
   } catch {
-    // best-effort only
+    return null;
   }
 }
 
-const GALLERY_IMAGE_MAX_BYTES = 16 * 1024 * 1024;
-const GALLERY_IMAGE_MAX_COUNT = 20;
-
-/** Best-effort: downloads a resolved page's remaining gallery photos -- everything besides
- * whichever one was already used as the plate thumbnail (skipUrl) -- and attaches each as a
- * supporting file. Every image is independent: one failing doesn't stop the rest or the
- * import as a whole. */
-export async function attachGalleryImagesAsSupportingFiles(
-  userId: string,
+/** Best-effort: downloads a resolved page's cover photo and remaining gallery photos and stores
+ * them as the print's preview images -- the cover first, so it lands at position 0 (the detail
+ * page's default/main image) -- and seeds the plate's own thumbnail from the same cover bytes
+ * when nothing better (e.g. an embedded .3mf thumbnail extracted during createPrint) already set
+ * one. Every image is independent and this never throws: a broken photo shouldn't fail the
+ * import, it just means one fewer preview image (the generated-snapshot fallback in
+ * POST /plate/:id/thumbnail-generated covers a print that ends up with none at all). */
+export async function attachImportedPreviewImages(
   printId: string | undefined,
-  images: { url: string; filename: string }[],
-  skipUrl: string | null | undefined,
+  plateId: string | undefined,
+  coverImageUrl: string | null | undefined,
+  galleryImages: { url: string; filename: string }[],
 ): Promise<void> {
-  if (!printId || !images.length) return;
-  const toSave = images.filter((image) => image.url !== skipUrl).slice(0, GALLERY_IMAGE_MAX_COUNT);
+  if (!printId) return;
+  const seen = new Set<string>();
+  const orderedUrls: string[] = [];
+  if (coverImageUrl) {
+    orderedUrls.push(coverImageUrl);
+    seen.add(coverImageUrl);
+  }
+  for (const image of galleryImages) {
+    if (seen.has(image.url)) continue;
+    seen.add(image.url);
+    orderedUrls.push(image.url);
+  }
 
-  for (const image of toSave) {
-    let tempPath: string | null = null;
-    try {
-      const res = await rawFetch(image.url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
-      if (!res.ok) {
-        await res.body?.cancel().catch(() => undefined);
-        continue;
-      }
-      const contentLength = res.headers.get("content-length");
-      if (contentLength && Number(contentLength) > GALLERY_IMAGE_MAX_BYTES) {
-        await res.body?.cancel().catch(() => undefined);
-        continue;
-      }
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > GALLERY_IMAGE_MAX_BYTES) continue;
-
-      tempPath = path.join(os.tmpdir(), `printstash-gallery-${crypto.randomBytes(8).toString("hex")}`);
-      await fs.writeFile(tempPath, buf);
-      await saveFileFromTemp(userId, printId, tempPath, image.filename, res.headers.get("content-type"));
-      tempPath = null;
-    } catch {
-      // best-effort only
-    } finally {
-      if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);
+  let platesThumbSeeded = false;
+  for (const url of orderedUrls.slice(0, PREVIEW_IMAGE_MAX_COUNT)) {
+    const buf = await fetchImageBytes(url);
+    if (!buf) continue;
+    await addPreviewImage(printId, buf);
+    if (!platesThumbSeeded && plateId && !plateThumbExists(plateId)) {
+      await saveThumbFromBytes(plateId, buf);
+      platesThumbSeeded = true;
     }
   }
 }
@@ -406,7 +393,7 @@ export async function importPrintFromUrl(
   userId: string,
   url: string,
   body: ImportRequestBody,
-): Promise<{ print: Print; plates: Plate[]; author: Author | null }> {
+): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[] }> {
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
   const author = await upsertAuthorFromImport(meta.author);
   const printMeta: PrintMetaInput = {
@@ -421,9 +408,12 @@ export async function importPrintFromUrl(
     const result = await createPrint(userId, printMeta, path.parse(filename).name, [
       { filename, mime, tempFilePath: tempPath },
     ]);
-    await applyCoverThumbnailIfMissing(result.plates[0]?.id, meta.previewImageUrl);
-    await attachGalleryImagesAsSupportingFiles(userId, result.print.id, meta.galleryImages, meta.previewImageUrl);
-    return { ...result, author };
+    await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl, meta.galleryImages);
+    const previewImages = await prisma.previewImage.findMany({
+      where: { printId: result.print.id },
+      orderBy: { position: "asc" },
+    });
+    return { ...result, author, previewImages };
   } finally {
     if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);
   }

@@ -38,8 +38,8 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = parseBody(importRequestSchema, req.body);
     const url = await normalizeImportUrl(body.url);
-    const { print, plates, author } = await importPrintFromUrl(req.userId!, url, body);
-    res.json(toPrintOut(print, plates, [], null, author));
+    const { print, plates, author, previewImages } = await importPrintFromUrl(req.userId!, url, body);
+    res.json(toPrintOut(print, plates, [], null, author, previewImages));
   }),
 );
 
@@ -90,7 +90,7 @@ router.post(
         previewImageUrl: meta.previewImageUrl,
         galleryImages: meta.galleryImages,
       });
-      res.json({ prints: prints.map((p) => toPrintOut(p, p.plates, [], null, author)), failed });
+      res.json({ prints: prints.map((p) => toPrintOut(p, p.plates, [], null, author, p.previewImages)), failed });
     } finally {
       await fs.rm(tempPath, { force: true }).catch(() => undefined);
     }
@@ -158,8 +158,8 @@ router.post(
         thingiverse_cookie: body.thingiverse_cookie,
       };
       try {
-        const { print, plates, author } = await importPrintFromUrl(req.userId!, modelUrl, itemBody);
-        return { ok: true as const, print: toPrintOut(print, plates, [], null, author) };
+        const { print, plates, author, previewImages } = await importPrintFromUrl(req.userId!, modelUrl, itemBody);
+        return { ok: true as const, print: toPrintOut(print, plates, [], null, author, previewImages) };
       } catch {
         return { ok: false as const, designId };
       }

@@ -10,6 +10,7 @@ function envInt(name: string, fallback: number): number {
 export const STORAGE = path.resolve(process.env.FILE_STORAGE || "./storage");
 export const THUMBS = path.join(STORAGE, "thumbs");
 export const BUNDLES = path.join(STORAGE, "bundles");
+export const PREVIEWS = path.join(STORAGE, "previews");
 
 export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
 export const AUTH_TOKEN_TTL = envInt("AUTH_TOKEN_TTL", 43200);

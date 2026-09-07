@@ -10,6 +10,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { modelUpload } from "../uploadMiddleware";
 import { createPrint, deletePlateFiles, resolvePlateFilePath, type NewPlateInput } from "../services/printCreation";
 import { plateThumbPath, relocatePrint, uniqueModelName } from "../services/printService";
+import { previewImagePath, deleteAllPreviewImages } from "../services/previewImageService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
 import { deleteAllPrintFiles } from "../services/printFileService";
@@ -117,7 +118,11 @@ router.get(
     const where = buildPrintWhere(req);
     const prints = await prisma.print.findMany({
       where,
-      include: { plates: { orderBy: { position: "asc" } }, author: true },
+      include: {
+        plates: { orderBy: { position: "asc" } },
+        previewImages: { orderBy: { position: "asc" } },
+        author: true,
+      },
     });
     const printIds = prints.map((p) => p.id);
     const files = printIds.length ? await prisma.printFile.findMany({ where: { printId: { in: printIds } } }) : [];
@@ -150,9 +155,18 @@ router.get(
     const out = paged.map((p) => {
       const printFiles = filesByPrint.get(p.id) ?? [];
       const preparedFile = p.preparedFileId ? printFiles.find((f) => f.id === p.preparedFileId) ?? null : null;
-      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author);
+      return toPrintOut(p, p.plates, printFiles, preparedFile, p.author, p.previewImages);
     });
     res.json(out);
+  }),
+);
+
+// ---- GET /print/:id ----------------------------------------------------------------------------
+
+router.get(
+  "/print/:id",
+  asyncHandler(async (req, res) => {
+    res.json(await printOutById(req.userId!, req.params.id));
   }),
 );
 
@@ -252,6 +266,21 @@ router.get(
   }),
 );
 
+router.get(
+  "/preview-image/:id/file.jpg",
+  asyncHandler(async (req, res) => {
+    const image = await prisma.previewImage.findFirst({
+      where: { id: req.params.id, print: { userId: req.userId } },
+    });
+    if (!image) throw new HttpError(404, "Not found");
+    const filePath = previewImagePath(image.id);
+    if (!fs.existsSync(filePath)) throw new HttpError(404, "Not found");
+    res.setHeader("Content-Type", "image/jpeg");
+    res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
+    res.sendFile(path.resolve(filePath));
+  }),
+);
+
 // ---- Print metadata mutation routes ---------------------------------------------------------
 
 const tagsSchema = z.object({ tags: z.array(z.string()) });
@@ -336,6 +365,7 @@ router.delete(
   asyncHandler(async (req, res) => {
     const full = await loadFullPrint(req.userId!, req.params.id);
     await deleteAllPrintFiles(req.params.id);
+    await deleteAllPreviewImages(req.params.id);
     await prisma.print.delete({ where: { id: req.params.id } });
     for (const plate of full.plates) {
       await deletePlateFiles(plate);

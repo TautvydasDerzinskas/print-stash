@@ -35,8 +35,8 @@ export const settingsApi = {
     return res.json();
   },
 
-  // Instance-wide preview generation mode -- read by every user (LibraryPage needs it to know
-  // whether to generate previews at all), written only from the admin settings panel.
+  // Instance-wide preview generation mode -- read by every user (the model detail page needs it
+  // to know whether to generate previews at all), written only from the admin settings panel.
   getPreviews: async (): Promise<{ mode: PreviewMode }> => {
     const res = await fetch(`${apiBase()}/settings/previews`, { headers: authHeaders() });
     assertOk(res, "Failed to load preview settings");

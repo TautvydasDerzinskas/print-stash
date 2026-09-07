@@ -14,7 +14,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import AddIcon from "@mui/icons-material/Add";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import LinkIcon from "@mui/icons-material/Link";
-import { useUploadImport } from "../../pages/LibraryPage/useUploadImport";
+import { useUploadImport } from "../uploads/useUploadImport";
 
 type Props = {
   folderId?: string | null;

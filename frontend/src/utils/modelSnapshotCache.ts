@@ -2,7 +2,7 @@
 // snapshot renderer is ever live at a time, since spinning up many WebGL contexts concurrently is
 // what caused the original flakiness this queue was written to avoid), a data-URL cache keyed by
 // plate id (falling back to the asset URL), and the actual "render one frame of the model to a
-// PNG" routine. Used by ModelSnapshot (pages/LibraryPage/ModelViewer).
+// PNG" routine. Used by ModelSnapshot (components/media/ModelViewer).
 import * as THREE from "three";
 import type { ResolvedTheme } from "../constants/settingsOptions";
 import { applyThemeToObject, disposeObject3D, loadObjectFromAsset, paletteForTheme } from "./modelLoaders";

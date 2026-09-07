@@ -3,9 +3,12 @@ import { useTranslation } from "react-i18next";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import AppLayout from "./components/Layout/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
-import LibraryPage from "./pages/LibraryPage";
+import ModelsPage from "./pages/ModelsPage";
+import ModelDetailPage from "./pages/ModelDetailPage";
+import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
@@ -15,35 +18,135 @@ import { settingsApi, type PreviewMode } from "./api/settings";
 import { clearToken, clearUser, readToken, readUser, storeToken, storeUser } from "./utils/auth";
 import { type AppSettings, loadSettings, saveSettings } from "./utils/settings";
 import { buildTheme } from "./theme";
-import type { ActiveView } from "./constants/views";
 
 const DEFAULT_REFRESH_SECONDS = 6 * 60 * 60; // 6 hours
-// Views reachable directly from the sidebar -- "back" from a drilled-into page (Settings) always
-// returns to whichever of these the user was last on, not always the app's default landing page.
-const MAIN_VIEWS = new Set<ActiveView>(["dashboard", "library"]);
+
+type AppShellProps = {
+  isAdmin: boolean;
+  user: AuthUser | null;
+  apiUp: boolean | null;
+  settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
+  previewMode: PreviewMode;
+  setPreviewMode: (mode: PreviewMode) => void;
+  resolvedTheme: AppSettings["theme"]["selected"];
+  muiTheme: ReturnType<typeof buildTheme>;
+  onUnauthorized: () => void;
+  onLogout: () => void;
+};
+
+/** Everything that needs router context (route-derived chrome, folder selection that also
+ *  navigates). Split out from App so App itself can stay outside <BrowserRouter>. */
+function AppShell({
+  isAdmin,
+  user,
+  apiUp,
+  settings,
+  setSettings,
+  previewMode,
+  setPreviewMode,
+  resolvedTheme,
+  muiTheme,
+  onUnauthorized,
+  onLogout,
+}: AppShellProps) {
+  const navigate = useNavigate();
+  const [folderId, setFolderId] = React.useState<string | null>(null);
+  const [nonce, setNonce] = React.useState(0);
+  const [folderVersion, setFolderVersion] = React.useState(0);
+
+  const handleFoldersChanged = React.useCallback(() => {
+    setFolderVersion(v => v + 1);
+  }, []);
+
+  const handlePrintsChanged = React.useCallback(() => {
+    setNonce(n => n + 1);
+  }, []);
+
+  // Used after a folder-scan import in Settings finishes -- jump to Models filtered to the
+  // folder the import landed in.
+  const handleSelectFolder = React.useCallback((id: string | null) => {
+    setFolderId(id);
+    navigate("/models");
+  }, [navigate]);
+
+  return (
+    <AppLayout
+      muiTheme={muiTheme}
+      resolvedTheme={resolvedTheme}
+      apiUp={apiUp}
+      folderId={folderId}
+      onPrintsChanged={handlePrintsChanged}
+      onUnauthorized={onUnauthorized}
+      isAdmin={isAdmin}
+      onOpenSettings={() => navigate("/settings")}
+      onLogout={onLogout}
+      makerworldCookie={settings.makerworld.cookie}
+      thingiverseCookie={settings.thingiverse.cookie}
+      user={user}
+      onThemeChange={selected => setSettings(prev => ({ ...prev, theme: { selected } }))}
+    >
+      <Routes>
+        <Route path="/" element={<DashboardPage />} />
+        <Route
+          path="/models"
+          element={
+            <ModelsPage
+              folderId={folderId}
+              onSelectFolder={setFolderId}
+              foldersVersion={folderVersion}
+              onFoldersChanged={handleFoldersChanged}
+              printsVersion={nonce}
+              onUnauthorized={onUnauthorized}
+              theme={resolvedTheme}
+              previewMode={previewMode}
+            />
+          }
+        />
+        <Route
+          path="/models/:printId"
+          element={<ModelDetailPage theme={resolvedTheme} onUnauthorized={onUnauthorized} />}
+        />
+        <Route path="/authors/:authorId" element={<AuthorPage />} />
+        <Route
+          path="/settings"
+          element={
+            <SettingsPage
+              settings={settings}
+              onChange={setSettings}
+              onAssetsChanged={handlePrintsChanged}
+              onFoldersChanged={handleFoldersChanged}
+              onUnauthorized={onUnauthorized}
+              onSelectFolder={handleSelectFolder}
+            />
+          }
+        />
+        <Route
+          path="/admin-settings"
+          element={
+            isAdmin
+              ? <AdminSettingsPage onUnauthorized={onUnauthorized} onPreviewModeChanged={setPreviewMode} />
+              : <Navigate to="/" replace />
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AppLayout>
+  );
+}
 
 export default function App() {
-  const { t } = useTranslation(["app", "common"]);
+  const { t } = useTranslation("app");
   const [token, setToken] = React.useState<string | null>(() => readToken());
   const [user, setUser] = React.useState<AuthUser | null>(() => readUser());
-  const [nonce, setNonce] = React.useState(0);
-  const [folderId, setFolderId] = React.useState<string | null>(null);
-  const [folderVersion, setFolderVersion] = React.useState(0);
   const [health, setHealth] = React.useState<HealthInfo | null>(null);
   const [tokenTtl, setTokenTtl] = React.useState<number | null>(null);
   const [sessionExpired, setSessionExpired] = React.useState(false);
-  const [activeView, setActiveView] = React.useState<ActiveView>("dashboard");
   const [settings, setSettings] = React.useState<AppSettings>(() => loadSettings());
   const [previewMode, setPreviewMode] = React.useState<PreviewMode>("automatic");
   const resolvedTheme = settings.theme.selected;
   const muiTheme = React.useMemo(() => buildTheme(resolvedTheme), [resolvedTheme]);
   const isAdmin = user?.role === "ADMIN";
-  // "Back" from Settings (opened from the avatar menu, not a sidebar link) returns here --
-  // whichever sidebar-level view the user was last on, not always the app's default.
-  const lastMainViewRef = React.useRef<ActiveView>("dashboard");
-  React.useEffect(() => {
-    if (MAIN_VIEWS.has(activeView)) lastMainViewRef.current = activeView;
-  }, [activeView]);
   React.useEffect(() => { (async ()=> setHealth(await healthApi.get()))(); }, []);
   React.useEffect(() => {
     if (!token) return;
@@ -78,19 +181,6 @@ export default function App() {
     setSessionExpired(true);
     alert(t("shell.sessionExpired"));
   }, [sessionExpired, t]);
-
-  const handleFoldersChanged = React.useCallback(() => {
-    setFolderVersion(v => v + 1);
-  }, []);
-
-  const handlePrintsChanged = React.useCallback(() => {
-    setNonce(n => n + 1);
-  }, []);
-
-  const handleSelectFolder = React.useCallback((id: string | null) => {
-    setFolderId(id);
-    setActiveView("library");
-  }, []);
 
   const handleLogout = () => {
     clearToken();
@@ -145,57 +235,20 @@ export default function App() {
   }
 
   return (
-    <AppLayout
-      muiTheme={muiTheme}
-      resolvedTheme={resolvedTheme}
-      apiUp={apiUp}
-      folderId={folderId}
-      onSelectFolder={handleSelectFolder}
-      folderVersion={folderVersion}
-      onFoldersChanged={handleFoldersChanged}
-      onPrintsChanged={handlePrintsChanged}
-      onUnauthorized={handleUnauthorized}
-      activeView={activeView}
-      isAdmin={isAdmin}
-      onOpenDashboard={() => setActiveView("dashboard")}
-      onOpenSettings={() => setActiveView("settings")}
-      onOpenAdminSettings={() => setActiveView("adminSettings")}
-      onBack={() => setActiveView(lastMainViewRef.current)}
-      onLogout={handleLogout}
-      makerworldCookie={settings.makerworld.cookie}
-      thingiverseCookie={settings.thingiverse.cookie}
-      user={user}
-      onThemeChange={selected => setSettings(prev => ({ ...prev, theme: { selected } }))}
-    >
-      {activeView === "dashboard" && <DashboardPage />}
-      {activeView === "library" && (
-        <LibraryPage
-          key={`${nonce + (folderId||'')}-${folderVersion}`}
-          folderId={folderId}
-          foldersVersion={folderVersion}
-          onUnauthorized={handleUnauthorized}
-          slicerSettings={settings.slicer}
-          engravingSettings={settings.engraving}
-          previewMode={previewMode}
-          theme={resolvedTheme}
-        />
-      )}
-      {activeView === "settings" && (
-        <SettingsPage
-          settings={settings}
-          onChange={setSettings}
-          onAssetsChanged={handlePrintsChanged}
-          onFoldersChanged={handleFoldersChanged}
-          onUnauthorized={handleUnauthorized}
-          onSelectFolder={handleSelectFolder}
-        />
-      )}
-      {activeView === "adminSettings" && (
-        <AdminSettingsPage
-          onUnauthorized={handleUnauthorized}
-          onPreviewModeChanged={setPreviewMode}
-        />
-      )}
-    </AppLayout>
+    <BrowserRouter>
+      <AppShell
+        isAdmin={isAdmin}
+        user={user}
+        apiUp={apiUp}
+        settings={settings}
+        setSettings={setSettings}
+        previewMode={previewMode}
+        setPreviewMode={setPreviewMode}
+        resolvedTheme={resolvedTheme}
+        muiTheme={muiTheme}
+        onUnauthorized={handleUnauthorized}
+        onLogout={handleLogout}
+      />
+    </BrowserRouter>
   );
 }

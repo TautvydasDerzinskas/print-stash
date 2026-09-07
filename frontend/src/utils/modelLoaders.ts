@@ -1,4 +1,4 @@
-// Pure/async 3D-asset loading logic used by LibraryPage's ModelViewer and ModelSnapshot
+// Pure/async 3D-asset loading logic used by the media components' ModelViewer and ModelSnapshot
 // components -- plain three.js scene-graph construction plus fetch/WASM work (STL/3MF/STEP/OBJ
 // parsing). paletteForTheme()/applyThemeToObject() (material coloring) also live here since both
 // ModelViewer's live scene and generateModelSnapshot() (in modelSnapshotCache.ts) need them.

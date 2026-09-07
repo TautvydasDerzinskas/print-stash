@@ -9,17 +9,17 @@ import { LANGUAGE_STORAGE_KEY, SUPPORTED_LANGUAGES } from "../constants/language
 // Namespaces are split by ownership area rather than kept in one giant file:
 // "common" - generic actions/words reused everywhere (Save, Cancel, Delete, ...)
 // "app"    - shell chrome: login, sidebar, settings, upload bar, import/zip modals, tag editor
-// "library" - the print grid/card, print preview modal + plate switcher, model viewer overlays,
-//             LightBurn preview
+// "library" - the model viewer overlays, LightBurn preview, and other shared preview widgets
+// "models" - the Models page (folders panel, model grid/card), model detail page, and author page
 i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
     resources: {
-      en: { common: en.common, app: en.app, library: en.library },
-      lt: { common: lt.common, app: lt.app, library: lt.library },
+      en: { common: en.common, app: en.app, library: en.library, models: en.models },
+      lt: { common: lt.common, app: lt.app, library: lt.library, models: lt.models },
     },
-    ns: ["common", "app", "library"],
+    ns: ["common", "app", "library", "models"],
     defaultNS: "common",
     fallbackLng: "en",
     supportedLngs: SUPPORTED_LANGUAGES.map((l) => l.code),

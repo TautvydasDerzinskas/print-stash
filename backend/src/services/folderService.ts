@@ -1,8 +1,12 @@
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 
-/** Ensures a parent folder exists (and belongs to userId) and that assigning it does not
- * introduce a cycle. */
+/** Ensures a parent folder exists (and belongs to userId) and that assigning it keeps the
+ * category tree at most two levels deep: a category can only be nested under a top-level
+ * (parent-less) category, and a category that already has subcategories of its own can't become
+ * a subcategory itself -- either would create a third level. With both of those enforced, a
+ * cycle is structurally impossible (a folder can never be its own ancestor), so there's nothing
+ * left to walk. */
 export async function validateParentFolder(
   userId: string,
   parentId: string | null | undefined,
@@ -13,15 +17,15 @@ export async function validateParentFolder(
   if (!parent) throw new HttpError(400, "Parent folder not found");
   if (folderId && parentId === folderId) throw new HttpError(400, "Folder cannot be its own parent");
 
-  const visited = new Set<string>(folderId ? [folderId] : []);
-  let ancestor = parent;
-  while (ancestor && ancestor.parentId) {
-    if (visited.has(ancestor.parentId)) throw new HttpError(400, "Invalid parent: would create a cycle");
-    if (folderId && ancestor.parentId === folderId) throw new HttpError(400, "Invalid parent: would create a cycle");
-    visited.add(ancestor.parentId);
-    const next = await prisma.folder.findFirst({ where: { id: ancestor.parentId, userId } });
-    if (!next) break;
-    ancestor = next;
+  if (parent.parentId) {
+    throw new HttpError(400, "Categories can only be nested two levels deep");
   }
+  if (folderId) {
+    const childCount = await prisma.folder.count({ where: { parentId: folderId, userId } });
+    if (childCount > 0) {
+      throw new HttpError(400, "A category with subcategories cannot be moved under another category");
+    }
+  }
+
   return parentId;
 }

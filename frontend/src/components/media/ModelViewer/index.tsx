@@ -6,11 +6,19 @@ import { useTranslation } from "react-i18next";
 import { type ResolvedTheme } from "../../../constants/settingsOptions";
 import { applyThemeToObject, disposeObject3D, loadObjectFromAsset, paletteForTheme } from "../../../utils/modelLoaders";
 
-type ModelViewerProps = { url: string; ext: string; viewKey?: string; theme: ResolvedTheme };
+type ModelViewerProps = {
+  url: string;
+  ext: string;
+  viewKey?: string;
+  theme: ResolvedTheme;
+  /** Overrides the theme-derived material color (e.g. the fixed "red plate" look used by the
+   *  model detail page's 3D preview modal) while keeping the rest of the palette intact. */
+  colorOverride?: string;
+};
 
 type ViewErrorKey = "unsupported" | "failed";
 
-export default function ModelViewer({ url, ext, viewKey, theme }: ModelViewerProps) {
+export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }: ModelViewerProps) {
   const { t } = useTranslation(["library"]);
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [viewError, setViewError] = useState<ViewErrorKey | null>(null);
@@ -21,6 +29,7 @@ export default function ModelViewer({ url, ext, viewKey, theme }: ModelViewerPro
     const mount = mountRef.current;
     if (!mount) return;
     const palette = paletteForTheme(theme);
+    if (colorOverride) palette.color = new THREE.Color(colorOverride);
     setViewError(null);
     const reportError = (key: ViewErrorKey) => {
       if (!disposed) {
@@ -163,7 +172,7 @@ export default function ModelViewer({ url, ext, viewKey, theme }: ModelViewerPro
     } catch {}
     renderer.dispose();
   };
-}, [url, ext, viewKey, theme]);
+}, [url, ext, viewKey, theme, colorOverride]);
 
   return (
     <Box

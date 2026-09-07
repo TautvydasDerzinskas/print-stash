@@ -74,7 +74,8 @@
       "administration": "Administration",
       "expandSidebar": "Expand sidebar",
       "collapseSidebar": "Collapse sidebar",
-      "foldersHeadingWithCount": "Folders ({{count}})"
+      "foldersHeadingWithCount": "Folders ({{count}})",
+      "models": "Models"
     },
     "uploadBar": {
       "uploading": "Uploading…",
@@ -302,7 +303,8 @@
     "error": "Error",
     "success": "Success",
     "retry": "Retry",
-    "language": "Language"
+    "language": "Language",
+    "more": "More"
   },
   "library": {
     "grid": {
@@ -452,6 +454,62 @@
     "lightburn": {
       "generatingPreview": "Generating preview...",
       "previewUnavailable": "Preview unavailable"
+    }
+  },
+  "models": {
+    "pageTitle": "Models",
+    "grid": {
+      "empty": "No models yet.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…"
+    },
+    "card": {
+      "unknownAuthor": "Unknown"
+    },
+    "detail": {
+      "preview3d": "3D Preview",
+      "description": "Description",
+      "noDescription": "No description yet.",
+      "plateLabel": "Plate {{n}}",
+      "downloadFailed": "Download failed. Please try again.",
+      "deleteFailed": "Failed to delete the model.",
+      "confirmDelete": "Delete \"{{name}}\"? This cannot be undone.",
+      "downloadPickerTitle": "Download",
+      "downloadAllZip": "Download all {{count}} plates (.zip)",
+      "orDownloadOne": "or download one plate",
+      "tags": "Tags",
+      "noTags": "No tags yet.",
+      "previousImage": "Previous image",
+      "nextImage": "Next image"
+    },
+    "author": {
+      "pageTitle": "Author",
+      "comingSoon": "Author pages are coming soon."
+    },
+    "errors": {
+      "loadFailed": "Unable to load models.",
+      "loadCategoriesFailed": "Unable to load categories.",
+      "createCategoryFailed": "Failed to create the category. Please try again.",
+      "renameCategoryFailed": "Failed to rename the category. Please try again.",
+      "deleteCategoryFailed": "Failed to delete the category. Please try again.",
+      "notFound": "Model not found."
+    },
+    "categories": {
+      "title": "Categories",
+      "all": "All",
+      "untitled": "Untitled",
+      "empty": "No categories yet",
+      "noSubcategories": "No subcategories yet",
+      "manageTooltip": "Manage categories",
+      "manager": {
+        "title": "Manage Categories",
+        "addCategory": "Add category",
+        "addSubcategory": "Add subcategory",
+        "noCategories": "No categories yet. Add one to get started.",
+        "confirmDeleteCategory": "Delete \"{{name}}\"? Any models in it move to Unassigned.",
+        "confirmDeleteCategoryWithSub": "Delete \"{{name}}\"? Its subcategories become top-level categories, and any models in them move to Unassigned.",
+        "confirmDeleteSubcategory": "Delete \"{{name}}\"? Any models in it move to Unassigned."
+      }
     }
   }
 }

@@ -15,6 +15,7 @@ import {
   type NewPlateInput,
 } from "../services/printCreation";
 import { availablePlateFilename, plateThumbPath, relocatePrint, saveThumbFromBytes } from "../services/printService";
+import { addGeneratedPreviewImageIfNone } from "../services/previewImageService";
 import { printOutById } from "../services/printLoader";
 
 const router = Router();
@@ -170,6 +171,10 @@ router.post(
     if (!plate) throw new HttpError(404, "Not found");
     const ok = await saveThumbFromBytes(plate.id, file.buffer);
     if (!ok) throw new HttpError(400, "Invalid thumbnail image");
+    // Every model needs at least one preview image for the detail page's gallery; a client-
+    // rendered 3D snapshot (this route) is the fallback when nothing better (an imported cover
+    // photo) already provided one.
+    await addGeneratedPreviewImageIfNone(plate.printId, file.buffer);
     res.json({ print: await printOutById(req.userId!, plate.printId) });
   }),
 );

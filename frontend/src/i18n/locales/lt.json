@@ -74,7 +74,8 @@
       "administration": "Administravimas",
       "expandSidebar": "Išskleisti šoninę juostą",
       "collapseSidebar": "Suskleisti šoninę juostą",
-      "foldersHeadingWithCount": "Aplankai ({{count}})"
+      "foldersHeadingWithCount": "Aplankai ({{count}})",
+      "models": "Modeliai"
     },
     "uploadBar": {
       "uploading": "Įkeliama…",
@@ -302,7 +303,8 @@
     "error": "Klaida",
     "success": "Pavyko",
     "retry": "Bandyti dar kartą",
-    "language": "Kalba"
+    "language": "Kalba",
+    "more": "Daugiau"
   },
   "library": {
     "grid": {
@@ -452,6 +454,62 @@
     "lightburn": {
       "generatingPreview": "Generuojama peržiūra...",
       "previewUnavailable": "Peržiūra nepasiekiama"
+    }
+  },
+  "models": {
+    "pageTitle": "Modeliai",
+    "grid": {
+      "empty": "Kol kas nėra modelių.",
+      "loadMore": "Įkelti daugiau",
+      "loadingMore": "Įkeliama…"
+    },
+    "card": {
+      "unknownAuthor": "Nežinomas"
+    },
+    "detail": {
+      "preview3d": "3D peržiūra",
+      "description": "Aprašymas",
+      "noDescription": "Aprašymo dar nėra.",
+      "plateLabel": "Plokštė {{n}}",
+      "downloadFailed": "Nepavyko atsisiųsti. Bandykite dar kartą.",
+      "deleteFailed": "Nepavyko ištrinti modelio.",
+      "confirmDelete": "Ištrinti „{{name}}“? Šio veiksmo nebus galima atšaukti.",
+      "downloadPickerTitle": "Atsisiųsti",
+      "downloadAllZip": "Atsisiųsti visas {{count}} plokštes (.zip)",
+      "orDownloadOne": "arba atsisiųsti vieną plokštę",
+      "tags": "Žymos",
+      "noTags": "Kol kas nėra žymų.",
+      "previousImage": "Ankstesnis paveikslėlis",
+      "nextImage": "Kitas paveikslėlis"
+    },
+    "author": {
+      "pageTitle": "Autorius",
+      "comingSoon": "Autorių puslapiai netrukus bus pasiekiami."
+    },
+    "errors": {
+      "loadFailed": "Nepavyko įkelti modelių.",
+      "loadCategoriesFailed": "Nepavyko įkelti kategorijų.",
+      "createCategoryFailed": "Nepavyko sukurti kategorijos. Bandykite dar kartą.",
+      "renameCategoryFailed": "Nepavyko pervadinti kategorijos. Bandykite dar kartą.",
+      "deleteCategoryFailed": "Nepavyko ištrinti kategorijos. Bandykite dar kartą.",
+      "notFound": "Modelis nerastas."
+    },
+    "categories": {
+      "title": "Kategorijos",
+      "all": "Visos",
+      "untitled": "Be pavadinimo",
+      "empty": "Kol kas nėra kategorijų",
+      "noSubcategories": "Kol kas nėra subkategorijų",
+      "manageTooltip": "Tvarkyti kategorijas",
+      "manager": {
+        "title": "Tvarkyti kategorijas",
+        "addCategory": "Pridėti kategoriją",
+        "addSubcategory": "Pridėti subkategoriją",
+        "noCategories": "Kol kas nėra kategorijų. Pridėkite pirmąją.",
+        "confirmDeleteCategory": "Ištrinti „{{name}}“? Joje esantys modeliai taps nepriskirti.",
+        "confirmDeleteCategoryWithSub": "Ištrinti „{{name}}“? Jos subkategorijos taps pagrindinėmis kategorijomis, o jose esantys modeliai taps nepriskirti.",
+        "confirmDeleteSubcategory": "Ištrinti „{{name}}“? Joje esantys modeliai taps nepriskirti."
+      }
     }
   }
 }

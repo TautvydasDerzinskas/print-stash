@@ -1,6 +1,7 @@
 import fs from "node:fs";
-import type { Author, Folder, Plate, Print, PrintFile, User } from "@prisma/client";
+import type { Author, Folder, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
+import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
 
 export type UserOut = {
@@ -76,6 +77,12 @@ export type PrintFileOut = {
   url: string;
 };
 
+export type PreviewImageOut = {
+  id: string;
+  position: number;
+  url: string;
+};
+
 export type PrintOut = {
   id: string;
   name: string;
@@ -88,6 +95,7 @@ export type PrintOut = {
   folder_id: string | null;
   storage_path: string | null;
   plates: PlateOut[];
+  preview_images: PreviewImageOut[];
   thumb_url: string | null;
   supporting_file_count: number;
   prepared_print: PreparedPrintOut | null;
@@ -121,6 +129,18 @@ export function toPlateOut(printId: string, plate: Plate): PlateOut {
   };
 }
 
+function previewImageUrl(id: string): string | null {
+  if (!previewImageExists(id)) return null;
+  const mtime = fs.statSync(previewImagePath(id)).mtimeMs;
+  return `/preview-image/${id}/file.jpg?v=${mtime}`;
+}
+
+export function toPreviewImageOut(image: PreviewImage): PreviewImageOut | null {
+  const url = previewImageUrl(image.id);
+  if (!url) return null;
+  return { id: image.id, position: image.position, url };
+}
+
 export function toPrintFileOut(printFile: PrintFile): PrintFileOut {
   return {
     id: printFile.id,
@@ -142,6 +162,8 @@ function storageParentDir(plates: Plate[]): string | null {
  * Builds the full Print DTO. `plates` must already be sorted by position ascending.
  * `files` is every PrintFile (supporting + prepared) belonging to this print.
  * `preparedFile` is the print's explicit prepared PrintFile row, if any (preparedFileId).
+ * `previewImages` must already be sorted by position ascending; position 0 is the default/main
+ * gallery image shown on the model detail page.
  */
 export function toPrintOut(
   print: Print,
@@ -149,10 +171,15 @@ export function toPrintOut(
   files: PrintFile[],
   preparedFile: PrintFile | null,
   author?: Author | null,
+  previewImages: PreviewImage[] = [],
 ): PrintOut {
   const sortedPlates = plates.toSorted((a, b) => a.position - b.position);
   const plateOuts = sortedPlates.map((p) => toPlateOut(print.id, p));
   const supportingCount = files.filter((f) => f.role === "SUPPORTING").length;
+  const previewImageOuts = previewImages
+    .toSorted((a, b) => a.position - b.position)
+    .map(toPreviewImageOut)
+    .filter((img): img is PreviewImageOut => img !== null);
 
   let prepared: PreparedPrintOut | null = null;
   let slicerUrl: string | null = null;
@@ -201,6 +228,7 @@ export function toPrintOut(
     folder_id: print.folderId,
     storage_path: storageParentDir(sortedPlates),
     plates: plateOuts,
+    preview_images: previewImageOuts,
     thumb_url: plateOuts[0]?.thumb_url ?? null,
     supporting_file_count: supportingCount,
     prepared_print: prepared,
