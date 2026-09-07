@@ -39,6 +39,10 @@ export const IMPORT_USER_AGENT = "PrintStash/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
 
+export const FLARESOLVERR_URL = (process.env.FLARESOLVERR_URL || "").trim();
+export const FLARESOLVERR_TIMEOUT_MS = envInt("FLARESOLVERR_TIMEOUT_MS", 60000);
+export const FLARESOLVERR_SESSION_TTL_MS = envInt("FLARESOLVERR_SESSION_TTL_MS", 15 * 60 * 1000);
+
 export const MOUNT_IMPORT_PATH = (process.env.IMPORT_MOUNT_PATH || "").trim();
 export const MOUNT_IMPORT_EXTS_RAW = (process.env.IMPORT_MOUNT_EXTS || "").trim();
 export const MOUNT_IMPORT_INCLUDE_HIDDEN = envBool("IMPORT_MOUNT_INCLUDE_HIDDEN", false);

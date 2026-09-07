@@ -16,6 +16,15 @@ services:
       timeout: 5s
       retries: 10
 
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      - LOG_LEVEL=${FLARESOLVERR_LOG_LEVEL:-info}
+      - TZ=${TZ:-UTC}
+    networks:
+      - app-net
+
   backend:
     # Pin to a specific build instead of :latest, e.g.:
     #   BACKEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-backend:sha-a8fef7d
@@ -36,9 +45,12 @@ services:
       - IMPORT_MOUNT_INCLUDE_HIDDEN=${IMPORT_MOUNT_INCLUDE_HIDDEN:-false}
       - IMPORT_MOUNT_ON_STARTUP=${IMPORT_MOUNT_ON_STARTUP:-false}
       - IMPORT_MOUNT_COPY=${IMPORT_MOUNT_COPY:-true}
+      - FLARESOLVERR_URL=${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
     depends_on:
       db:
         condition: service_healthy
+      flaresolverr:
+        condition: service_started
     volumes:
       - printstash_storage:/app/storage
       - ${IMPORT_MOUNT_PATH_HOST:-./imports}:/imports:ro

@@ -10,6 +10,13 @@ import {
   IMPORT_USER_AGENT,
 } from "../config";
 import { HttpError, isJsonContentType } from "../utils/fileUtils";
+import {
+  extractJsonFromBrowserBody,
+  fetchViaFlaresolverr,
+  isFlaresolverrEnabled,
+  looksLikeCloudflareBlock,
+  shouldProxyHost,
+} from "./flaresolverr";
 
 export type ImportCookies = {
   makerworld_cookie?: string | null;
@@ -134,7 +141,7 @@ function thingiverseApiHeaders(referer?: string | null, cookie?: string | null, 
 // -- Small bounded fetch helpers (used only for resolver-side HTML/JSON probes; the actual
 // model-file download streams straight to disk in importService.ts, not through here). ------
 
-async function fetchCappedBuffer(
+async function rawFetchBuffer(
   url: string,
   headers: Record<string, string>,
   init?: { method?: string; body?: string },
@@ -157,6 +164,56 @@ async function fetchCappedBuffer(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Loads `url` through FlareSolverr's real browser (GET only - its POST command submits a
+ * browser form, not a raw JSON body, so callers with a POST init fall back to a direct
+ * request instead). Unwraps the JSON it renders back into the same {status, headers, buffer,
+ * url} shape rawFetchBuffer returns, so callers don't need to know which path served them. */
+async function proxiedBuffer(
+  url: string,
+  cookieHeader?: string | null,
+): Promise<{ status: number; headers: Headers; buffer: Buffer; url: string } | null> {
+  const solved = await fetchViaFlaresolverr(url, cookieHeader);
+  if (!solved) return null;
+  const json = extractJsonFromBrowserBody(solved.body);
+  const bodyText = json !== null ? JSON.stringify(json) : solved.body;
+  const contentType = json !== null ? "application/json" : "text/html; charset=utf-8";
+  return {
+    status: solved.status,
+    headers: new Headers({ "content-type": contentType }),
+    buffer: Buffer.from(bodyText, "utf-8"),
+    url,
+  };
+}
+
+async function fetchCappedBuffer(
+  url: string,
+  headers: Record<string, string>,
+  init?: { method?: string; body?: string },
+): Promise<{ status: number; headers: Headers; buffer: Buffer; url: string } | null> {
+  const isGet = !init?.method || init.method.toUpperCase() === "GET";
+  if (!isGet || !isFlaresolverrEnabled()) {
+    return rawFetchBuffer(url, headers, init);
+  }
+
+  let hostname = "";
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    return rawFetchBuffer(url, headers, init);
+  }
+
+  if (shouldProxyHost(hostname)) {
+    return (await proxiedBuffer(url, headers.Cookie)) || rawFetchBuffer(url, headers, init);
+  }
+
+  const result = await rawFetchBuffer(url, headers, init);
+  if (result && result.status === 403 && looksLikeCloudflareBlock(result.headers)) {
+    const proxied = await proxiedBuffer(url, headers.Cookie);
+    if (proxied) return proxied;
+  }
+  return result;
 }
 
 function parseJsonErrorMessage(raw: Buffer): string | null {

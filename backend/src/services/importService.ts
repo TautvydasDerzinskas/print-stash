@@ -11,6 +11,7 @@ import {
 } from "../config";
 import { HttpError, buildImportFilename, isHtmlContentType, mimeFromContentType } from "../utils/fileUtils";
 import { validateRemoteUrl } from "../utils/urlUtils";
+import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock, shouldProxyHost } from "./flaresolverr";
 import {
   findDownloadUrl,
   isPrintablesPageHost,
@@ -66,11 +67,48 @@ async function readCapped(response: Response, maxBytes: number): Promise<{ buffe
   return { buffer: Buffer.concat(chunks), truncated };
 }
 
-async function fetchWithGuard(url: string, headers: Record<string, string>): Promise<Response> {
+async function rawFetch(url: string, headers: Record<string, string>): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IMPORT_TIMEOUT_SECONDS * 1000);
   try {
-    const res = await fetch(url, { headers, redirect: "follow", signal: controller.signal });
+    return await fetch(url, { headers, redirect: "follow", signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/** Loads `url` through FlareSolverr's real browser and wraps the rendered body as an HTML
+ * Response, so callers (openImportResponse's page-scraping path) can treat it exactly like
+ * an ordinary fetch result. */
+async function proxiedResponse(url: string, cookieHeader?: string | null): Promise<Response | null> {
+  const solved = await fetchViaFlaresolverr(url, cookieHeader);
+  if (!solved) return null;
+  return new Response(solved.body, {
+    status: solved.status,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+async function fetchWithGuard(url: string, headers: Record<string, string>): Promise<Response> {
+  try {
+    let hostname = "";
+    try {
+      hostname = new URL(url).hostname;
+    } catch {
+      // validateRemoteUrl already rejects unparsable URLs upstream
+    }
+
+    let res: Response;
+    if (isFlaresolverrEnabled() && shouldProxyHost(hostname)) {
+      res = (await proxiedResponse(url, headers.Cookie)) || (await rawFetch(url, headers));
+    } else {
+      res = await rawFetch(url, headers);
+      if (res.status === 403 && isFlaresolverrEnabled() && looksLikeCloudflareBlock(res.headers)) {
+        const proxied = await proxiedResponse(url, headers.Cookie);
+        if (proxied) res = proxied;
+      }
+    }
+
     if (!res.ok) {
       throw new HttpError(res.status || 400, `Failed to fetch URL: ${res.statusText || res.status}`);
     }
@@ -78,8 +116,6 @@ async function fetchWithGuard(url: string, headers: Record<string, string>): Pro
   } catch (err) {
     if (err instanceof HttpError) throw err;
     throw new HttpError(400, "Failed to reach the provided URL");
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
