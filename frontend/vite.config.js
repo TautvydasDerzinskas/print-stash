@@ -39,27 +39,24 @@ function parseAllowedHosts(value, extras = []) {
   return merged;
 }
 
-const apiUrlHost = (() => {
-  const url = process.env.VITE_API_URL;
-  if (!url) return null;
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return null;
-  }
-})();
-
 const resolvedAllowedHosts = parseAllowedHosts(
   process.env.VITE_ALLOWED_HOSTS ||
     process.env.ALLOWED_HOSTS ||
     process.env.CORS_ORIGINS,
-  apiUrlHost ? [apiUrlHost] : []
 );
 
 export default defineConfig({
   server: {
     host: true,
     allowedHosts: resolvedAllowedHosts,
+    proxy: {
+      // Forward /api/* to the backend during local development (npm run dev), mirroring the
+      // nginx reverse proxy used in the Docker image (see nginx.conf).
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     allowedHosts: resolvedAllowedHosts,

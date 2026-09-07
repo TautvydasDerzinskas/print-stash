@@ -1,6 +1,6 @@
 import { SCAN_EXT_SET } from "../constants/fileTypes";
 import { extOf } from "./fileExtensions";
-import type { UploadEntry } from "../services/uploadTree";
+import type { UploadEntry } from "./uploadTree";
 
 function normalizeRelativePath(path: string) {
   return (path || "").replace(/\\/g, "/").replace(/^\/+/, "");

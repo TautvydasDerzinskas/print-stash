@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
-import AppLayout from "./common/layout/AppLayout";
-import PrintGrid from "./routes/library";
-import Login from "./routes/login";
-import Settings from "./routes/settings";
-import { apiHealth, getApiBase, refreshToken, type HealthInfo } from "./services/api";
-import { clearToken, readToken, storeToken } from "./services/auth";
-import { type AppSettings, loadSettings, saveSettings } from "./services/settings";
+import AppLayout from "./components/Layout/AppLayout";
+import LibraryPage from "./pages/LibraryPage";
+import LoginPage from "./pages/LoginPage";
+import SettingsPage from "./pages/SettingsPage";
+import { healthApi, type HealthInfo } from "./api/health";
+import { authApi } from "./api/auth";
+import { clearToken, readToken, storeToken } from "./utils/auth";
+import { type AppSettings, loadSettings, saveSettings } from "./utils/settings";
 import { resolveTheme } from "./utils/settingsHelpers";
 import { buildTheme } from "./theme";
 
@@ -31,10 +32,7 @@ export default function App() {
     [settings.theme.selected]
   );
   const muiTheme = React.useMemo(() => buildTheme(resolvedTheme), [resolvedTheme]);
-  // Re-check health whenever the API base (driven by the public URL override) changes, even
-  // though apiHealth() takes no args.
-  // oxlint-disable-next-line react/exhaustive-effect-dependencies
-  React.useEffect(() => { (async ()=> setHealth(await apiHealth()))(); }, [settings.network.publicUrl]);
+  React.useEffect(() => { (async ()=> setHealth(await healthApi.get()))(); }, []);
   React.useEffect(() => {
     saveSettings(settings);
   }, [settings]);
@@ -76,16 +74,6 @@ export default function App() {
     setTokenTtl(null);
   };
 
-  const resetSavedProxyUrl = () => {
-    setSettings(prev => ({
-      ...prev,
-      network: {
-        ...prev.network,
-        publicUrl: "",
-      },
-    }));
-  };
-
   React.useEffect(() => {
     if (!token) return;
     const ttl = tokenTtl ?? DEFAULT_REFRESH_SECONDS;
@@ -95,7 +83,7 @@ export default function App() {
     );
     const timer = window.setTimeout(async () => {
       try {
-        const res = await refreshToken();
+        const res = await authApi.refresh();
         storeToken(res.token);
         setToken(res.token);
         setTokenTtl(res.expires_in);
@@ -120,7 +108,7 @@ export default function App() {
             p: 2,
           }}
         >
-          <Login onSuccess={handleLogin} apiUp={apiUp} theme={resolvedTheme} />
+          <LoginPage onSuccess={handleLogin} apiUp={apiUp} theme={resolvedTheme} />
         </Box>
       </ThemeProvider>
     );
@@ -131,9 +119,6 @@ export default function App() {
       muiTheme={muiTheme}
       resolvedTheme={resolvedTheme}
       apiUp={apiUp}
-      apiBase={getApiBase()}
-      publicUrl={settings.network.publicUrl}
-      onResetProxyUrl={resetSavedProxyUrl}
       folderId={folderId}
       onSelectFolder={handleSelectFolder}
       folderVersion={folderVersion}
@@ -148,7 +133,7 @@ export default function App() {
       thingiverseCookie={settings.thingiverse.cookie}
     >
       {activeView === "library" ? (
-        <PrintGrid
+        <LibraryPage
           key={`${nonce + (folderId||'')}-${folderVersion}`}
           folderId={folderId}
           foldersVersion={folderVersion}
@@ -159,7 +144,7 @@ export default function App() {
           theme={resolvedTheme}
         />
       ) : (
-        <Settings
+        <SettingsPage
           settings={settings}
           onChange={setSettings}
           onAssetsChanged={handlePrintsChanged}

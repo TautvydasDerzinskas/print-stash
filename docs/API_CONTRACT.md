@@ -4,10 +4,11 @@ Node.js + Express + Prisma (Postgres) backend, ported from MakersVault's FastAPI
 backend, with one structural change: a **Print** is a set of one or more **Plates** (multi-part
 prints) instead of a single file. Everything else behaves the same as MakersVault.
 
-Base path: no prefix, ever — routes are mounted directly (`/health`, `/prints`, `/login`, ...).
-In production the backend also serves the built frontend as static files from the same origin
-(see `backend/src/app.ts`'s `express.static(FRONTEND_DIST)`), so the UI calls these routes with
-plain relative paths and no reverse proxy is involved.
+Base path: `/api` — routes are mounted under it in `backend/src/app.ts` (`/api/health`,
+`/api/prints`, `/api/login`, ...). The frontend is a separate nginx container that serves the
+built static app and reverse-proxies `/api/*` to this backend unmodified (see
+`frontend/nginx.conf`), so the routes below are documented without that prefix but are only
+reachable at `/api/<route>`.
 
 Auth: identical scheme to MakersVault — single-user JWT (HS256). `AUTH_USERNAME`/`AUTH_PASSWORD`/
 `AUTH_SECRET`/`AUTH_TOKEN_TTL` env vars. `AUTH_ENABLED = Boolean(username && password)`. Every

@@ -29,12 +29,9 @@ jobs:
       packages: write
     uses: ./.github/workflows/build-image.yml
     with:
-      # Build context is the repo root: backend/Dockerfile builds the frontend in its own stage
-      # and bundles the static output into the backend image, so it needs to see both backend/
-      # and frontend/ regardless of which one changed.
       project_dir: backend
       image_name: ghcr.io/${{ github.repository_owner }}/printstash-backend
-      context: .
+      context: ./backend
       dockerfile: backend/Dockerfile
       cache_scope: backend
       push: ${{ github.event_name != 'pull_request' }}

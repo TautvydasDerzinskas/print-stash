@@ -8,6 +8,8 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-printstash}
     volumes:
       - printstash_db:/var/lib/postgresql/data
+    networks:
+      - app-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printstash}"]
       interval: 5s
@@ -28,11 +30,6 @@ services:
       - AUTH_TOKEN_TTL=${AUTH_TOKEN_TTL:-43200}
       - FILE_STORAGE=/app/storage
       - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
-      - PUBLIC_URL=${PUBLIC_URL:-}
-      # Running the frontend as its own service on its own domain (e.g. behind an external
-      # reverse proxy mapping printstash.mylan -> frontend, printstash-api.mylan -> backend)
-      # makes every browser call to the API cross-origin, so the frontend's *own* origin must be
-      # allowed here explicitly -- e.g. CORS_ORIGINS=http://printstash.mylan
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - IMPORT_MOUNT_PATH=${IMPORT_MOUNT_PATH:-}
       - IMPORT_MOUNT_EXTS=${IMPORT_MOUNT_EXTS:-stl,3mf,step,stp,obj,svg,png,jpg,jpeg,webp,bmp,lbrn,lbrn2,zip}
@@ -45,29 +42,28 @@ services:
     volumes:
       - printstash_storage:/app/storage
       - ${IMPORT_MOUNT_PATH_HOST:-./imports}:/imports:ro
-    ports:
-      - "${API_PORT:-8000}:8000"
+    networks:
+      - app-net
 
-  # Standalone UI, published separately from the backend (see frontend/Dockerfile) -- no nginx,
-  # no /api proxying, it just serves the built static app and calls the backend directly. Only
-  # needed if you want to run the UI as its own service/domain; the backend image alone already
-  # serves the bundled UI at its own address if you'd rather run one service instead of two (see
-  # docker-compose.yml).
-  #
-  # Because this image is published generically (no backend address baked in), point it at your
-  # backend's address once after deploying: open the app, go to Settings -> Network, and set the
-  # API address (e.g. http://printstash-api.mylan). That's stored per-browser and survives
-  # restarts/updates -- no rebuild needed.
+  # Frontend: nginx serving the built static app and reverse-proxying /api/* to the backend
+  # container over the compose network (see frontend/nginx.conf) — the same single-entry-point
+  # pattern as docker-compose.yml, just built from a published image instead of local source.
   frontend:
     # Pin to a specific build instead of :latest, e.g.:
     #   FRONTEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-frontend:sha-a8fef7d
     image: ${FRONTEND_IMAGE:-ghcr.io/tautvydasderzinskas/printstash-frontend:latest}
     restart: unless-stopped
     ports:
-      - "${WEB_PORT:-5173}:5173"
+      - "${WEB_PORT:-80}:80"
     depends_on:
       - backend
+    networks:
+      - app-net
 
 volumes:
   printstash_storage:
   printstash_db:
+
+networks:
+  app-net:
+    driver: bridge

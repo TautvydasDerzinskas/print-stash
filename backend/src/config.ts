@@ -50,10 +50,3 @@ export const DEFAULT_MOUNT_IMPORT_EXTS = new Set([
 ]);
 
 export const API_PORT = envInt("API_PORT", 8000);
-
-/**
- * Where the frontend's built static files (index.html, assets/*) live, if present. Populated by
- * the Docker image's build (see Dockerfile); absent in local `npm run dev` — express.static()
- * simply serves nothing and every request falls through to the API routes / 404 handler.
- */
-export const FRONTEND_DIST = path.resolve(process.env.FRONTEND_DIST || path.join(__dirname, "../public"));

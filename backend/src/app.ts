@@ -1,8 +1,6 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
-import fs from "node:fs";
 import { resolveCorsOrigins } from "./cors";
-import { FRONTEND_DIST } from "./config";
 import { HttpError } from "./utils/fileUtils";
 
 import healthRoutes from "./routes/health";
@@ -28,22 +26,16 @@ export function createApp(): Express {
 
   app.use(express.json());
 
-  // Serves the frontend's built static files (index.html, assets/*) when present — i.e. in the
-  // production Docker image, which bundles frontend + backend behind one origin/port so the UI
-  // can call the API with plain relative paths (no /api prefix, no separate proxy). Absent in
-  // local dev (`npm run dev`), where the Vite dev server is used instead and this is a no-op.
-  if (fs.existsSync(FRONTEND_DIST)) {
-    app.use(express.static(FRONTEND_DIST));
-  }
-
-  app.use(healthRoutes);
-  app.use(authRoutes);
-  app.use(settingsRoutes);
-  app.use(printsRoutes);
-  app.use(platesRoutes);
-  app.use(foldersRoutes);
-  app.use(printFilesRoutes);
-  app.use(importsRoutes);
+  // Mounted under /api because the frontend is served separately by its own nginx container,
+  // which reverse-proxies /api/* here unmodified (see frontend/nginx.conf).
+  app.use("/api", healthRoutes);
+  app.use("/api", authRoutes);
+  app.use("/api", settingsRoutes);
+  app.use("/api", printsRoutes);
+  app.use("/api", platesRoutes);
+  app.use("/api", foldersRoutes);
+  app.use("/api", printFilesRoutes);
+  app.use("/api", importsRoutes);
 
   // 404 fallback for unmatched routes.
   app.use((_req: Request, res: Response) => {
