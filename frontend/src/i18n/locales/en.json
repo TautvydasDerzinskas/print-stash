@@ -6,14 +6,31 @@
       "confirmLogout": "Are you sure you want to log out?",
       "sessionExpired": "Your session has expired. Please sign in again."
     },
-    "login": {
+    "auth": {
       "subtitle": "Sign in to continue",
       "apiOffline": "API appears offline. Ensure the API service is running.",
-      "loginFailed": "Login failed",
-      "usernameLabel": "Username",
-      "passwordLabel": "Password",
-      "signIn": "Sign in",
-      "signingIn": "Signing in…"
+      "signInTab": "Sign In",
+      "registerTab": "Register",
+      "signIn": {
+        "emailLabel": "Email",
+        "passwordLabel": "Password",
+        "submit": "Sign in",
+        "submitting": "Signing in...",
+        "failed": "Login failed"
+      },
+      "register": {
+        "displayNameLabel": "Display Name",
+        "emailLabel": "Email",
+        "passwordLabel": "Password",
+        "passwordHelp": "At least 8 characters",
+        "confirmPasswordLabel": "Confirm Password",
+        "submit": "Create Account",
+        "submitting": "Creating account...",
+        "failed": "Registration failed",
+        "passwordMismatch": "Passwords do not match",
+        "passwordTooShort": "Password must be at least 8 characters",
+        "disabled": "New registrations are currently disabled."
+      }
     },
     "sidebar": {
       "brand": "PrintStash",
@@ -204,13 +221,6 @@
       "imports": {
         "heading": "Imports",
         "subtitle": "Manage session cookies and import local folders.",
-        "mountHeading": "Mount import (server)",
-        "mountDesc": "Index files from the server's mounted volume. Enable the no-copy option to keep files in place and avoid duplicates.",
-        "mountPath": "Mount path: {{path}}",
-        "mountPathNotConfigured": "Not configured",
-        "mountNote": "Changes apply on the next server restart. In no-copy mode, mounted files stay read-only and renaming is disabled.",
-        "mountEnableLabel": "Enable mount import on startup",
-        "mountCopyLabel": "Copy files into PrintStash storage (disable to use mounted files directly)",
         "save": "Save",
         "saving": "Saving…",
         "loadingSettings": "Loading settings…",

@@ -24,7 +24,7 @@ function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
   const tagsParam = typeof req.query.tags === "string" ? req.query.tags : "";
   const folderId = typeof req.query.folder_id === "string" ? req.query.folder_id : undefined;
 
-  const where: Prisma.PrintWhereInput = {};
+  const where: Prisma.PrintWhereInput = { userId: req.userId };
   if (folderId) where.folderId = folderId;
   const tagList = tagsParam
     .split(",")
@@ -73,7 +73,7 @@ router.post(
         for (const file of files) {
           const safeName = sanitizeFilename(file.originalname);
           const mime = mimeFromContentType(file.mimetype, safeName);
-          const { print, plates } = await createPrint(meta, path.parse(safeName).name, [
+          const { print, plates } = await createPrint(req.userId!, meta, path.parse(safeName).name, [
             { filename: safeName, mime, tempFilePath: file.path },
           ]);
           printsOut.push(toPrintOut(print, plates, [], null));
@@ -84,7 +84,7 @@ router.post(
           return { filename: safeName, mime: mimeFromContentType(f.mimetype, safeName), tempFilePath: f.path };
         });
         const nameHint = path.parse(plateInputs[0].filename).name;
-        const { print, plates } = await createPrint(meta, nameHint, plateInputs);
+        const { print, plates } = await createPrint(req.userId!, meta, nameHint, plateInputs);
         printsOut.push(toPrintOut(print, plates, [], null));
       }
       res.json({ prints: printsOut });
@@ -190,7 +190,7 @@ router.post(
     if (!(body.print_ids?.length || body.tag || body.folder_id)) {
       throw new HttpError(400, "Provide print_ids, tag, or folder_id to download.");
     }
-    const where: Prisma.PrintWhereInput = {};
+    const where: Prisma.PrintWhereInput = { userId: req.userId };
     if (body.print_ids?.length) where.id = { in: body.print_ids };
     if (body.folder_id) where.folderId = body.folder_id;
     let prints = await prisma.print.findMany({
@@ -223,8 +223,10 @@ router.post(
 router.get(
   "/print/:id/plate/:plateId/file/:filename",
   asyncHandler(async (req, res) => {
-    const plate = await prisma.plate.findUnique({ where: { id: req.params.plateId } });
-    if (!plate || plate.printId !== req.params.id) throw new HttpError(404, "Not found");
+    const plate = await prisma.plate.findFirst({
+      where: { id: req.params.plateId, printId: req.params.id, print: { userId: req.userId } },
+    });
+    if (!plate) throw new HttpError(404, "Not found");
     const filePath = resolvePlateFilePath(plate);
     if (!filePath) throw new HttpError(404, "Not found");
     res.setHeader("Content-Type", plate.mime || "application/octet-stream");
@@ -237,7 +239,10 @@ router.get(
 router.get(
   "/print/:id/thumb.jpg",
   asyncHandler(async (req, res) => {
-    const plate0 = await prisma.plate.findFirst({ where: { printId: req.params.id }, orderBy: { position: "asc" } });
+    const plate0 = await prisma.plate.findFirst({
+      where: { printId: req.params.id, print: { userId: req.userId } },
+      orderBy: { position: "asc" },
+    });
     if (!plate0) throw new HttpError(404, "Not found");
     const thumbPath = plateThumbPath(plate0.id);
     if (!fs.existsSync(thumbPath)) throw new HttpError(404, "Not found");
@@ -254,7 +259,7 @@ router.post(
   "/print/:id/tags",
   asyncHandler(async (req, res) => {
     const body = parseBody(tagsSchema, req.body);
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
     const updated = await prisma.print.update({
       where: { id: print.id },
@@ -262,7 +267,7 @@ router.post(
     });
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
@@ -277,13 +282,13 @@ router.post(
   "/print/:id/meta",
   asyncHandler(async (req, res) => {
     const body = parseBody(metaSchema, req.body);
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
 
     const data: Prisma.PrintUpdateInput = {};
     const requestedName = body.name !== undefined ? body.name : body.title;
     if (requestedName !== undefined) {
-      const nextName = await uniqueModelName(requestedName, print.folderId, print.id);
+      const nextName = await uniqueModelName(req.userId!, requestedName, print.folderId, print.id);
       if (nextName !== print.name) {
         data.name = nextName;
         data.nameNormalized = nextName.trim().toLowerCase();
@@ -297,7 +302,7 @@ router.post(
     const updated = await prisma.print.update({ where: { id: print.id }, data });
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
@@ -306,30 +311,30 @@ router.post(
   "/print/:id/folder",
   asyncHandler(async (req, res) => {
     const body = parseBody(folderUpdateSchema, req.body);
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
     const folderId = body.folder_id || null;
     const data: Prisma.PrintUpdateInput = {};
     if (folderId) {
-      const folder = await prisma.folder.findUnique({ where: { id: folderId } });
+      const folder = await prisma.folder.findFirst({ where: { id: folderId, userId: req.userId } });
       if (!folder) throw new HttpError(400, "Folder not found");
-      await uniqueModelName(print.name, folder.id, print.id);
+      await uniqueModelName(req.userId!, print.name, folder.id, print.id);
       data.folder = { connect: { id: folder.id } };
     } else {
-      await uniqueModelName(print.name, null, print.id);
+      await uniqueModelName(req.userId!, print.name, null, print.id);
       data.folder = { disconnect: true };
     }
     const updated = await prisma.print.update({ where: { id: print.id }, data });
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
 router.delete(
   "/print/:id",
   asyncHandler(async (req, res) => {
-    const full = await loadFullPrint(req.params.id);
+    const full = await loadFullPrint(req.userId!, req.params.id);
     await deleteAllPrintFiles(req.params.id);
     await prisma.print.delete({ where: { id: req.params.id } });
     for (const plate of full.plates) {

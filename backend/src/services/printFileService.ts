@@ -43,12 +43,13 @@ async function pruneBundleDirs(start: string): Promise<void> {
  * PREPARED file replaces (deletes) any existing one for the print.
  */
 export async function saveFileFromTemp(
+  userId: string,
   printId: string,
   tempPath: string,
   originalFilename: string,
   contentType: string | null | undefined,
 ): Promise<Print> {
-  const print = await prisma.print.findUnique({ where: { id: printId } });
+  const print = await prisma.print.findFirst({ where: { id: printId, userId } });
   if (!print) throw new HttpError(404, "Print not found");
 
   const safeName = sanitizeFilename(originalFilename || "supporting-file");
@@ -131,7 +132,9 @@ export async function saveFileFromTemp(
   }
 }
 
-export async function deleteSupportingFile(printId: string, fileId: string): Promise<Print> {
+export async function deleteSupportingFile(userId: string, printId: string, fileId: string): Promise<Print> {
+  const print = await prisma.print.findFirst({ where: { id: printId, userId } });
+  if (!print) throw new HttpError(404, "Print not found");
   const record = await prisma.printFile.findUnique({ where: { id: fileId } });
   if (!record || record.printId !== printId || record.role !== "SUPPORTING") {
     throw new HttpError(404, "Supporting file not found");
@@ -155,8 +158,8 @@ export async function deleteAllPrintFiles(printId: string): Promise<void> {
   }
 }
 
-export async function deletePreparedFile(printId: string): Promise<Print> {
-  const print = await prisma.print.findUnique({ where: { id: printId } });
+export async function deletePreparedFile(userId: string, printId: string): Promise<Print> {
+  const print = await prisma.print.findFirst({ where: { id: printId, userId } });
   if (!print || !print.preparedFileId) throw new HttpError(404, "No prepared print file");
   const record = await prisma.printFile.findUnique({ where: { id: print.preparedFileId } });
   if (!record || record.printId !== printId || record.role !== "PREPARED") {

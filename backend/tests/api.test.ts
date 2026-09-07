@@ -30,10 +30,20 @@ async function cleanupPrint(id: string) {
   await request(app).delete(`/api/print/${id}`).set("Authorization", `Bearer ${token}`);
 }
 
+const TEST_EMAIL = "test@example.com";
+const TEST_PASSWORD = "test-password-123";
+
 beforeAll(async () => {
-  const res = await request(app).post("/api/login").send({ username: "admin", password: "super-secret" });
+  // Register the primary test account, or log in if a previous run against a persistent test
+  // DB already created it.
+  let res = await request(app)
+    .post("/api/register")
+    .send({ displayName: "Test User", email: TEST_EMAIL, password: TEST_PASSWORD });
+  if (res.status === 409) {
+    res = await request(app).post("/api/login").send({ email: TEST_EMAIL, password: TEST_PASSWORD });
+  }
   if (res.status !== 200) {
-    throw new Error(`Failed to log in during test setup: ${res.status} ${JSON.stringify(res.body)}`);
+    throw new Error(`Failed to authenticate during test setup: ${res.status} ${JSON.stringify(res.body)}`);
   }
   token = res.body.token;
 });
@@ -62,8 +72,60 @@ describe("auth", () => {
   });
 
   it("rejects a bad login", async () => {
-    const res = await request(app).post("/api/login").send({ username: "admin", password: "wrong" });
+    const res = await request(app).post("/api/login").send({ email: TEST_EMAIL, password: "wrong" });
     expect(res.status).toBe(401);
+  });
+
+  it("rejects login for an email that doesn't exist with the same generic message", async () => {
+    const res = await request(app).post("/api/login").send({ email: "nobody@example.com", password: "whatever123" });
+    expect(res.status).toBe(401);
+    expect(res.body.detail).toBe("Invalid email or password");
+  });
+
+  it("rejects registration with a password under 8 characters", async () => {
+    const res = await request(app)
+      .post("/api/register")
+      .send({ displayName: "X", email: `short-${Date.now()}@example.com`, password: "short" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects registration with an invalid email", async () => {
+    const res = await request(app)
+      .post("/api/register")
+      .send({ displayName: "X", email: "not-an-email", password: "validpass123" });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a duplicate email registration", async () => {
+    const res = await request(app)
+      .post("/api/register")
+      .send({ displayName: "Dup", email: TEST_EMAIL, password: TEST_PASSWORD });
+    expect(res.status).toBe(409);
+  });
+
+  it("scopes prints per user -- a second account cannot see or modify the first's", async () => {
+    const otherEmail = `other-${Date.now()}@example.com`;
+    const registerRes = await request(app)
+      .post("/api/register")
+      .send({ displayName: "Other", email: otherEmail, password: "other-password-123" });
+    expect(registerRes.status).toBe(200);
+    const otherToken = registerRes.body.token as string;
+
+    const f = tmpFile("cross-tenant.stl", "solid x endsolid");
+    const uploadRes = await auth(request(app).post("/api/upload")).attach("files", f);
+    fs.rmSync(f, { force: true });
+    expect(uploadRes.status).toBe(200);
+    const printId = uploadRes.body.prints[0].id as string;
+    await trackPrint(printId);
+
+    const listRes = await request(app).get("/api/prints").set("Authorization", `Bearer ${otherToken}`);
+    expect(listRes.body.find((p: { id: string }) => p.id === printId)).toBeUndefined();
+
+    const tagRes = await request(app)
+      .post(`/api/print/${printId}/tags`)
+      .set("Authorization", `Bearer ${otherToken}`)
+      .send({ tags: ["hijacked"] });
+    expect(tagRes.status).toBe(404);
   });
 });
 

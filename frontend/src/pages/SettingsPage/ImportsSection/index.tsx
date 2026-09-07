@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import Stack from "@mui/material/Stack";
 import type { MakerWorldSettings, ThingiverseSettings } from "../../../utils/settings";
 import SectionHeader from "../SectionHeader";
-import MountImportPanel from "./MountImportPanel";
 import FolderScanPanel from "./FolderScanPanel";
 import CookiePanel from "./CookiePanel";
 
@@ -41,8 +40,6 @@ export default function ImportsSection({
         onBack={onBack}
         backLabel={t("settings.back")}
       />
-
-      <MountImportPanel onUnauthorized={onUnauthorized} />
 
       <FolderScanPanel
         onAssetsChanged={onAssetsChanged}

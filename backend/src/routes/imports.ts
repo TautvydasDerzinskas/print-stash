@@ -38,7 +38,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = parseBody(importRequestSchema, req.body);
     const url = await normalizeImportUrl(body.url);
-    const { print, plates, author } = await importPrintFromUrl(url, body);
+    const { print, plates, author } = await importPrintFromUrl(req.userId!, url, body);
     res.json(toPrintOut(print, plates, [], null, author));
   }),
 );
@@ -80,7 +80,7 @@ router.post(
     try {
       if (path.extname(filename).toLowerCase() !== ".zip") throw new HttpError(415, "Imported file is not a zip");
       const author = await upsertAuthorFromImport(meta.author);
-      const { prints, failed } = await extractZipEntriesToPrints(tempPath, body.entries, {
+      const { prints, failed } = await extractZipEntriesToPrints(req.userId!, tempPath, body.entries, {
         title: body.title ?? meta.title,
         notes: body.notes ?? meta.description,
         tags: body.tags && body.tags.length ? body.tags : meta.tags,
@@ -158,7 +158,7 @@ router.post(
         thingiverse_cookie: body.thingiverse_cookie,
       };
       try {
-        const { print, plates, author } = await importPrintFromUrl(modelUrl, itemBody);
+        const { print, plates, author } = await importPrintFromUrl(req.userId!, modelUrl, itemBody);
         return { ok: true as const, print: toPrintOut(print, plates, [], null, author) };
       } catch {
         return { ok: false as const, designId };

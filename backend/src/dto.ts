@@ -1,7 +1,23 @@
 import fs from "node:fs";
-import type { Author, Folder, Plate, Print, PrintFile } from "@prisma/client";
+import type { Author, Folder, Plate, Print, PrintFile, User } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { preparedFilename } from "./services/preparedPrint";
+
+export type UserOut = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: "ADMIN" | "MEMBER";
+};
+
+export function toUserOut(user: User): UserOut {
+  return {
+    id: user.id,
+    email: user.email,
+    display_name: user.displayName,
+    role: user.role,
+  };
+}
 
 export type AuthorOut = {
   id: string;

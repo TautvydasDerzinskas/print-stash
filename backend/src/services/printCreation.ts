@@ -3,7 +3,7 @@ import fsSync from "node:fs";
 import path from "node:path";
 import { prisma } from "../db";
 import { STORAGE } from "../config";
-import { sanitizeFilename, guessMimeFromPath, mimeFromContentType } from "../utils/fileUtils";
+import { HttpError, sanitizeFilename, guessMimeFromPath, mimeFromContentType } from "../utils/fileUtils";
 import { inspectPreparedPrint } from "./preparedPrint";
 import {
   availableModelName,
@@ -113,7 +113,7 @@ export async function refreshAutoPreparedMetadata(printId: string): Promise<void
 type CreatedPlate = { record: Plate; effectivePath: string | null };
 
 async function createPlateAtPosition(
-  print: Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId">,
+  print: Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId" | "userId">,
   input: NewPlateInput,
   position: number,
 ): Promise<CreatedPlate> {
@@ -143,16 +143,25 @@ async function createPlateAtPosition(
 
 /** Creates a new Print with one or more Plates (in the given order). Used by /upload (single + multiplate). */
 export async function createPrint(
+  userId: string,
   meta: PrintMetaInput,
   nameHint: string,
   plateInputs: NewPlateInput[],
 ): Promise<{ print: Print; plates: Plate[] }> {
   if (!plateInputs.length) throw new Error("createPrint requires at least one plate");
+  // meta.folderId can come straight from a request body (upload/import/zip) with no prior
+  // ownership check by the caller -- verify here, once, rather than trusting every call site
+  // to have already confirmed it (the FK to Folder.id alone doesn't prove *this user* owns it).
+  if (meta.folderId) {
+    const folder = await prisma.folder.findFirst({ where: { id: meta.folderId, userId } });
+    if (!folder) throw new HttpError(400, "Folder not found");
+  }
   const baseName = (meta.title || "").trim() || nameHint;
-  const finalName = await availableModelName(baseName, meta.folderId ?? null);
+  const finalName = await availableModelName(userId, baseName, meta.folderId ?? null);
 
   const print = await prisma.print.create({
     data: {
+      userId,
       name: finalName,
       nameNormalized: finalName.trim().toLowerCase(),
       title: meta.title ?? null,
@@ -191,8 +200,8 @@ export async function createPrint(
 }
 
 /** Appends one or more plates to an existing print (POST /print/:id/plates). */
-export async function addPlatesToPrint(printId: string, plateInputs: NewPlateInput[]): Promise<Plate[]> {
-  const print = await prisma.print.findUnique({ where: { id: printId } });
+export async function addPlatesToPrint(userId: string, printId: string, plateInputs: NewPlateInput[]): Promise<Plate[]> {
+  const print = await prisma.print.findFirst({ where: { id: printId, userId } });
   if (!print) throw new Error("Print not found");
   const maxPosition = await prisma.plate.aggregate({ where: { printId }, _max: { position: true } });
   let nextPosition = (maxPosition._max.position ?? -1) + 1;

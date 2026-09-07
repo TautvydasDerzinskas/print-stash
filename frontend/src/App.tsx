@@ -5,7 +5,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
 import AppLayout from "./components/Layout/AppLayout";
 import LibraryPage from "./pages/LibraryPage";
-import LoginPage from "./pages/LoginPage";
+import AuthPage from "./pages/AuthPage";
 import SettingsPage from "./pages/SettingsPage";
 import { healthApi, type HealthInfo } from "./api/health";
 import { authApi } from "./api/auth";
@@ -108,7 +108,12 @@ export default function App() {
             p: 2,
           }}
         >
-          <LoginPage onSuccess={handleLogin} apiUp={apiUp} theme={resolvedTheme} />
+          <AuthPage
+            onSuccess={handleLogin}
+            apiUp={apiUp}
+            theme={resolvedTheme}
+            allowRegistrations={health?.allow_registrations ?? true}
+          />
         </Box>
       </ThemeProvider>
     );

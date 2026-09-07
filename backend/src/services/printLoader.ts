@@ -10,8 +10,8 @@ export type FullPrint = {
   preparedFile: PrintFile | null;
 };
 
-export async function loadFullPrint(printId: string): Promise<FullPrint> {
-  const print = await prisma.print.findUnique({ where: { id: printId }, include: { author: true } });
+export async function loadFullPrint(userId: string, printId: string): Promise<FullPrint> {
+  const print = await prisma.print.findFirst({ where: { id: printId, userId }, include: { author: true } });
   if (!print) throw new HttpError(404, "Print not found");
   const [plates, files] = await Promise.all([
     prisma.plate.findMany({ where: { printId }, orderBy: { position: "asc" } }),
@@ -23,7 +23,7 @@ export async function loadFullPrint(printId: string): Promise<FullPrint> {
   return { print, plates, files, preparedFile };
 }
 
-export async function printOutById(printId: string): Promise<PrintOut> {
-  const full = await loadFullPrint(printId);
+export async function printOutById(userId: string, printId: string): Promise<PrintOut> {
+  const full = await loadFullPrint(userId, printId);
   return toPrintOut(full.print, full.plates, full.files, full.preparedFile, full.print.author);
 }

@@ -1,35 +1,87 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { AUTH_ENABLED, AUTH_PASSWORD, AUTH_TOKEN_TTL, AUTH_USERNAME } from "../config";
-import { createToken, requireAuth, verifyToken } from "../auth";
+import { AUTH_TOKEN_TTL, INITIAL_ADMIN_EMAIL } from "../config";
+import { createToken, requireAuth } from "../auth";
+import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
 import { parseBody } from "../utils/validate";
+import { asyncHandler } from "../utils/asyncHandler";
+import { getAllowRegistrations } from "../services/settingsService";
+import { toUserOut } from "../dto";
+import type { Role } from "@prisma/client";
 
 const router = Router();
 
-const loginSchema = z.object({ username: z.string(), password: z.string() });
+const PASSWORD_HASH_COST = 12;
 
-router.post("/login", (req, res) => {
-  if (!AUTH_ENABLED) throw new HttpError(503, "Authentication is not configured on the server");
-  const body = parseBody(loginSchema, req.body);
-  if (body.username !== AUTH_USERNAME || body.password !== AUTH_PASSWORD) {
-    throw new HttpError(401, "Invalid username or password");
-  }
-  const token = createToken(body.username);
-  res.json({ token, expires_in: AUTH_TOKEN_TTL });
+const registerSchema = z.object({
+  displayName: z.string().trim().min(1, "Display name is required"),
+  email: z.string().trim().email("Enter a valid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
-router.post("/refresh", requireAuth, (req, res) => {
-  if (!AUTH_ENABLED) throw new HttpError(503, "Authentication is not configured on the server");
-  const header = req.header("authorization");
-  const headerToken = header?.toLowerCase().startsWith("bearer ") ? header.slice(7).trim() : undefined;
-  const queryToken = typeof req.query.token === "string" ? req.query.token : undefined;
-  const token = headerToken || queryToken;
-  if (!token) throw new HttpError(401, "Unauthorized");
-  const payload = verifyToken(token);
-  if (!payload?.sub) throw new HttpError(401, "Invalid or expired token");
-  const newToken = createToken(payload.sub);
-  res.json({ token: newToken, expires_in: AUTH_TOKEN_TTL });
+const loginSchema = z.object({
+  email: z.string().trim().email(),
+  password: z.string(),
 });
+
+router.post(
+  "/register",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(registerSchema, req.body);
+    const email = body.email.toLowerCase();
+
+    // The designated initial-admin address may always create the first admin account, even
+    // if registrations are otherwise disabled -- an operator can never lock themselves out of
+    // bootstrapping the instance. Once any admin exists, this exception no longer applies.
+    const isInitialAdminEmail = Boolean(INITIAL_ADMIN_EMAIL) && email === INITIAL_ADMIN_EMAIL;
+    const adminExists = (await prisma.user.count({ where: { role: "ADMIN" } })) > 0;
+    const bootstrapping = isInitialAdminEmail && !adminExists;
+
+    if (!bootstrapping && !(await getAllowRegistrations(true))) {
+      throw new HttpError(403, "Registration is currently disabled");
+    }
+    if (await prisma.user.findUnique({ where: { email } })) {
+      throw new HttpError(409, "An account with this email already exists");
+    }
+
+    const passwordHash = await bcrypt.hash(body.password, PASSWORD_HASH_COST);
+    const role: Role = isInitialAdminEmail ? "ADMIN" : "MEMBER";
+    const user = await prisma.user.create({
+      data: { email, passwordHash, displayName: body.displayName, role },
+    });
+
+    const token = createToken(user.id, user.role);
+    res.json({ token, expires_in: AUTH_TOKEN_TTL, user: toUserOut(user) });
+  }),
+);
+
+router.post(
+  "/login",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(loginSchema, req.body);
+    const email = body.email.toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Same generic message whether the email doesn't exist or the password is wrong -- don't
+    // let a login attempt be used to enumerate registered addresses.
+    if (!user || !(await bcrypt.compare(body.password, user.passwordHash))) {
+      throw new HttpError(401, "Invalid email or password");
+    }
+    const token = createToken(user.id, user.role);
+    res.json({ token, expires_in: AUTH_TOKEN_TTL, user: toUserOut(user) });
+  }),
+);
+
+router.post(
+  "/refresh",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+    if (!user) throw new HttpError(401, "Invalid or expired token");
+    const token = createToken(user.id, user.role);
+    res.json({ token, expires_in: AUTH_TOKEN_TTL });
+  }),
+);
 
 export default router;

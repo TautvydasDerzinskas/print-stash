@@ -29,15 +29,15 @@ router.post(
     const files = (req.files as Express.Multer.File[]) || [];
     try {
       if (!files.length) throw new HttpError(400, "No files uploaded");
-      const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+      const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
       if (!print) throw new HttpError(404, "Print not found");
 
       const plateInputs: NewPlateInput[] = files.map((f) => {
         const safeName = sanitizeFilename(f.originalname);
         return { filename: safeName, mime: mimeFromContentType(f.mimetype, safeName), tempFilePath: f.path };
       });
-      await addPlatesToPrint(print.id, plateInputs);
-      res.json({ print: await printOutById(print.id) });
+      await addPlatesToPrint(req.userId!, print.id, plateInputs);
+      res.json({ print: await printOutById(req.userId!, print.id) });
     } finally {
       for (const f of files) {
         if (fs.existsSync(f.path)) fs.rmSync(f.path, { force: true });
@@ -51,7 +51,7 @@ router.post(
 router.delete(
   "/print/:id/plates/:plateId",
   asyncHandler(async (req, res) => {
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     const target = plates.find((p) => p.id === req.params.plateId);
@@ -77,7 +77,7 @@ router.delete(
     if (target.position === 0) {
       await refreshAutoPreparedMetadata(print.id);
     }
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
@@ -88,7 +88,7 @@ router.post(
   "/print/:id/plates/reorder",
   asyncHandler(async (req, res) => {
     const body = parseBody(reorderSchema, req.body);
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
     const plates = await prisma.plate.findMany({ where: { printId: print.id } });
     const byId = new Map(plates.map((p) => [p.id, p]));
@@ -108,7 +108,7 @@ router.post(
     if (previousFirst !== body.plate_ids[0]) {
       await refreshAutoPreparedMetadata(print.id);
     }
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
@@ -119,7 +119,7 @@ router.post(
   "/print/:id/plate/:plateId/rename",
   asyncHandler(async (req, res) => {
     const body = parseBody(renameSchema, req.body);
-    const print = await prisma.print.findUnique({ where: { id: req.params.id } });
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
     const plate = await prisma.plate.findUnique({ where: { id: req.params.plateId } });
     if (!plate || plate.printId !== print.id) throw new HttpError(404, "Plate not found");
@@ -133,7 +133,7 @@ router.post(
         await refreshAutoPreparedMetadata(print.id);
       }
     }
-    res.json({ print: await printOutById(print.id) });
+    res.json({ print: await printOutById(req.userId!, print.id) });
   }),
 );
 
@@ -142,7 +142,9 @@ router.post(
 router.get(
   "/plate/:plateId/thumb.jpg",
   asyncHandler(async (req, res) => {
-    const plate = await prisma.plate.findUnique({ where: { id: req.params.plateId } });
+    const plate = await prisma.plate.findFirst({
+      where: { id: req.params.plateId, print: { userId: req.userId } },
+    });
     if (!plate) throw new HttpError(404, "Not found");
     const thumbPath = plateThumbPath(plate.id);
     if (!fs.existsSync(thumbPath)) throw new HttpError(404, "Not found");
@@ -162,11 +164,13 @@ router.post(
       throw new HttpError(415, "Generated thumbnail must be PNG, JPEG, or WebP");
     }
     if (file.size > 8 * 1024 * 1024) throw new HttpError(413, "Generated thumbnail exceeds 8 MB");
-    const plate = await prisma.plate.findUnique({ where: { id: req.params.plateId } });
+    const plate = await prisma.plate.findFirst({
+      where: { id: req.params.plateId, print: { userId: req.userId } },
+    });
     if (!plate) throw new HttpError(404, "Not found");
     const ok = await saveThumbFromBytes(plate.id, file.buffer);
     if (!ok) throw new HttpError(400, "Invalid thumbnail image");
-    res.json({ print: await printOutById(plate.printId) });
+    res.json({ print: await printOutById(req.userId!, plate.printId) });
   }),
 );
 

@@ -6,14 +6,31 @@
       "confirmLogout": "Ar tikrai norite atsijungti?",
       "sessionExpired": "Jūsų sesija baigėsi. Prašome prisijungti iš naujo."
     },
-    "login": {
+    "auth": {
       "subtitle": "Prisijunkite, kad tęstumėte",
-      "apiOffline": "Panašu, kad API neveikia. Įsitikinkite, kad API paslauga paleista.",
-      "loginFailed": "Prisijungti nepavyko",
-      "usernameLabel": "Naudotojo vardas",
-      "passwordLabel": "Slaptažodis",
-      "signIn": "Prisijungti",
-      "signingIn": "Jungiamasi…"
+      "apiOffline": "Atrodo, kad API neveikia. Įsitikinkite, kad API paslauga veikia.",
+      "signInTab": "Prisijungti",
+      "registerTab": "Registruotis",
+      "signIn": {
+        "emailLabel": "El. paštas",
+        "passwordLabel": "Slaptažodis",
+        "submit": "Prisijungti",
+        "submitting": "Jungiamasi...",
+        "failed": "Prisijungti nepavyko"
+      },
+      "register": {
+        "displayNameLabel": "Rodomas vardas",
+        "emailLabel": "El. paštas",
+        "passwordLabel": "Slaptažodis",
+        "passwordHelp": "Bent 8 simboliai",
+        "confirmPasswordLabel": "Pakartokite slaptažodį",
+        "submit": "Sukurti paskyrą",
+        "submitting": "Kuriama paskyra...",
+        "failed": "Registracija nepavyko",
+        "passwordMismatch": "Slaptažodžiai nesutampa",
+        "passwordTooShort": "Slaptažodis turi būti bent 8 simbolių",
+        "disabled": "Šiuo metu naujos registracijos yra išjungtos."
+      }
     },
     "sidebar": {
       "brand": "PrintStash",
@@ -204,13 +221,6 @@
       "imports": {
         "heading": "Importas",
         "subtitle": "Tvarkykite sesijos slapukus ir importuokite vietinius aplankus.",
-        "mountHeading": "Prijungimo importas (serveris)",
-        "mountDesc": "Indeksuokite failus iš serverio prijungto tomo. Įjunkite be kopijavimo parinktį, kad failai liktų vietoje ir būtų išvengta dublikatų.",
-        "mountPath": "Prijungimo kelias: {{path}}",
-        "mountPathNotConfigured": "Nesukonfigūruota",
-        "mountNote": "Pakeitimai įsigalioja iš naujo paleidus serverį. Be kopijavimo režime prijungti failai lieka tik skaitymui, o pervadinimas išjungtas.",
-        "mountEnableLabel": "Įjungti prijungimo importą paleidžiant",
-        "mountCopyLabel": "Kopijuoti failus į PrintStash saugyklą (išjunkite, kad naudotumėte prijungtus failus tiesiogiai)",
         "save": "Išsaugoti",
         "saving": "Saugoma…",
         "loadingSettings": "Kraunami nustatymai…",

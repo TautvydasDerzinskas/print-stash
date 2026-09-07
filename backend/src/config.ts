@@ -7,22 +7,17 @@ function envInt(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function envBool(name: string, fallback: boolean): boolean {
-  const raw = process.env[name];
-  if (raw === undefined) return fallback;
-  return ["1", "true", "yes", "y", "on"].includes(raw.trim().toLowerCase());
-}
-
 export const STORAGE = path.resolve(process.env.FILE_STORAGE || "./storage");
 export const THUMBS = path.join(STORAGE, "thumbs");
 export const BUNDLES = path.join(STORAGE, "bundles");
 
-export const AUTH_USERNAME = process.env.AUTH_USERNAME || "admin";
-export const AUTH_PASSWORD = process.env.AUTH_PASSWORD || "super-secret";
 export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
 export const AUTH_TOKEN_TTL = envInt("AUTH_TOKEN_TTL", 43200);
 export const AUTH_ALGO = "HS256" as const;
-export const AUTH_ENABLED = Boolean(AUTH_USERNAME && AUTH_PASSWORD);
+// A user registering with this exact (lowercased) email becomes ADMIN automatically, and may
+// register even while registrations are otherwise disabled, as long as no admin exists yet --
+// the bootstrap escape hatch so an operator can never lock themselves out of the first account.
+export const INITIAL_ADMIN_EMAIL = (process.env.INITIAL_ADMIN_EMAIL || "").trim().toLowerCase();
 
 export const IMPORT_ALLOWED_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj", ".lbrn", ".lbrn2", ".zip"]);
 export const IMPORT_EXT_PRIORITY = [".3mf", ".stl", ".step", ".stp", ".lbrn2", ".lbrn", ".zip"];
@@ -42,15 +37,5 @@ export const IMPORT_BROWSER_USER_AGENT =
 export const FLARESOLVERR_URL = (process.env.FLARESOLVERR_URL || "").trim();
 export const FLARESOLVERR_TIMEOUT_MS = envInt("FLARESOLVERR_TIMEOUT_MS", 60000);
 export const FLARESOLVERR_SESSION_TTL_MS = envInt("FLARESOLVERR_SESSION_TTL_MS", 15 * 60 * 1000);
-
-export const MOUNT_IMPORT_PATH = (process.env.IMPORT_MOUNT_PATH || "").trim();
-export const MOUNT_IMPORT_EXTS_RAW = (process.env.IMPORT_MOUNT_EXTS || "").trim();
-export const MOUNT_IMPORT_INCLUDE_HIDDEN = envBool("IMPORT_MOUNT_INCLUDE_HIDDEN", false);
-export const MOUNT_IMPORT_ENABLED = envBool("IMPORT_MOUNT_ON_STARTUP", true);
-export const MOUNT_IMPORT_COPY = envBool("IMPORT_MOUNT_COPY", true);
-export const DEFAULT_MOUNT_IMPORT_EXTS = new Set([
-  ".stl", ".3mf", ".step", ".stp", ".obj", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".bmp",
-  ".lbrn", ".lbrn2", ".zip",
-]);
 
 export const API_PORT = envInt("API_PORT", 8000);

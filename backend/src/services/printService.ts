@@ -62,15 +62,15 @@ function renderTemplate(template: string, values: Record<string, string>): strin
   });
 }
 
-export async function folderSegments(folderId: string | null | undefined): Promise<string[]> {
+export async function folderSegments(userId: string, folderId: string | null | undefined): Promise<string[]> {
   if (!folderId) return ["Unassigned"];
   const segments: string[] = [];
   const visited = new Set<string>();
-  let current: Folder | null = await prisma.folder.findUnique({ where: { id: folderId } });
+  let current: Folder | null = await prisma.folder.findFirst({ where: { id: folderId, userId } });
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
     segments.unshift(sanitizePathSegment(current.name, "Folder"));
-    current = current.parentId ? await prisma.folder.findUnique({ where: { id: current.parentId } }) : null;
+    current = current.parentId ? await prisma.folder.findFirst({ where: { id: current.parentId, userId } }) : null;
   }
   return segments.length ? segments : ["Unassigned"];
 }
@@ -84,9 +84,11 @@ function assertWithinStorage(relative: string): string {
   return relative;
 }
 
-type PrintLike = Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId">;
+type PrintLike = Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId" | "userId">;
 
-/** Renders the on-disk relative path for one plate of a print using the storage template. */
+/** Renders the on-disk relative path for one plate of a print using the storage template.
+ * Every user's files live under their own u-<userId> segment beneath the (instance-wide)
+ * rendered template, invisibly -- the template's own tokens/UX are unaware of it. */
 export async function renderPlateStoragePath(
   print: PrintLike,
   plateFilename: string,
@@ -97,7 +99,7 @@ export async function renderPlateStoragePath(
   const tagLabel = (print.tags || []).map((t) => t.trim()).filter(Boolean).join(" + ") || "Untagged";
   const modelLabel = sanitizePathSegment(print.name, "Model");
   const values: Record<string, string> = {
-    folder: (await folderSegments(print.folderId)).join("/"),
+    folder: (await folderSegments(print.userId, print.folderId)).join("/"),
     collection: sanitizePathSegment(print.collection || "Uncollected", "Uncollected"),
     tags: sanitizePathSegment(tagLabel, "Untagged"),
     creator: sanitizePathSegment(print.creator || "Unknown creator", "Unknown creator"),
@@ -110,7 +112,8 @@ export async function renderPlateStoragePath(
   const rendered = renderTemplate(safeTemplate, values).replace(/\\/g, "/");
   const parts = rendered.split("/").filter(Boolean).map((part) => sanitizePathSegment(part, "item"));
   if (!parts.length) throw new HttpError(400, "Storage template produced an empty path");
-  return assertWithinStorage(path.join(...parts));
+  const userSegment = sanitizePathSegment(`u-${print.userId}`, "user");
+  return assertWithinStorage(path.join(userSegment, ...parts));
 }
 
 export function samplePlateStoragePaths(template: string): [string, string] {
@@ -133,8 +136,10 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-/** Throws 409 if `requested` is already taken in this folder. Used for explicit renames. */
+/** Throws 409 if `requested` is already taken in this folder (for this user). Used for
+ * explicit renames. */
 export async function uniqueModelName(
+  userId: string,
   requested: string,
   folderId: string | null,
   excludeId?: string,
@@ -142,6 +147,7 @@ export async function uniqueModelName(
   const base = sanitizePathSegment(requested, "Model");
   const existing = await prisma.print.findFirst({
     where: {
+      userId,
       folderId: folderId ?? null,
       nameNormalized: normalizeName(base),
       ...(excludeId ? { id: { not: excludeId } } : {}),
@@ -151,8 +157,10 @@ export async function uniqueModelName(
   return base;
 }
 
-/** Auto-suffixes `requested` until it's free in this folder. Used for creation/reassignment. */
+/** Auto-suffixes `requested` until it's free in this folder (for this user). Used for
+ * creation/reassignment. */
 export async function availableModelName(
+  userId: string,
   requested: string,
   folderId: string | null,
   excludeId?: string,
@@ -164,6 +172,7 @@ export async function availableModelName(
   for (;;) {
     const existing = await prisma.print.findFirst({
       where: {
+        userId,
         folderId: folderId ?? null,
         nameNormalized: normalizeName(candidate),
         ...(excludeId ? { id: { not: excludeId } } : {}),
@@ -242,10 +251,20 @@ export async function relocatePrint(print: PrintLike, plates: Plate[], template?
   }
 }
 
-export async function reorganizeManagedPrints(template?: string | null): Promise<{ moved: number; skipped: number }> {
+/** Re-lays-out managed print storage. Pass `userId` for a folder rename/delete affecting only
+ * that user's own prints; omit it for an instance-wide storage-template change (admin-only --
+ * see requireAdmin on POST /settings/storage), which needs to touch every user's files. */
+export async function reorganizeManagedPrints(
+  template?: string | null,
+  userId?: string,
+): Promise<{ moved: number; skipped: number }> {
   let moved = 0;
   let skipped = 0;
-  const prints = await prisma.print.findMany({ include: { plates: true }, orderBy: { id: "asc" } });
+  const prints = await prisma.print.findMany({
+    where: userId ? { userId } : undefined,
+    include: { plates: true },
+    orderBy: { id: "asc" },
+  });
   for (const print of prints) {
     try {
       const before = new Map(print.plates.map((p) => [p.id, p.storagePath]));

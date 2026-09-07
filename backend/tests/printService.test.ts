@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { prisma } from "../src/db";
 import {
   availableModelName,
@@ -43,51 +43,89 @@ describe("samplePlateStoragePaths", () => {
 
 describe("print name + plate filename uniqueness (integration, real Postgres)", () => {
   const createdPrintIds: string[] = [];
+  let userId: string;
+  let otherUserId: string;
+
+  beforeAll(async () => {
+    const suffix = Date.now();
+    const user = await prisma.user.create({
+      data: {
+        email: `printservice-test-${suffix}@example.com`,
+        passwordHash: "unused-in-these-tests",
+        displayName: "Print Service Test User",
+      },
+    });
+    userId = user.id;
+    const otherUser = await prisma.user.create({
+      data: {
+        email: `printservice-test-other-${suffix}@example.com`,
+        passwordHash: "unused-in-these-tests",
+        displayName: "Print Service Test User (other)",
+      },
+    });
+    otherUserId = otherUser.id;
+  });
 
   afterAll(async () => {
     if (createdPrintIds.length) {
       await prisma.print.deleteMany({ where: { id: { in: createdPrintIds } } });
     }
+    await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     await prisma.$disconnect();
   });
 
   it("availableModelName auto-suffixes root-level collisions", async () => {
     const name = `Test Widget ${Date.now()}`;
     const first = await prisma.print.create({
-      data: { name, nameNormalized: name.toLowerCase(), tags: [] },
+      data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] },
     });
     createdPrintIds.push(first.id);
 
-    const nextName = await availableModelName(name, null);
+    const nextName = await availableModelName(userId, name, null);
     expect(nextName).toBe(`${name} (2)`);
   });
 
   it("uniqueModelName throws 409 on an explicit collision", async () => {
     const name = `Test Gadget ${Date.now()}`;
     const first = await prisma.print.create({
-      data: { name, nameNormalized: name.toLowerCase(), tags: [] },
+      data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] },
     });
     createdPrintIds.push(first.id);
 
-    await expect(uniqueModelName(name, null)).rejects.toMatchObject({ status: 409 });
+    await expect(uniqueModelName(userId, name, null)).rejects.toMatchObject({ status: 409 });
   });
 
-  it("the partial unique index rejects two root-level prints with the same name", async () => {
+  it("the partial unique index rejects two root-level prints with the same name for the same user", async () => {
     const name = `Test Collision ${Date.now()}`;
     const first = await prisma.print.create({
-      data: { name, nameNormalized: name.toLowerCase(), tags: [] },
+      data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] },
     });
     createdPrintIds.push(first.id);
 
     await expect(
-      prisma.print.create({ data: { name, nameNormalized: name.toLowerCase(), tags: [] } }),
+      prisma.print.create({ data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] } }),
     ).rejects.toThrow(/unique constraint/i);
+  });
+
+  it("the same name is allowed for two different users (uniqueness is per-user)", async () => {
+    const name = `Test Cross-User ${Date.now()}`;
+    const first = await prisma.print.create({
+      data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] },
+    });
+    createdPrintIds.push(first.id);
+
+    const second = await prisma.print.create({
+      data: { userId: otherUserId, name, nameNormalized: name.toLowerCase(), tags: [] },
+    });
+    createdPrintIds.push(second.id);
+
+    expect(second.nameNormalized).toBe(first.nameNormalized);
   });
 
   it("availablePlateFilename auto-suffixes a duplicate filename within the same print", async () => {
     const name = `Test Multiplate ${Date.now()}`;
     const print = await prisma.print.create({
-      data: { name, nameNormalized: name.toLowerCase(), tags: [] },
+      data: { userId, name, nameNormalized: name.toLowerCase(), tags: [] },
     });
     createdPrintIds.push(print.id);
     await prisma.plate.create({

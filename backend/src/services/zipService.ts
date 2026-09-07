@@ -47,6 +47,7 @@ export async function listZipEntries(zipPath: string): Promise<ZipEntrySummary[]
 type FolderCache = Map<string, string>;
 
 async function getOrCreateFolder(
+  userId: string,
   parentId: string | null,
   parentKey: string,
   name: string,
@@ -55,12 +56,12 @@ async function getOrCreateFolder(
   const key = `${parentKey}/${name}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const existing = await prisma.folder.findFirst({ where: { parentId, name } });
+  const existing = await prisma.folder.findFirst({ where: { userId, parentId, name } });
   if (existing) {
     cache.set(key, existing.id);
     return existing.id;
   }
-  const folder = await prisma.folder.create({ data: { name, parentId, tags: [] } });
+  const folder = await prisma.folder.create({ data: { userId, name, parentId, tags: [] } });
   cache.set(key, folder.id);
   return folder.id;
 }
@@ -68,6 +69,7 @@ async function getOrCreateFolder(
 /** Recreates the zip's directory structure as nested Folders, returning the leaf folder id
  * for one entry's path. Mirrors MakersVault's resolve_zip_folder_id. */
 export async function resolveZipFolderId(
+  userId: string,
   baseFolderId: string | null,
   entryPath: string,
   cache: FolderCache,
@@ -79,7 +81,7 @@ export async function resolveZipFolderId(
   for (const segment of segments) {
     const safe = sanitizeFolderName(segment);
     if (!safe) continue;
-    targetId = await getOrCreateFolder(targetId, parentKey, safe, cache);
+    targetId = await getOrCreateFolder(userId, targetId, parentKey, safe, cache);
     parentKey = `${parentKey}/${safe}`;
   }
   return targetId;
@@ -103,6 +105,7 @@ export type ZipExtractOptions = {
  * failed to extract (missing, a directory, or over the size cap).
  */
 export async function extractZipEntriesToPrints(
+  userId: string,
   zipPath: string,
   selections: string[],
   options: ZipExtractOptions,
@@ -118,7 +121,7 @@ export async function extractZipEntriesToPrints(
   if (!ordered.length) throw new HttpError(400, "No zip entries selected");
 
   if (options.folderId) {
-    await validateParentFolder(options.folderId);
+    await validateParentFolder(userId, options.folderId);
   }
 
   const raw = await listRawZipEntries(zipPath);
@@ -141,7 +144,7 @@ export async function extractZipEntriesToPrints(
     }
     let tempPath: string | null = null;
     try {
-      const targetFolderId = await resolveZipFolderId(options.folderId ?? null, entryName, folderCache);
+      const targetFolderId = await resolveZipFolderId(userId, options.folderId ?? null, entryName, folderCache);
       const filename = sanitizeFilename(path.basename(entryName));
       const buffer = await readZipEntry(zipPath, entryName, IMPORT_MAX_BYTES);
       if (!buffer) throw new Error("Extracted file exceeds size limit or could not be read");
@@ -164,12 +167,12 @@ export async function extractZipEntriesToPrints(
         authorId: options.authorId ?? null,
       };
       const mime = guessMimeFromPath(filename);
-      const { print, plates } = await createPrint(meta, path.parse(filename).name, [
+      const { print, plates } = await createPrint(userId, meta, path.parse(filename).name, [
         { filename, mime, tempFilePath: tempPath },
       ]);
       tempPath = null;
       await applyCoverThumbnailIfMissing(plates[0]?.id, options.previewImageUrl);
-      await attachGalleryImagesAsSupportingFiles(print.id, options.galleryImages ?? [], options.previewImageUrl);
+      await attachGalleryImagesAsSupportingFiles(userId, print.id, options.galleryImages ?? [], options.previewImageUrl);
       prints.push({ ...print, plates });
     } catch {
       if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);

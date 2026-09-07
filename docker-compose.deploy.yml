@@ -33,18 +33,12 @@ services:
     environment:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
-      - AUTH_USERNAME=${AUTH_USERNAME:-admin}
-      - AUTH_PASSWORD=${AUTH_PASSWORD:-super-secret}
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-}
       - AUTH_SECRET=${AUTH_SECRET:-changeme-secret}
       - AUTH_TOKEN_TTL=${AUTH_TOKEN_TTL:-43200}
       - FILE_STORAGE=/app/storage
       - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
       - CORS_ORIGINS=${CORS_ORIGINS:-}
-      - IMPORT_MOUNT_PATH=${IMPORT_MOUNT_PATH:-}
-      - IMPORT_MOUNT_EXTS=${IMPORT_MOUNT_EXTS:-stl,3mf,step,stp,obj,svg,png,jpg,jpeg,webp,bmp,lbrn,lbrn2,zip}
-      - IMPORT_MOUNT_INCLUDE_HIDDEN=${IMPORT_MOUNT_INCLUDE_HIDDEN:-false}
-      - IMPORT_MOUNT_ON_STARTUP=${IMPORT_MOUNT_ON_STARTUP:-false}
-      - IMPORT_MOUNT_COPY=${IMPORT_MOUNT_COPY:-true}
       - FLARESOLVERR_URL=${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
     depends_on:
       db:
@@ -53,7 +47,6 @@ services:
         condition: service_started
     volumes:
       - printstash_storage:/app/storage
-      - ${IMPORT_MOUNT_PATH_HOST:-./imports}:/imports:ro
     networks:
       - app-net
 

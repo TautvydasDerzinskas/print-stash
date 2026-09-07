@@ -7,8 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  role         Role     @default(MEMBER)
+  folders      Folder[]
+  prints       Print[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 model Folder {
   id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   name      String
   tags      String[] @default([])
   parentId  String?
@@ -18,12 +37,14 @@ model Folder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([parentId])
+  @@index([userId, parentId])
   @@index([tags], type: Gin)
 }
 
 model Print {
   id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   name           String
   nameNormalized String
   title          String?
@@ -44,8 +65,8 @@ model Print {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  @@unique([folderId, nameNormalized])
-  @@index([folderId, name])
+  @@unique([userId, folderId, nameNormalized])
+  @@index([userId, folderId, name])
   @@index([tags], type: Gin)
   @@index([authorId])
 }

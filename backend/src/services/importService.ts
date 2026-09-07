@@ -365,6 +365,7 @@ const GALLERY_IMAGE_MAX_COUNT = 20;
  * supporting file. Every image is independent: one failing doesn't stop the rest or the
  * import as a whole. */
 export async function attachGalleryImagesAsSupportingFiles(
+  userId: string,
   printId: string | undefined,
   images: { url: string; filename: string }[],
   skipUrl: string | null | undefined,
@@ -390,7 +391,7 @@ export async function attachGalleryImagesAsSupportingFiles(
 
       tempPath = path.join(os.tmpdir(), `printstash-gallery-${crypto.randomBytes(8).toString("hex")}`);
       await fs.writeFile(tempPath, buf);
-      await saveFileFromTemp(printId, tempPath, image.filename, res.headers.get("content-type"));
+      await saveFileFromTemp(userId, printId, tempPath, image.filename, res.headers.get("content-type"));
       tempPath = null;
     } catch {
       // best-effort only
@@ -402,6 +403,7 @@ export async function attachGalleryImagesAsSupportingFiles(
 
 /** Downloads a URL and creates a single-plate Print from it (POST /import). */
 export async function importPrintFromUrl(
+  userId: string,
   url: string,
   body: ImportRequestBody,
 ): Promise<{ print: Print; plates: Plate[]; author: Author | null }> {
@@ -416,9 +418,11 @@ export async function importPrintFromUrl(
     authorId: author?.id ?? null,
   };
   try {
-    const result = await createPrint(printMeta, path.parse(filename).name, [{ filename, mime, tempFilePath: tempPath }]);
+    const result = await createPrint(userId, printMeta, path.parse(filename).name, [
+      { filename, mime, tempFilePath: tempPath },
+    ]);
     await applyCoverThumbnailIfMissing(result.plates[0]?.id, meta.previewImageUrl);
-    await attachGalleryImagesAsSupportingFiles(result.print.id, meta.galleryImages, meta.previewImageUrl);
+    await attachGalleryImagesAsSupportingFiles(userId, result.print.id, meta.galleryImages, meta.previewImageUrl);
     return { ...result, author };
   } finally {
     if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);

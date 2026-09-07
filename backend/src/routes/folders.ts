@@ -22,8 +22,8 @@ const folderSchema = z.object({
 
 router.get(
   "/folders",
-  asyncHandler(async (_req, res) => {
-    const folders = await prisma.folder.findMany();
+  asyncHandler(async (req, res) => {
+    const folders = await prisma.folder.findMany({ where: { userId: req.userId } });
     res.json(folders.map(toFolderOut));
   }),
 );
@@ -32,9 +32,9 @@ router.post(
   "/folders",
   asyncHandler(async (req, res) => {
     const body = parseBody(folderSchema, req.body);
-    const parentId = await validateParentFolder(body.parent_id ?? null);
+    const parentId = await validateParentFolder(req.userId!, body.parent_id ?? null);
     const folder = await prisma.folder.create({
-      data: { name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
+      data: { userId: req.userId!, name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
     });
     res.json(toFolderOut(folder));
   }),
@@ -44,14 +44,14 @@ router.patch(
   "/folder/:id",
   asyncHandler(async (req, res) => {
     const body = parseBody(folderSchema, req.body);
-    const folder = await prisma.folder.findUnique({ where: { id: req.params.id } });
+    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!folder) throw new HttpError(404, "Not found");
-    const parentId = await validateParentFolder(body.parent_id ?? null, folder.id);
+    const parentId = await validateParentFolder(req.userId!, body.parent_id ?? null, folder.id);
     const updated = await prisma.folder.update({
       where: { id: folder.id },
       data: { name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
     });
-    await reorganizeManagedPrints();
+    await reorganizeManagedPrints(undefined, req.userId);
     res.json(toFolderOut(updated));
   }),
 );
@@ -59,14 +59,17 @@ router.patch(
 router.delete(
   "/folder/:id",
   asyncHandler(async (req, res) => {
-    const folder = await prisma.folder.findUnique({ where: { id: req.params.id } });
+    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!folder) throw new HttpError(404, "Not found");
 
-    await prisma.folder.updateMany({ where: { parentId: folder.id }, data: { parentId: null } });
+    await prisma.folder.updateMany({
+      where: { parentId: folder.id, userId: req.userId },
+      data: { parentId: null },
+    });
 
-    const prints = await prisma.print.findMany({ where: { folderId: folder.id } });
+    const prints = await prisma.print.findMany({ where: { folderId: folder.id, userId: req.userId } });
     for (const print of prints) {
-      const nextName = await availableModelName(print.name, null, print.id);
+      const nextName = await availableModelName(req.userId!, print.name, null, print.id);
       const data: Prisma.PrintUpdateInput = { folder: { disconnect: true } };
       if (nextName !== print.name) {
         data.name = nextName;
@@ -77,7 +80,7 @@ router.delete(
     }
 
     await prisma.folder.delete({ where: { id: folder.id } });
-    await reorganizeManagedPrints();
+    await reorganizeManagedPrints(undefined, req.userId);
     res.json({ ok: true });
   }),
 );
@@ -85,10 +88,10 @@ router.delete(
 router.get(
   "/folder/:id/download",
   asyncHandler(async (req, res) => {
-    const folder = await prisma.folder.findUnique({ where: { id: req.params.id } });
+    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!folder) throw new HttpError(404, "Folder not found");
     const prints = await prisma.print.findMany({
-      where: { folderId: folder.id },
+      where: { folderId: folder.id, userId: req.userId },
       include: { plates: { orderBy: { position: "asc" } }, folder: true },
     });
     const downloadName = `${(folder.name || "folder").replace(/ /g, "_").slice(0, 50) || "folder"}.zip`;
