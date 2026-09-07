@@ -68,14 +68,16 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = parseBody(zipExtractRequestSchema, req.body);
     const url = await normalizeImportUrl(body.url);
-    const { tempPath, filename } = await downloadImportToTemp(url, body);
+    const { tempPath, filename, meta } = await downloadImportToTemp(url, body);
     try {
       if (path.extname(filename).toLowerCase() !== ".zip") throw new HttpError(415, "Imported file is not a zip");
       const { prints, failed } = await extractZipEntriesToPrints(tempPath, body.entries, {
-        title: body.title,
-        notes: body.notes,
-        tags: body.tags,
+        title: body.title ?? meta.title,
+        notes: body.notes ?? meta.description,
+        tags: body.tags && body.tags.length ? body.tags : meta.tags,
         folderId: body.folder_id,
+        creator: meta.creator,
+        previewImageUrl: meta.previewImageUrl,
       });
       res.json({ prints: prints.map((p) => toPrintOut(p, p.plates, [], null)), failed });
     } finally {

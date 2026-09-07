@@ -7,6 +7,7 @@ import { HttpError, sanitizeFilename, guessMimeFromPath } from "../utils/fileUti
 import { IMPORT_MAX_BYTES } from "../config";
 import { listZipEntries as listRawZipEntries, readZipEntry } from "../utils/zipReader";
 import { validateParentFolder } from "./folderService";
+import { applyCoverThumbnailIfMissing } from "./importService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import type { Print, Plate } from "@prisma/client";
 
@@ -89,6 +90,8 @@ export type ZipExtractOptions = {
   notes?: string | null;
   tags?: string[];
   folderId?: string | null;
+  creator?: string | null;
+  previewImageUrl?: string | null;
 };
 
 /**
@@ -144,17 +147,25 @@ export async function extractZipEntriesToPrints(
       tempPath = path.join(os.tmpdir(), `printstash-zip-${crypto.randomBytes(8).toString("hex")}`);
       await fs.writeFile(tempPath, buffer);
 
+      // A resolved page title (e.g. MakerWorld's design name) is the same for every entry in
+      // the zip, so when more than one entry is being extracted into its own Print, keep them
+      // distinguishable by tagging the entry's own filename onto it instead of overwriting it
+      // outright the way a single-entry extraction does.
+      const resolvedTitle =
+        options.title && ordered.length > 1 ? `${options.title} (${path.parse(filename).name})` : options.title;
       const meta: PrintMetaInput = {
-        title: options.title ?? null,
+        title: resolvedTitle ?? null,
         notes: options.notes ?? null,
         tags: options.tags ?? [],
         folderId: targetFolderId,
+        creator: options.creator ?? null,
       };
       const mime = guessMimeFromPath(filename);
       const { print, plates } = await createPrint(meta, path.parse(filename).name, [
         { filename, mime, tempFilePath: tempPath },
       ]);
       tempPath = null;
+      await applyCoverThumbnailIfMissing(plates[0]?.id, options.previewImageUrl);
       prints.push({ ...print, plates });
     } catch {
       if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);

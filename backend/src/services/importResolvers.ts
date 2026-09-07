@@ -443,6 +443,112 @@ function makerworldDesignIdFromNextData(data: unknown): string | null {
   return designId ? String(designId) : null;
 }
 
+function makerworldTitleFromNextData(data: unknown): string | null {
+  const title = getPath(data, "props", "pageProps", "design", "title");
+  return typeof title === "string" && title.trim() ? title.trim() : null;
+}
+
+function makerworldTagsFromNextData(data: unknown): string[] {
+  const tags = getPath(data, "props", "pageProps", "design", "tags");
+  if (!Array.isArray(tags)) return [];
+  return tags.filter((tag): tag is string => typeof tag === "string" && tag.trim().length > 0).map((tag) => tag.trim());
+}
+
+function makerworldCreatorFromNextData(data: unknown): string | null {
+  const creator = getPath(data, "props", "pageProps", "design", "designCreator") as Record<string, unknown> | undefined;
+  if (!creator) return null;
+  for (const key of ["nickName", "name", "handle"]) {
+    const value = creator[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function makerworldCoverUrlFromNextData(data: unknown): string | null {
+  for (const key of ["coverUrl", "coverPortrait", "coverLandscape"]) {
+    const value = getPath(data, "props", "pageProps", "design", key);
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/** MakerWorld's design summary is a small HTML fragment (paragraphs, links, embedded figures).
+ * Converts it to plain text for Print.notes: turns block-level closing tags into line breaks,
+ * strips every remaining tag, decodes entities, and collapses the resulting whitespace. */
+function htmlToPlainText(html: string): string | null {
+  const withBreaks = html
+    .replace(/<\s*(br|\/p|\/li|\/div|\/h[1-6])\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+  const text = decodeHtmlEntities(withBreaks)
+    .replace(/\u00A0/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return text || null;
+}
+
+function makerworldDescriptionFromNextData(data: unknown): string | null {
+  const summary = getPath(data, "props", "pageProps", "design", "summary");
+  if (typeof summary !== "string" || !summary.trim()) return null;
+  return htmlToPlainText(summary);
+}
+
+function genericTitleFromHtml(html: string): string | null {
+  const ogMatch =
+    html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']*)["']/i) ||
+    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:title["']/i);
+  if (ogMatch && ogMatch[1].trim()) return decodeHtmlEntities(ogMatch[1].trim());
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (titleMatch && titleMatch[1].trim()) return decodeHtmlEntities(titleMatch[1].trim());
+  return null;
+}
+
+export type ImportedPageMetadata = {
+  title: string | null;
+  tags: string[];
+  description: string | null;
+  creator: string | null;
+  previewImageUrl: string | null;
+};
+
+export function emptyImportedPageMetadata(): ImportedPageMetadata {
+  return { title: null, tags: [], description: null, creator: null, previewImageUrl: null };
+}
+
+/** Best-effort metadata for a landing page, used to fill in the Print when the caller didn't
+ * supply a field explicitly. MakerWorld exposes title/tags/summary/creator/cover image directly
+ * on the design object in its NEXT_DATA blob; everywhere else only title is filled in, via the
+ * page's og:title/<title> (still far more useful than the internal filename of whatever the
+ * page links to). */
+export function extractPageMetadata(html: string, pageHost: string): ImportedPageMetadata {
+  const meta = emptyImportedPageMetadata();
+  if (pageHost.endsWith("makerworld.com")) {
+    const nextData = extractNextDataJson(html);
+    if (nextData) {
+      meta.title = makerworldTitleFromNextData(nextData);
+      meta.tags = makerworldTagsFromNextData(nextData);
+      meta.description = makerworldDescriptionFromNextData(nextData);
+      meta.creator = makerworldCreatorFromNextData(nextData);
+      meta.previewImageUrl = makerworldCoverUrlFromNextData(nextData);
+    }
+  }
+  if (!meta.title) meta.title = genericTitleFromHtml(html);
+  return meta;
+}
+
 function makerworldInstanceIdFromNextData(data: unknown): string | null {
   const design = getPath(data, "props", "pageProps", "design") as Record<string, unknown> | undefined;
   if (!design) return null;
