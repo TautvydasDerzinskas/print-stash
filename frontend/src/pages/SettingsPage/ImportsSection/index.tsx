@@ -1,16 +1,14 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Stack from "@mui/material/Stack";
-import type { MakerWorldSettings, ThingiverseSettings } from "../../../utils/settings";
+import type { MakerWorldSettings } from "../../../utils/settings";
 import SectionHeader from "../../../components/SectionHeader";
 import FolderScanPanel from "./FolderScanPanel";
 import CookiePanel from "./CookiePanel";
 
 type Props = {
   makerworldCookie: string;
-  thingiverseCookie: string;
   onUpdateMakerWorld: (patch: Partial<MakerWorldSettings>) => void;
-  onUpdateThingiverse: (patch: Partial<ThingiverseSettings>) => void;
   onAssetsChanged?: () => void;
   onFoldersChanged?: () => void;
   onUnauthorized?: () => void;
@@ -18,13 +16,13 @@ type Props = {
   onBack: () => void;
 };
 
-/** Composes the three independent Imports sub-panels: server-side mount import, the local
- *  folder-scan feature, and the MakerWorld/Thingiverse session-cookie editors. */
+/** Composes the Imports sub-panels: server-side mount import, the local folder-scan feature,
+ *  and the MakerWorld session-cookie editor. Thingiverse import auth is an admin-configured,
+ *  instance-wide Access Token (see AdminSettingsPage/ThingiverseSection) -- not a per-user
+ *  setting, so it has no panel here. */
 export default function ImportsSection({
   makerworldCookie,
-  thingiverseCookie,
   onUpdateMakerWorld,
-  onUpdateThingiverse,
   onAssetsChanged,
   onFoldersChanged,
   onUnauthorized,
@@ -55,15 +53,6 @@ export default function ImportsSection({
         descText={t("settings.imports.makerworldDesc")}
         helpText={t("settings.imports.makerworldHelp")}
         placeholderText={t("settings.imports.makerworldPlaceholder") ?? undefined}
-      />
-
-      <CookiePanel
-        cookie={thingiverseCookie}
-        onSave={cookie => onUpdateThingiverse({ cookie })}
-        headingText={t("settings.imports.thingiverseHeading")}
-        descText={t("settings.imports.thingiverseDesc")}
-        helpText={t("settings.imports.thingiverseHelp")}
-        placeholderText={t("settings.imports.thingiversePlaceholder") ?? undefined}
       />
     </Stack>
   );

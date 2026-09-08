@@ -63,9 +63,7 @@ export default function SettingsPage({
     return (
       <ImportsSection
         makerworldCookie={settings.makerworld.cookie}
-        thingiverseCookie={settings.thingiverse.cookie}
         onUpdateMakerWorld={patch => onChange({ ...settings, makerworld: { ...settings.makerworld, ...patch } })}
-        onUpdateThingiverse={patch => onChange({ ...settings, thingiverse: { ...settings.thingiverse, ...patch } })}
         onAssetsChanged={onAssetsChanged}
         onFoldersChanged={onFoldersChanged}
         onUnauthorized={onUnauthorized}

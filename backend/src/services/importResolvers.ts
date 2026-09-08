@@ -20,7 +20,6 @@ import {
 
 export type ImportCookies = {
   makerworld_cookie?: string | null;
-  thingiverse_cookie?: string | null;
 };
 
 function firstNonEmptyLine(raw: string): string | null {
@@ -41,12 +40,6 @@ function firstNonEmptyLine(raw: string): string | null {
 
 export function resolveMakerworldCookie(body: ImportCookies): string | null {
   const raw = (body.makerworld_cookie || process.env.MAKERWORLD_COOKIE || "").trim();
-  if (!raw) return null;
-  return firstNonEmptyLine(raw);
-}
-
-export function resolveThingiverseCookie(body: ImportCookies): string | null {
-  const raw = (body.thingiverse_cookie || process.env.THINGIVERSE_COOKIE || "").trim();
   if (!raw) return null;
   return firstNonEmptyLine(raw);
 }
@@ -106,37 +99,9 @@ export function printablesHtmlHeaders(referer?: string | null): Record<string, s
   return headers;
 }
 
-export function isThingiversePageHost(host: string): boolean {
-  const lowered = (host || "").toLowerCase();
-  return lowered === "thingiverse.com" || lowered === "www.thingiverse.com";
-}
-
-export function thingiverseHtmlHeaders(referer?: string | null, cookie?: string | null): Record<string, string> {
-  const headers: Record<string, string> = {
-    "User-Agent": IMPORT_BROWSER_USER_AGENT,
-    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-    "Upgrade-Insecure-Requests": "1",
-  };
-  if (referer) headers.Referer = referer;
-  if (cookie) headers.Cookie = cookie;
-  return headers;
-}
-
-function thingiverseApiHeaders(referer?: string | null, cookie?: string | null, token?: string | null): Record<string, string> {
-  const headers: Record<string, string> = {
-    "User-Agent": IMPORT_BROWSER_USER_AGENT,
-    Accept: "application/json",
-    "Accept-Language": "en-US,en;q=0.9",
-    Origin: "https://www.thingiverse.com",
-  };
-  if (referer) headers.Referer = referer;
-  if (cookie) headers.Cookie = cookie;
-  if (token) headers.Authorization = `Bearer ${token}`;
-  return headers;
-}
+// Thingiverse import no longer goes through this page-scraping resolver at all -- see
+// thingiverseApi.ts, which talks to the official api.thingiverse.com Developer API instead
+// (a plain unauthenticated www.thingiverse.com fetch turned out to be Cloudflare-gated).
 
 // -- Small bounded fetch helpers (used only for resolver-side HTML/JSON probes; the actual
 // model-file download streams straight to disk in importService.ts, not through here). ------
@@ -860,168 +825,4 @@ export async function resolvePrintablesDownloadUrl(pageUrl: string): Promise<str
   }
 
   return null;
-}
-
-// -- Thingiverse -------------------------------------------------------------------------------
-
-function thingiverseThingIdFromUrl(url: string): string | null {
-  try {
-    const pathname = new URL(url).pathname;
-    const m1 = pathname.match(/thing:(\d+)/i);
-    if (m1) return m1[1];
-    const m2 = pathname.match(/\/things\/(\d+)/i);
-    return m2 ? m2[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Same shape as makerworldCloudApi.ts's parseMakerworldModelUrl -- used by
- * importService.ts's identifySourceModel for import dedup. */
-export function parseThingiverseThingUrl(url: string): { thingId: string } | null {
-  const thingId = thingiverseThingIdFromUrl(url);
-  return thingId ? { thingId } : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-/** Thingiverse's `GET /api/v2/things/{id}` -- confirmed live to return a `creator` object
- * (`{id, name, public_url, thumbnail}`) and a `preview_image`/`thumbnail`, but critically no
- * `description`, `tags`, or `categories` field at all (verified against a real response, not
- * assumed from docs) -- unlike MakerWorld, Thingiverse's public API exposes no per-Thing
- * category/tag data anywhere, so there is nothing here to populate `siteCategoryIds`/
- * `categorySite` from. `/api/v2/things/{id}/files` (tried first in the loop below, for the
- * actual download URL) 404s in practice -- the real download always falls through to the
- * `/thing:{id}/zip` URL -- so this detail response only ever contributes metadata, never a URL. */
-function extractThingiverseMeta(detail: Record<string, unknown>): Partial<ImportedPageMetadata> {
-  const meta: Partial<ImportedPageMetadata> = {};
-  if (typeof detail.name === "string" && detail.name.trim()) meta.title = detail.name.trim();
-  const previewUrl =
-    (typeof detail.preview_image === "string" && detail.preview_image.trim() && detail.preview_image) ||
-    (typeof detail.thumbnail === "string" && detail.thumbnail.trim() && detail.thumbnail) ||
-    null;
-  if (previewUrl) meta.previewImageUrl = previewUrl;
-  const creator = isRecord(detail.creator) ? detail.creator : null;
-  if (creator) {
-    const name = typeof creator.name === "string" && creator.name.trim() ? creator.name.trim() : null;
-    const externalId = creator.id != null ? String(creator.id) : null;
-    if (name) meta.creator = name;
-    if (externalId) {
-      const publicUrl = typeof creator.public_url === "string" && creator.public_url.trim() ? creator.public_url.trim() : null;
-      meta.author = {
-        provider: "thingiverse",
-        externalId,
-        name,
-        // Thingiverse's creator object has no separate handle field distinct from name.
-        handle: name,
-        bio: null,
-        bioTranslated: null,
-        links: publicUrl ? [publicUrl] : [],
-        avatarUrl: typeof creator.thumbnail === "string" && creator.thumbnail.trim() ? creator.thumbnail.trim() : null,
-        backgroundUrl: null,
-      };
-    }
-  }
-  return meta;
-}
-
-async function fetchThingiverseJson(
-  url: string,
-  pageUrl: string,
-  cookie: string | null,
-  token: string | null,
-): Promise<unknown | null> {
-  const result = await fetchCappedBuffer(url, thingiverseApiHeaders(pageUrl, cookie, token));
-  if (!result) return null;
-  if (result.status >= 400) {
-    const message = parseJsonErrorMessage(result.buffer);
-    if ([401, 403, 429].includes(result.status)) {
-      throw new HttpError(result.status, message || "Thingiverse request failed");
-    }
-    return null;
-  }
-  if (result.buffer.length > IMPORT_HTML_MAX_BYTES) return null;
-  const contentType = result.headers.get("content-type") || "";
-  if (!isJsonContentType(contentType)) {
-    const trimmed = result.buffer.toString("utf-8").trimStart();
-    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
-  }
-  try {
-    return JSON.parse(result.buffer.toString("utf-8"));
-  } catch {
-    return null;
-  }
-}
-
-async function fetchThingiverseViewToken(pageUrl: string, cookie: string | null): Promise<string | null> {
-  const apiUrl = "https://www.thingiverse.com/api/v2/auth/view";
-  const result = await fetchCappedBuffer(apiUrl, thingiverseApiHeaders(pageUrl, cookie));
-  if (!result) return null;
-  if (result.status >= 400) {
-    const message = parseJsonErrorMessage(result.buffer);
-    if ([401, 403, 429].includes(result.status)) {
-      throw new HttpError(
-        result.status,
-        message ||
-          "Thingiverse blocked the request. Paste the Cookie header from your browser session in Settings to import.",
-      );
-    }
-    return null;
-  }
-  if (result.buffer.length > IMPORT_HTML_MAX_BYTES) return null;
-  let data: unknown;
-  try {
-    data = JSON.parse(result.buffer.toString("utf-8"));
-  } catch {
-    return null;
-  }
-  if (data && typeof data === "object") {
-    const dict = data as Record<string, unknown>;
-    const token = dict.access || dict.token || dict.access_token;
-    if (typeof token === "string" && token.trim()) return token.trim();
-    const inner = dict.data;
-    if (inner && typeof inner === "object") {
-      const innerDict = inner as Record<string, unknown>;
-      const innerToken = innerDict.access || innerDict.token || innerDict.access_token;
-      if (typeof innerToken === "string" && innerToken.trim()) return innerToken.trim();
-    }
-  }
-  return null;
-}
-
-export type ThingiverseResolution = { downloadUrl: string; meta: Partial<ImportedPageMetadata> };
-
-export async function resolveThingiverseDownloadUrl(
-  pageUrl: string,
-  thingiverseCookie: string | null,
-): Promise<ThingiverseResolution | null> {
-  const thingId = thingiverseThingIdFromUrl(pageUrl);
-  if (!thingId) return null;
-  const token = await fetchThingiverseViewToken(pageUrl, thingiverseCookie);
-  if (!token) {
-    if (!thingiverseCookie) {
-      throw new HttpError(403, "Thingiverse requires a session cookie to fetch download links.");
-    }
-    return null;
-  }
-  const apiCandidates = [
-    `https://www.thingiverse.com/api/v2/things/${thingId}/files`,
-    `https://www.thingiverse.com/api/v2/things/${thingId}`,
-  ];
-  let downloadUrl: string | null = null;
-  let meta: Partial<ImportedPageMetadata> = {};
-  for (const apiUrl of apiCandidates) {
-    const data = await fetchThingiverseJson(apiUrl, pageUrl, thingiverseCookie, token);
-    if (!data) continue;
-    // Only the /things/{id} response (an object with a `name`) carries metadata -- /files
-    // returns an array of file entries with nothing about the Thing itself.
-    if (isRecord(data) && typeof data.name === "string") meta = extractThingiverseMeta(data);
-    if (!downloadUrl) {
-      const url = findDownloadUrlInJson(data, apiUrl);
-      if (url) downloadUrl = url;
-    }
-  }
-  return { downloadUrl: downloadUrl ?? `https://www.thingiverse.com/thing:${thingId}/zip`, meta };
 }

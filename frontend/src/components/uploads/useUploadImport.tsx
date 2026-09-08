@@ -22,6 +22,22 @@ function isMakerworldCollectionUrl(url: string): boolean {
   }
 }
 
+/** A Thingiverse Thing import goes through its own backend path entirely (see
+ * importService.ts's importThingiverseThing) rather than the generic inspect/zip-picker flow --
+ * skip straight to a plain import call so the zip-entry picker (meant for arbitrary remote
+ * zips) never shows up for one. Every recognized model file on the Thing becomes its own plate
+ * automatically. */
+function isThingiverseThingUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "thingiverse.com" && host !== "www.thingiverse.com") return false;
+    return /thing:\d+/i.test(parsed.pathname) || /\/things\/\d+/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Every dropped/picked entry's relativePath equals its bare filename when the
 // selection has no folder structure. A webkitdirectory folder pick always
 // prefixes relativePath with the folder name, so this only ever fires for a
@@ -34,14 +50,13 @@ type Props = {
   onUploaded: () => void;
   folderId?: string | null;
   makerworldCookie?: string | null;
-  thingiverseCookie?: string | null;
   onUnauthorized?: () => void;
 };
 
 /** Backs the top bar's "+ Add" menu -- Upload opens a hidden file input, Import opens a
  *  paste-a-link dialog. Both funnel into the same zip/multi-plate/collection prompts used
  *  elsewhere in the app, so `modals` must be rendered by the caller alongside the menu. */
-export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingiverseCookie, onUnauthorized }: Props) {
+export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnauthorized }: Props) {
   const { t } = useTranslation("app");
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -161,12 +176,10 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
     setImporting(true);
     try {
       const cookie = (makerworldCookie || "").trim();
-      const thingiverse = (thingiverseCookie || "").trim();
       const payload = {
         url,
         folder_id: folderId || undefined,
         makerworld_cookie: cookie || undefined,
-        thingiverse_cookie: thingiverse || undefined,
       };
 
       if (isMakerworldCollectionUrl(url)) {
@@ -196,6 +209,14 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
             }
           },
         });
+        return;
+      }
+
+      if (isThingiverseThingUrl(url)) {
+        // A Thing always resolves to a zip; skip straight past the inspect/zip-picker steps --
+        // the backend already splits it into plates automatically.
+        await importsApi.fromLink(payload);
+        onUploaded();
         return;
       }
 

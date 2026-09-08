@@ -26,7 +26,6 @@ type AppLayoutProps = {
   onOpenSettings: () => void;
   onLogout: () => void;
   makerworldCookie: string;
-  thingiverseCookie: string;
   user: AuthUser | null;
   onThemeChange: (theme: ThemeSelection) => void;
   children: React.ReactNode;
@@ -92,7 +91,6 @@ function AppLayoutShell({
   onOpenSettings,
   onLogout,
   makerworldCookie,
-  thingiverseCookie,
   user,
   onThemeChange,
   children,
@@ -129,7 +127,6 @@ function AppLayoutShell({
             actions={pageHeader?.actions}
             folderId={folderId}
             makerworldCookie={makerworldCookie}
-            thingiverseCookie={thingiverseCookie}
             onUploaded={onPrintsChanged}
             onUnauthorized={onUnauthorized}
             user={user}

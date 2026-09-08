@@ -199,11 +199,7 @@
         "makerworldDesc": "Neprivaloma autentifikacija MakerWorld modelių importui.",
         "makerworldHelp": "Įklijuokite Cookie antraštę iš prisijungusio makerworld.com užklausos, kad panaikintumėte atsisiuntimo limitus. Ši reikšmė saugoma tik jūsų naršyklėje.",
         "sessionCookieLabel": "Sesijos slapukas",
-        "makerworldPlaceholder": "pavyzdys: mw_session=...; mw_token=...;",
-        "thingiverseHeading": "Thingiverse",
-        "thingiverseDesc": "Neprivaloma autentifikacija Thingiverse modelių importui.",
-        "thingiverseHelp": "Įklijuokite savo Thingiverse Cookie antraštę, kad importuojant būtų praeitas Cloudflare patikrinimas. Ši reikšmė saugoma tik jūsų naršyklėje.",
-        "thingiversePlaceholder": "pavyzdys: cf_clearance=...; PHPSESSID=...;"
+        "makerworldPlaceholder": "pavyzdys: mw_session=...; mw_token=...;"
       },
       "language": {
         "heading": "Sąsajos kalba",
@@ -253,7 +249,10 @@
         "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą.",
         "triggersTitle": "Veiksmai",
         "triggersHeading": "Trigeriai",
-        "triggersDesc": "Vienkartiniai veiksmai, veikiantys kito naudotojo duomenis."
+        "triggersDesc": "Vienkartiniai veiksmai, veikiantys kito naudotojo duomenis.",
+        "thingiverseTitle": "Importas",
+        "thingiverseHeading": "Thingiverse prieigos raktas",
+        "thingiverseDesc": "Sukonfigūruokite bendrą prieigos raktą, naudojamą visų naudotojų Thingiverse importui."
       },
       "storage": {
         "heading": "Saugojimo struktūra",
@@ -301,6 +300,22 @@
         "confirmInstructions": "Norėdami patvirtinti, įveskite {{email}}.",
         "confirmButton": "Ištrinti visus modelius",
         "deleting": "Trinama…"
+      },
+      "thingiverse": {
+        "heading": "Thingiverse prieigos raktas",
+        "subtitle": "Bendras visos sistemos kredencialas oficialiai Thingiverse Developer API -- naudojamas visų naudotojų Thingiverse importui, tai ne kiekvieno naudotojo nustatymas.",
+        "helpText": "Sukurkite programėlę adresu thingiverse.com/apps/create (bet kokio tipo, pvz. „Desktop“) ir įklijuokite ten parodytą prieigos raktą. Tai skiriasi nuo jūsų Thingiverse prisijungimo -- tai nuolatinis raktas, susietas su registruota programėle.",
+        "statusConfigured": "Šiuo metu sukonfigūruotas prieigos raktas.",
+        "statusNotConfigured": "Prieigos raktas dar nesukonfigūruotas -- Thingiverse importas neveiks, kol jis nebus nustatytas.",
+        "tokenLabel": "Prieigos raktas",
+        "tokenPlaceholder": "Įklijuokite naują raktą, kad pakeistumėte dabartinį",
+        "tokenHelperConfigured": "Saugumo sumetimais dabartinis raktas daugiau nerodomas -- palikite tuščią, kad jį išsaugotumėte, arba įklijuokite naują, kad jį pakeistumėte.",
+        "save": "Išsaugoti",
+        "saving": "Saugoma…",
+        "clear": "Pašalinti raktą",
+        "saved": "Išsaugota.",
+        "cleared": "Prieigos raktas pašalintas.",
+        "failed": "Nepavyko išsaugoti Thingiverse nustatymų."
       }
     }
   },

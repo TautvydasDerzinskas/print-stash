@@ -4,12 +4,13 @@ import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
 import {
+  IMPORT_ALLOWED_EXTS,
   IMPORT_HTML_MAX_BYTES,
   IMPORT_MAX_BYTES,
   IMPORT_TIMEOUT_SECONDS,
   IMPORT_USER_AGENT,
 } from "../config";
-import { HttpError, buildImportFilename, isHtmlContentType, mimeFromContentType } from "../utils/fileUtils";
+import { HttpError, buildImportFilename, guessMimeFromPath, isHtmlContentType, mimeFromContentType, sanitizeFilename } from "../utils/fileUtils";
 import { validateRemoteUrl } from "../utils/urlUtils";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock, shouldProxyHost } from "./flaresolverr";
 import {
@@ -17,16 +18,11 @@ import {
   extractPageMetadata,
   findDownloadUrl,
   isPrintablesPageHost,
-  isThingiversePageHost,
   makerworldHtmlHeaders,
-  parseThingiverseThingUrl,
   printablesHtmlHeaders,
   resolveMakerworldCookie,
   resolveMakerworldDownloadUrl,
   resolvePrintablesDownloadUrl,
-  resolveThingiverseCookie,
-  resolveThingiverseDownloadUrl,
-  thingiverseHtmlHeaders,
   type ImportCookies,
   type ImportedPageMetadata,
 } from "./importResolvers";
@@ -37,8 +33,15 @@ import {
   parseMakerworldModelUrl,
   resolveMakerworldViaCloudApi,
 } from "./makerworldCloudApi";
+import {
+  parseThingiverseThingUrl,
+  resolveThingiverseThing,
+  ThingiverseAuthError,
+  type ThingiversePlateFile,
+} from "./thingiverseApi";
+import { getThingiverseAccessToken } from "./settingsService";
 import { upsertAuthorFromImport } from "./authorService";
-import { createPrint, type PrintMetaInput } from "./printCreation";
+import { createPrint, type NewPlateInput, type PrintMetaInput } from "./printCreation";
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
 import { addPreviewImage } from "./previewImageService";
 import { prisma } from "../db";
@@ -202,13 +205,9 @@ export async function openImportResponse(
 
   const headers: Record<string, string> = { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" };
   let makerworldCookie: string | null = null;
-  let thingiverseCookie: string | null = null;
   if (host.endsWith("makerworld.com")) {
     makerworldCookie = resolveMakerworldCookie(body);
     Object.assign(headers, makerworldHtmlHeaders(referer || validatedUrl, makerworldCookie));
-  } else if (isThingiversePageHost(host)) {
-    thingiverseCookie = resolveThingiverseCookie(body);
-    Object.assign(headers, thingiverseHtmlHeaders(referer || validatedUrl, thingiverseCookie));
   } else if (isPrintablesPageHost(host)) {
     Object.assign(headers, printablesHtmlHeaders(referer || validatedUrl));
   }
@@ -246,20 +245,6 @@ export async function openImportResponse(
     if (pageHost.endsWith("makerworld.com")) {
       if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
       downloadUrl = await resolveMakerworldDownloadUrl(html, finalUrl, makerworldCookie);
-    }
-    if (!downloadUrl && isThingiversePageHost(pageHost)) {
-      if (thingiverseCookie === null) thingiverseCookie = resolveThingiverseCookie(body);
-      const resolved = await resolveThingiverseDownloadUrl(finalUrl, thingiverseCookie);
-      if (resolved) {
-        downloadUrl = resolved.downloadUrl;
-        // Thingiverse has no server-rendered per-Thing page (confirmed live -- it's a client
-        // SPA shell), so extractPageMetadata's HTML pass above never finds anything for it;
-        // this is the only source of title/creator/author/preview for a Thingiverse import.
-        if (resolved.meta.title) resolvedMeta.title = resolved.meta.title;
-        if (resolved.meta.creator) resolvedMeta.creator = resolved.meta.creator;
-        if (resolved.meta.author) resolvedMeta.author = resolved.meta.author;
-        if (resolved.meta.previewImageUrl) resolvedMeta.previewImageUrl = resolved.meta.previewImageUrl;
-      }
     }
     if (!downloadUrl && isPrintablesPageHost(pageHost)) {
       downloadUrl = await resolvePrintablesDownloadUrl(finalUrl);
@@ -351,6 +336,7 @@ const PREVIEW_IMAGE_MAX_COUNT = 20;
 
 async function fetchImageBytes(url: string): Promise<Buffer | null> {
   try {
+  console.error("DEBUG fetchImageBytes url=", url);
     const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
@@ -434,9 +420,8 @@ async function resolveFolderIdByCategory(
 /** Identifies a provider + stable external id for a model URL, when possible -- used to dedup
  * imports (see importPrintFromUrl below) so re-importing the same design, whether pasted again
  * directly or pulled in as part of a different collection's batch import, reuses the existing
- * Print instead of re-downloading a duplicate. MakerWorld only for now; a URL that doesn't match
- * any known provider (or isn't from one at all -- a generic file host, say) returns null and is
- * simply never deduped, same as today. */
+ * Print instead of re-downloading a duplicate. A URL that doesn't match any known provider (or
+ * isn't from one at all -- a generic file host, say) returns null and is simply never deduped. */
 export function identifySourceModel(url: string): { provider: string; externalId: string } | null {
   const makerworld = parseMakerworldModelUrl(url);
   if (makerworld) return { provider: "makerworld", externalId: makerworld.designId };
@@ -461,7 +446,114 @@ async function findExistingImportedPrint(
   return { print, plates, author: print.author, previewImages };
 }
 
-/** Downloads a URL and creates a single-plate Print from it (POST /import). Returns
+const THINGIVERSE_PLATE_EXTS = new Set([...IMPORT_ALLOWED_EXTS].filter((ext) => ext !== ".zip"));
+
+/** Downloads one plain, unauthenticated file URL (a Thingiverse CDN asset -- see
+ * thingiverseApi.ts's zip_data.files) to a temp file. Best-effort: returns null instead of
+ * throwing, so one unreachable file among several doesn't fail the whole Thing import. */
+async function downloadPlainFileToTemp(url: string, suggestedName: string): Promise<NewPlateInput | null> {
+  try {
+    const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => undefined);
+      return null;
+    }
+    const filename = sanitizeFilename(suggestedName);
+    const tempFilePath = path.join(
+      os.tmpdir(),
+      `printstash-thingiverse-${crypto.randomBytes(8).toString("hex")}${path.extname(filename)}`,
+    );
+    await streamToFileCapped(res, tempFilePath, IMPORT_MAX_BYTES);
+    return { filename, mime: guessMimeFromPath(filename), tempFilePath };
+  } catch {
+    return null;
+  }
+}
+
+/** Thingiverse import path: entirely separate from openImportResponse's generic HTML-scraping
+ * flow (see thingiverseApi.ts for why -- www.thingiverse.com is Cloudflare-gated, the official
+ * api.thingiverse.com resolves everything needed directly). Every recognized model file bundled
+ * with the Thing becomes its own Plate on one Print -- mirrors both a multi-file upload of one
+ * model and how a single MakerWorld model (a multi-plate .3mf) already becomes one Print with
+ * several plates. */
+async function importThingiverseThing(
+  userId: string,
+  source: { provider: string; externalId: string },
+  body: ImportRequestBody,
+): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[]; alreadyImported: boolean }> {
+  const accessToken = await getThingiverseAccessToken();
+  if (!accessToken) {
+    throw new HttpError(
+      503,
+      "Thingiverse import isn't configured for this instance yet -- ask an admin to add an Access Token in Admin Settings.",
+    );
+  }
+
+  let resolved;
+  try {
+    resolved = await resolveThingiverseThing(source.externalId, accessToken);
+  } catch (err) {
+    if (err instanceof ThingiverseAuthError) throw new HttpError(401, err.message);
+    throw err;
+  }
+  if (!resolved) {
+    throw new HttpError(404, "This Thingiverse Thing could not be found, or isn't accessible with the configured Access Token.");
+  }
+  const { meta, plateFiles, galleryImages } = resolved;
+
+  const author = await upsertAuthorFromImport(meta.author ?? null);
+  const folderId =
+    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
+  const printMeta: PrintMetaInput = {
+    title: body.title ?? meta.title ?? null,
+    notes: body.notes ?? meta.description ?? null,
+    tags: body.tags && body.tags.length ? body.tags : (meta.tags ?? []),
+    folderId,
+    creator: meta.creator ?? null,
+    authorId: author?.id ?? null,
+    sourceProvider: source.provider,
+    sourceExternalId: source.externalId,
+  };
+
+  const modelFiles = plateFiles.filter((f: ThingiversePlateFile) => THINGIVERSE_PLATE_EXTS.has(path.extname(f.name).toLowerCase()));
+  const downloaded = (
+    await Promise.all(modelFiles.map((f: ThingiversePlateFile) => downloadPlainFileToTemp(f.url, f.name)))
+  ).filter((input): input is NewPlateInput => input !== null);
+  if (!downloaded.length) {
+    throw new HttpError(400, "None of this Thing's files could be downloaded.");
+  }
+
+  try {
+    let result: { print: Print; plates: Plate[] };
+    try {
+      result = await createPrint(userId, printMeta, meta.title || `thing-${source.externalId}`, downloaded);
+    } catch (err) {
+      // Race guard: another concurrent import of the same source model won between our
+      // dedup check above and this create -- treat it the same as finding it up front.
+      if (isUniqueConstraintError(err)) {
+        const existing = await findExistingImportedPrint(userId, source);
+        if (existing) return { ...existing, alreadyImported: true };
+      }
+      throw err;
+    }
+    const gallery = galleryImages.map((img) => ({ url: img.url, filename: img.name }));
+    await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl ?? null, gallery);
+    const previewImages = await prisma.previewImage.findMany({
+      where: { printId: result.print.id },
+      orderBy: { position: "asc" },
+    });
+    return { ...result, author, previewImages, alreadyImported: false };
+  } finally {
+    for (const input of downloaded) {
+      if (input.tempFilePath && fsSync.existsSync(input.tempFilePath)) {
+        await fs.rm(input.tempFilePath, { force: true }).catch(() => undefined);
+      }
+    }
+  }
+}
+
+/** Downloads a URL and creates a Print from it (POST /import) -- one plate for most sources, or
+ * several when the source is a Thingiverse Thing (see importThingiverseThing). Returns
  * `alreadyImported: true` (and the existing print, left untouched) instead of re-downloading
  * when this exact source model has already been imported by this user. */
 export async function importPrintFromUrl(
@@ -473,6 +565,10 @@ export async function importPrintFromUrl(
   if (source) {
     const existing = await findExistingImportedPrint(userId, source);
     if (existing) return { ...existing, alreadyImported: true };
+  }
+
+  if (source?.provider === "thingiverse") {
+    return importThingiverseThing(userId, source, body);
   }
 
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
@@ -489,6 +585,7 @@ export async function importPrintFromUrl(
     sourceProvider: source?.provider ?? null,
     sourceExternalId: source?.externalId ?? null,
   };
+
   try {
     let result: { print: Print; plates: Plate[] };
     try {

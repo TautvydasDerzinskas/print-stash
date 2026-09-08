@@ -77,7 +77,6 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
         tags: body.tags ?? [],
         folder_id: body.folder_id ?? null,
         makerworld_cookie: body.makerworld_cookie,
-        thingiverse_cookie: body.thingiverse_cookie,
       };
       try {
         const { print, alreadyImported } = await importPrintFromUrl(userId, modelUrl, itemBody);

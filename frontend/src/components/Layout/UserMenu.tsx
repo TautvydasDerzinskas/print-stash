@@ -21,7 +21,7 @@ import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 const THEME_MODES: ThemeSelection[] = ["light", "dark"];
 
 type ServiceChipDef = {
-  key: "makerworld" | "thingiverse";
+  key: "makerworld";
   label: string;
   color: string;
   connected: boolean;
@@ -34,13 +34,14 @@ type Props = {
   onOpenSettings: () => void;
   onLogout: () => void;
   makerworldCookie: string;
-  thingiverseCookie: string;
 };
 
 /** Avatar (Gravatar, from the account email) that opens identity + quick settings, mirroring
  *  the youtube-mp3-vault UserMenu: name/email/logout up top, Settings and a light/dark Theme
- *  submenu below, then at-a-glance MakerWorld/Thingiverse cookie status. */
-export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout, makerworldCookie, thingiverseCookie }: Props) {
+ *  submenu below, then at-a-glance MakerWorld cookie status. Thingiverse import auth is an
+ *  admin-configured, instance-wide Access Token now (see AdminSettingsPage/ThingiverseSection),
+ *  not a per-user credential, so it has no chip here. */
+export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout, makerworldCookie }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const avatarUrl = useGravatarUrl(user?.email, 128);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -57,7 +58,6 @@ export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout,
 
   const services: ServiceChipDef[] = [
     { key: "makerworld", label: "MakerWorld", color: "#F07745", connected: Boolean(makerworldCookie.trim()) },
-    { key: "thingiverse", label: "Thingiverse", color: "#2B78FE", connected: Boolean(thingiverseCookie.trim()) },
   ];
 
   return (

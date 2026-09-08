@@ -6,8 +6,10 @@ import { asyncHandler } from "../utils/asyncHandler";
 import {
   getAllowRegistrations,
   getPreviewMode,
+  getThingiverseAccessToken,
   setAllowRegistrations,
   setPreviewMode,
+  setThingiverseAccessToken,
 } from "../services/settingsService";
 import {
   DEFAULT_STORAGE_TEMPLATE,
@@ -96,6 +98,29 @@ router.post(
     const body = parseBody(previewsSchema, req.body);
     await setPreviewMode(body.mode);
     res.json({ mode: body.mode });
+  }),
+);
+
+// Admin-only end to end, like storage settings: the token is a shared credential for the whole
+// instance's Thingiverse imports, not a per-user preference. GET never echoes the token itself
+// back (write-only, like any other API secret) -- only whether one is currently configured, so
+// the admin UI can show "configured" / "not configured" without re-displaying the value.
+router.get(
+  "/settings/thingiverse",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    res.json({ configured: Boolean(await getThingiverseAccessToken()) });
+  }),
+);
+
+const thingiverseSettingsSchema = z.object({ access_token: z.string().nullable() });
+router.post(
+  "/settings/thingiverse",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(thingiverseSettingsSchema, req.body);
+    await setThingiverseAccessToken(body.access_token);
+    res.json({ configured: Boolean(body.access_token && body.access_token.trim()) });
   }),
 );
 

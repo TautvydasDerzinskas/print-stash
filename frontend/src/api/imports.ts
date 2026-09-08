@@ -55,7 +55,6 @@ type ImportLinkPayload = {
   folder_id?: string;
   filename?: string;
   makerworld_cookie?: string;
-  thingiverse_cookie?: string;
 };
 
 export const importsApi = {

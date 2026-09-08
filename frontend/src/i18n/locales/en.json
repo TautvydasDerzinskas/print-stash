@@ -199,11 +199,7 @@
         "makerworldDesc": "Optional auth for importing MakerWorld models.",
         "makerworldHelp": "Paste the Cookie header from a logged-in makerworld.com request to lift download limits. This value is stored only in your browser.",
         "sessionCookieLabel": "Session cookie",
-        "makerworldPlaceholder": "example: mw_session=...; mw_token=...;",
-        "thingiverseHeading": "Thingiverse",
-        "thingiverseDesc": "Optional auth for importing Thingiverse models.",
-        "thingiverseHelp": "Paste your Thingiverse Cookie header to pass Cloudflare checks when importing. This value is stored only in your browser.",
-        "thingiversePlaceholder": "example: cf_clearance=...; PHPSESSID=...;"
+        "makerworldPlaceholder": "example: mw_session=...; mw_token=...;"
       },
       "language": {
         "heading": "Interface Language",
@@ -253,7 +249,10 @@
         "previewsDesc": "Choose automatic, on-demand, or disabled preview generation.",
         "triggersTitle": "Actions",
         "triggersHeading": "Triggers",
-        "triggersDesc": "One-off actions that operate on another user's data."
+        "triggersDesc": "One-off actions that operate on another user's data.",
+        "thingiverseTitle": "Imports",
+        "thingiverseHeading": "Thingiverse Access Token",
+        "thingiverseDesc": "Configure the shared Access Token used for every user's Thingiverse imports."
       },
       "storage": {
         "heading": "Storage Structure",
@@ -301,6 +300,22 @@
         "confirmInstructions": "Type {{email}} to confirm.",
         "confirmButton": "Delete all models",
         "deleting": "Deleting…"
+      },
+      "thingiverse": {
+        "heading": "Thingiverse Access Token",
+        "subtitle": "Instance-wide credential for the official Thingiverse Developer API -- shared by every user's Thingiverse imports, not a per-user setting.",
+        "helpText": "Create an app at thingiverse.com/apps/create (any type, e.g. \"Desktop\") and paste the Access Token it shows you. This is different from your Thingiverse login -- it's a permanent token tied to the registered app.",
+        "statusConfigured": "An Access Token is currently configured.",
+        "statusNotConfigured": "No Access Token is configured yet -- Thingiverse imports will fail until one is set.",
+        "tokenLabel": "Access Token",
+        "tokenPlaceholder": "Paste a new token to replace the current one",
+        "tokenHelperConfigured": "For security, the current token is never shown again -- leave this blank to keep it, or paste a new one to replace it.",
+        "save": "Save",
+        "saving": "Saving…",
+        "clear": "Remove token",
+        "saved": "Saved.",
+        "cleared": "Access Token removed.",
+        "failed": "Failed to save Thingiverse settings."
       }
     }
   },

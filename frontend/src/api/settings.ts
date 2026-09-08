@@ -55,4 +55,26 @@ export const settingsApi = {
     }
     return res.json();
   },
+
+  // Instance-wide Thingiverse Developer API Access Token, shared by every user's Thingiverse
+  // imports -- write-only like any other API secret: GET only ever reports whether one is
+  // configured, never the value itself.
+  getThingiverse: async (): Promise<{ configured: boolean }> => {
+    const res = await fetch(`${apiBase()}/settings/thingiverse`, { headers: authHeaders() });
+    assertOk(res, "Failed to load Thingiverse settings");
+    return res.json();
+  },
+
+  updateThingiverse: async (accessToken: string | null): Promise<{ configured: boolean }> => {
+    const res = await fetch(`${apiBase()}/settings/thingiverse`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ access_token: accessToken }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, "Failed to update Thingiverse settings"));
+    }
+    return res.json();
+  },
 };

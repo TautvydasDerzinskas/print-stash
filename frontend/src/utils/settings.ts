@@ -18,16 +18,11 @@ export type MakerWorldSettings = {
   cookie: string;
 };
 
-export type ThingiverseSettings = {
-  cookie: string;
-};
-
 export type AppSettings = {
   slicer: SlicerSettings;
   engraving: EngravingSettings;
   theme: ThemeSettings;
   makerworld: MakerWorldSettings;
-  thingiverse: ThingiverseSettings;
 };
 
 const STORAGE_KEY = "printstash_settings";
@@ -45,9 +40,6 @@ const DEFAULT_SETTINGS: AppSettings = {
     selected: "light",
   },
   makerworld: {
-    cookie: "",
-  },
-  thingiverse: {
     cookie: "",
   },
 };
@@ -74,10 +66,6 @@ export function loadSettings(): AppSettings {
     const themeValid = THEME_OPTIONS.some(opt => opt.id === themeSelected);
     const makerworld = parsed.makerworld || {};
     const cookie = typeof makerworld.cookie === "string" ? makerworld.cookie : DEFAULT_SETTINGS.makerworld.cookie;
-    const thingiverse = parsed.thingiverse || {};
-    const thingiverseCookie = typeof thingiverse.cookie === "string"
-      ? thingiverse.cookie
-      : DEFAULT_SETTINGS.thingiverse.cookie;
     return {
       slicer: {
         enabled,
@@ -92,9 +80,6 @@ export function loadSettings(): AppSettings {
       },
       makerworld: {
         cookie,
-      },
-      thingiverse: {
-        cookie: thingiverseCookie,
       },
     };
   } catch {

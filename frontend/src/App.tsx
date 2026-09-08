@@ -84,7 +84,6 @@ function AppShell({
       onOpenSettings={() => navigate("/settings")}
       onLogout={onLogout}
       makerworldCookie={settings.makerworld.cookie}
-      thingiverseCookie={settings.thingiverse.cookie}
       user={user}
       onThemeChange={selected => setSettings(prev => ({ ...prev, theme: { selected } }))}
     >

@@ -27,7 +27,6 @@ const importRequestSchema = z.object({
   folder_id: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
   makerworld_cookie: z.string().nullable().optional(),
-  thingiverse_cookie: z.string().nullable().optional(),
 });
 
 router.post(

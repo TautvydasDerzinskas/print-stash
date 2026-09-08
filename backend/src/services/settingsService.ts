@@ -49,3 +49,28 @@ export async function setPreviewMode(value: PreviewMode): Promise<void> {
     update: { value },
   });
 }
+
+const THINGIVERSE_ACCESS_TOKEN_KEY = "thingiverse_access_token";
+
+// Instance-wide, not per-user: it's a credential for api.thingiverse.com (the official
+// Developer API -- see thingiverseApi.ts), tied to whichever Thingiverse account registered
+// the app at thingiverse.com/apps/create, not to any one PrintStash user's own account. Every
+// user's Thingiverse imports share it, same as the storage template and preview mode above.
+export async function getThingiverseAccessToken(): Promise<string | null> {
+  const row = await prisma.setting.findUnique({ where: { key: THINGIVERSE_ACCESS_TOKEN_KEY } });
+  const value = row?.value;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+export async function setThingiverseAccessToken(value: string | null): Promise<void> {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) {
+    await prisma.setting.deleteMany({ where: { key: THINGIVERSE_ACCESS_TOKEN_KEY } });
+    return;
+  }
+  await prisma.setting.upsert({
+    where: { key: THINGIVERSE_ACCESS_TOKEN_KEY },
+    create: { key: THINGIVERSE_ACCESS_TOKEN_KEY, value: trimmed },
+    update: { value: trimmed },
+  });
+}

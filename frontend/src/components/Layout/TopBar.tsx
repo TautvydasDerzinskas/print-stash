@@ -21,7 +21,6 @@ type Props = {
   actions?: React.ReactNode;
   folderId: string | null;
   makerworldCookie: string;
-  thingiverseCookie: string;
   onUploaded: () => void;
   onUnauthorized?: () => void;
   user: AuthUser | null;
@@ -39,7 +38,6 @@ export default function TopBar({
   actions,
   folderId,
   makerworldCookie,
-  thingiverseCookie,
   onUploaded,
   onUnauthorized,
   user,
@@ -66,7 +64,6 @@ export default function TopBar({
         <AddMenu
           folderId={folderId}
           makerworldCookie={makerworldCookie}
-          thingiverseCookie={thingiverseCookie}
           onUploaded={onUploaded}
           onUnauthorized={onUnauthorized}
         />
@@ -78,7 +75,6 @@ export default function TopBar({
           onOpenSettings={onOpenSettings}
           onLogout={onLogout}
           makerworldCookie={makerworldCookie}
-          thingiverseCookie={thingiverseCookie}
         />
       </Stack>
     </Box>
