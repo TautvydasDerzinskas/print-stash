@@ -533,6 +533,12 @@ export type ImportedPageMetadata = {
   /** The richer, structured creator record (for the Author table) -- distinct from `creator`,
    * which stays a plain display string for backward compatibility and non-provider sources. */
   author: ImportedAuthorInfo | null;
+  /** The source site's own category ids for this model (e.g. MakerWorld's `design.categories`),
+   * paired with which site they belong to -- each site has its own independent id namespace, so
+   * both are needed to match against the right Folder.*CatId column (see importService.ts's
+   * resolveFolderIdByCategory). Empty/null when the resolver doesn't expose categories. */
+  siteCategoryIds: number[];
+  categorySite: "makerworld" | "thingiverse" | "printables" | null;
 };
 
 export type ImportedAuthorInfo = {
@@ -557,6 +563,8 @@ export function emptyImportedPageMetadata(): ImportedPageMetadata {
     filename: null,
     galleryImages: [],
     author: null,
+    siteCategoryIds: [],
+    categorySite: null,
   };
 }
 

@@ -14,13 +14,18 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import CircularProgress from "@mui/material/CircularProgress";
 import Divider from "@mui/material/Divider";
+import Tooltip from "@mui/material/Tooltip";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import CheckIcon from "@mui/icons-material/Check";
-import type { Folder } from "../../api/folders";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import type { Folder, FolderMetaInput } from "../../api/folders";
 import { useConfirm } from "../../components/ConfirmProvider";
+import CategoryMetaDialog from "./CategoryMetaDialog";
 
 type Props = {
   folders: Folder[];
@@ -28,15 +33,35 @@ type Props = {
   onCreate: (name: string, parentId: string | null) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onReorder: (folderIds: string[]) => Promise<void>;
+  onUpdateMeta: (id: string, meta: FolderMetaInput) => Promise<void>;
 };
 
-/** One editable row shared by both category levels: plain text + edit/delete icons, or (while
- *  editing) a text field + save/cancel. */
+function hasMeta(folder: Folder): boolean {
+  return Boolean(
+    folder.meta_title ||
+      folder.meta_description ||
+      folder.makerworld_cat_id ||
+      folder.thingiverse_cat_id ||
+      folder.printables_cat_id,
+  );
+}
+
+/** One editable row shared by both category levels: plain text + move-up/move-down/details/edit/
+ *  delete icons, or (while editing) a text field + save/cancel. */
 function CategoryRow({
   name,
   indent,
   bold,
   busy,
+  canMoveUp,
+  canMoveDown,
+  onMoveUp,
+  onMoveDown,
+  metaTitle,
+  metaDescription,
+  hasDetails,
+  onOpenMeta,
   onRename,
   onDelete,
 }: {
@@ -44,10 +69,18 @@ function CategoryRow({
   indent: number;
   bold?: boolean;
   busy: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  hasDetails: boolean;
+  onOpenMeta: () => void;
   onRename: (name: string) => Promise<void>;
   onDelete: () => void;
 }) {
-  const { t } = useTranslation(["common"]);
+  const { t } = useTranslation(["models", "common"]);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(name);
   const [saving, setSaving] = useState(false);
@@ -111,6 +144,45 @@ function CategoryRow({
       sx={{ pl: indent, py: 0.5 }}
       secondaryAction={
         <Stack direction="row" spacing={0.25}>
+          <IconButton size="small" onClick={onMoveUp} disabled={busy || !canMoveUp} aria-label={t("common:moveUp") ?? undefined}>
+            <ArrowUpwardIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small" onClick={onMoveDown} disabled={busy || !canMoveDown} aria-label={t("common:moveDown") ?? undefined}>
+            <ArrowDownwardIcon fontSize="small" />
+          </IconButton>
+          <Tooltip
+            title={
+              hasDetails ? (
+                <Stack spacing={0.25} sx={{ py: 0.25 }}>
+                  {metaTitle && <Typography variant="caption" fontWeight={700} sx={{ display: "block" }}>{metaTitle}</Typography>}
+                  {metaDescription && <Typography variant="caption" sx={{ display: "block" }}>{metaDescription}</Typography>}
+                </Stack>
+              ) : (
+                t("models:categories.manager.addDetailsTooltip") ?? ""
+              )
+            }
+          >
+            <span>
+              <IconButton
+                size="small"
+                onClick={onOpenMeta}
+                disabled={busy}
+                aria-label={
+                  (hasDetails
+                    ? t("models:categories.manager.editDetailsTooltip")
+                    : t("models:categories.manager.addDetailsTooltip")) ?? undefined
+                }
+              >
+                <InfoOutlinedIcon
+                  fontSize="small"
+                  sx={{
+                    opacity: hasDetails ? 1 : 0.35,
+                    color: hasDetails ? "primary.main" : "action.active",
+                  }}
+                />
+              </IconButton>
+            </span>
+          </Tooltip>
           <IconButton size="small" onClick={startEdit} disabled={busy} aria-label={t("common:rename") ?? undefined}>
             <EditIcon fontSize="small" />
           </IconButton>
@@ -120,7 +192,7 @@ function CategoryRow({
         </Stack>
       }
     >
-      <Typography variant="body2" fontWeight={bold ? 600 : 400} noWrap sx={{ pr: 8 }}>
+      <Typography variant="body2" fontWeight={bold ? 600 : 400} noWrap sx={{ pr: 19 }}>
         {name}
       </Typography>
     </ListItem>
@@ -184,10 +256,11 @@ function AddRow({ indent, placeholder, busy, onAdd }: {
   );
 }
 
-export default function CategoryManagerModal({ folders, onClose, onCreate, onRename, onDelete }: Props) {
+export default function CategoryManagerModal({ folders, onClose, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [metaFolder, setMetaFolder] = useState<Folder | null>(null);
 
   const { roots, childrenByParent } = useMemo(() => {
     const childrenMap: Record<string, Folder[]> = {};
@@ -200,11 +273,12 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
         rootList.push(f);
       }
     });
+    const byPosition = (a: Folder, b: Folder) => a.position - b.position || a.name.localeCompare(b.name);
     Object.keys(childrenMap).forEach(key => {
-      childrenMap[key] = childrenMap[key].toSorted((a, b) => a.name.localeCompare(b.name));
+      childrenMap[key] = childrenMap[key].toSorted(byPosition);
     });
     return {
-      roots: rootList.toSorted((a, b) => a.name.localeCompare(b.name)),
+      roots: rootList.toSorted(byPosition),
       childrenByParent: childrenMap,
     };
   }, [folders]);
@@ -236,7 +310,29 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
     }
   };
 
+  const swapAndReorder = async (siblingIds: string[], index: number, direction: -1 | 1, busyKey: string) => {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= siblingIds.length) return;
+    const reordered = siblingIds.slice();
+    [reordered[index], reordered[swapIndex]] = [reordered[swapIndex], reordered[index]];
+    setBusyId(busyKey);
+    try {
+      await onReorder(reordered);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const moveRoot = (index: number, direction: -1 | 1) =>
+    swapAndReorder(roots.map(r => r.id), index, direction, roots[index].id);
+
+  const moveChild = (parentId: string, index: number, direction: -1 | 1) => {
+    const children = childrenByParent[parentId] || [];
+    return swapAndReorder(children.map(c => c.id), index, direction, children[index].id);
+  };
+
   return (
+    <>
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         {t("models:categories.manager.title")}
@@ -246,7 +342,7 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
       </DialogTitle>
       <DialogContent dividers>
         <List disablePadding>
-          {roots.map(root => {
+          {roots.map((root, rootIndex) => {
             const children = childrenByParent[root.id] || [];
             return (
               <Box key={root.id} sx={{ mb: 1.5 }}>
@@ -255,16 +351,32 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
                   indent={0}
                   bold
                   busy={busyId === root.id}
+                  canMoveUp={rootIndex > 0}
+                  canMoveDown={rootIndex < roots.length - 1}
+                  onMoveUp={() => moveRoot(rootIndex, -1)}
+                  onMoveDown={() => moveRoot(rootIndex, 1)}
+                  metaTitle={root.meta_title}
+                  metaDescription={root.meta_description}
+                  hasDetails={hasMeta(root)}
+                  onOpenMeta={() => setMetaFolder(root)}
                   onRename={name => onRename(root.id, name)}
                   onDelete={() => handleDeleteCategory(root)}
                 />
                 <List disablePadding>
-                  {children.map(child => (
+                  {children.map((child, childIndex) => (
                     <CategoryRow
                       key={child.id}
                       name={child.name || untitledLabel}
                       indent={3}
                       busy={busyId === child.id}
+                      canMoveUp={childIndex > 0}
+                      canMoveDown={childIndex < children.length - 1}
+                      onMoveUp={() => moveChild(root.id, childIndex, -1)}
+                      onMoveDown={() => moveChild(root.id, childIndex, 1)}
+                      metaTitle={child.meta_title}
+                      metaDescription={child.meta_description}
+                      hasDetails={hasMeta(child)}
+                      onOpenMeta={() => setMetaFolder(child)}
                       onRename={name => onRename(child.id, name)}
                       onDelete={() => handleDeleteSubcategory(child)}
                     />
@@ -316,5 +428,13 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
         <Button onClick={onClose}>{t("common:close")}</Button>
       </DialogActions>
     </Dialog>
+    {metaFolder && (
+      <CategoryMetaDialog
+        folder={metaFolder}
+        onClose={() => setMetaFolder(null)}
+        onSave={meta => onUpdateMeta(metaFolder.id, meta)}
+      />
+    )}
+    </>
   );
 }

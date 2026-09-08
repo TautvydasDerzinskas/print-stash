@@ -86,7 +86,7 @@ export default function ModelCard({ item, theme, previewMode }: Props) {
             </Stack>
             <Stack direction="row" alignItems="center" spacing={0.4}>
               <PrintIcon sx={{ fontSize: 14 }} />
-              <Typography variant="caption">0</Typography>
+              <Typography variant="caption">{item.print_count}</Typography>
             </Stack>
           </Stack>
         </Stack>

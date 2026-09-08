@@ -3,17 +3,20 @@ import { useTranslation } from "react-i18next";
 import Dialog from "@mui/material/Dialog";
 import Box from "@mui/material/Box";
 import Paper from "@mui/material/Paper";
+import Divider from "@mui/material/Divider";
 import List from "@mui/material/List";
 import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import IconButton from "@mui/material/IconButton";
 import Typography from "@mui/material/Typography";
+import LayersIcon from "@mui/icons-material/Layers";
 import CloseIcon from "@mui/icons-material/Close";
 import { type Print, printsApi } from "../../api/prints";
 import { MODEL_EXTS } from "../../constants/fileTypes";
 import { extOf } from "../../utils/fileExtensions";
 import ModelViewer from "../../components/media/ModelViewer";
+import type { PlateSummary } from "../../utils/bambuThreeMf";
 
 // A neutral, theme-independent canvas -- this is a fixed "product shot" style preview, not part
 // of the app's light/dark chrome, so it stays the same regardless of the viewer's theme.
@@ -37,6 +40,30 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
   const activePlate = sortedPlates.find(p => p.id === activePlateId) || sortedPlates[0];
   const ext = activePlate ? extOf(activePlate.filename) : "";
   const is3d = Boolean(activePlate) && MODEL_EXTS.has(ext);
+
+  // A single uploaded/imported .3mf can itself be a Bambu Studio multi-plate project -- these are
+  // its *internal* plates (detected client-side by the viewer), distinct from sortedPlates above
+  // (separate uploaded files). Reset whenever the active file changes; a stale list from the
+  // previous file would let you pick a plate index that doesn't exist in the new one.
+  const [internalPlates, setInternalPlates] = useState<PlateSummary[]>([]);
+  const [internalThumbnails, setInternalThumbnails] = useState<Record<number, string | null>>({});
+  const [selectedInternalPlateId, setSelectedInternalPlateId] = useState<number | null>(null);
+
+  const handlePlatesDetected = (plates: PlateSummary[], getThumbnail: (index: number) => Promise<string | null>) => {
+    setInternalPlates(plates);
+    setSelectedInternalPlateId(plates[0]?.index ?? null);
+    setInternalThumbnails({});
+    Promise.all(plates.map(async plate => [plate.index, await getThumbnail(plate.index)] as const)).then(pairs => {
+      setInternalThumbnails(Object.fromEntries(pairs));
+    });
+  };
+
+  const selectPlate = (plateId: string) => {
+    setActivePlateId(plateId);
+    setInternalPlates([]);
+    setInternalThumbnails({});
+    setSelectedInternalPlateId(null);
+  };
 
   return (
     <Dialog
@@ -82,7 +109,7 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
               <ListItemButton
                 key={plate.id}
                 selected={plate.id === activePlate?.id}
-                onClick={() => setActivePlateId(plate.id)}
+                onClick={() => selectPlate(plate.id)}
                 sx={{ borderRadius: 1, mb: 0.5 }}
               >
                 <ListItemIcon sx={{ minWidth: 40 }}>
@@ -106,6 +133,61 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
               </ListItemButton>
             ))}
           </List>
+
+          {internalPlates.length > 0 && (
+            <>
+              <Divider sx={{ my: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  {t("models:detail.internalPlatesDivider", { count: internalPlates.length })}
+                </Typography>
+              </Divider>
+              <List disablePadding>
+                {internalPlates.map(plate => (
+                  <ListItemButton
+                    key={plate.index}
+                    selected={plate.index === selectedInternalPlateId}
+                    onClick={() => setSelectedInternalPlateId(plate.index)}
+                    sx={{ borderRadius: 1, mb: 0.5 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {internalThumbnails[plate.index] ? (
+                        <Box
+                          component="img"
+                          src={internalThumbnails[plate.index] ?? undefined}
+                          alt=""
+                          sx={{ width: 32, height: 32, borderRadius: 0.75, objectFit: "cover" }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 0.75,
+                            bgcolor: "action.hover",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <LayersIcon fontSize="small" color="disabled" />
+                        </Box>
+                      )}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={
+                        plate.name
+                          ? t("models:detail.plateLabel", { n: plate.index }) + ` — ${plate.name}`
+                          : t("models:detail.plateLabel", { n: plate.index })
+                      }
+                      secondary={t("models:detail.internalPlateObjectCount", { count: plate.objectCount })}
+                      primaryTypographyProps={{ variant: "body2", noWrap: true }}
+                      secondaryTypographyProps={{ variant: "caption" }}
+                    />
+                  </ListItemButton>
+                ))}
+              </List>
+            </>
+          )}
         </Paper>
 
         <Box sx={{ width: "100%", height: "100%" }}>
@@ -117,6 +199,8 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
               viewKey={`preview-${print.id}-${activePlate.id}`}
               theme="light"
               colorOverride={PREVIEW_MODEL_COLOR}
+              selectedPlateId={selectedInternalPlateId}
+              onPlatesDetected={handlePlatesDetected}
             />
           ) : (
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>

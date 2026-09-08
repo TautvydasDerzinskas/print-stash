@@ -60,6 +60,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: P
       if (!res.ok) throw new Error("Download failed");
       await saveResponseToDisk(res, plate.filename || "download");
       setPickerOpen(false);
+      printsApi.recordDownload(print.id).catch(() => {});
     } catch (err) {
       handleDownloadError(err);
     } finally {
@@ -73,6 +74,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: P
       const res = await printsApi.downloadZip({ print_ids: [print.id] });
       await saveResponseToDisk(res, `${print.name || "model"}.zip`);
       setPickerOpen(false);
+      printsApi.recordDownload(print.id).catch(() => {});
     } catch (err) {
       handleDownloadError(err);
     } finally {

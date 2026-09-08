@@ -68,6 +68,7 @@ export type Print = {
   slicer_url?: string | null;
   slicer_filename?: string | null;
   view_count: number;
+  print_count: number;
 };
 
 export type ListPrintsResult = {
@@ -343,5 +344,16 @@ export const printsApi = {
     });
     assertOk(res, "Download failed");
     return res;
+  },
+
+  /** Records a completed download of this print (called once per explicit download action --
+   *  single-file, per-plate, or "download all as zip" -- from the model detail page). */
+  recordDownload: async (id: string) => {
+    const res = await fetch(`${apiBase()}/print/${id}/download`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    assertOk(res, "Failed to record download");
+    return res.json();
   },
 };

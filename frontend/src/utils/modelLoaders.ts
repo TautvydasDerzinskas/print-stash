@@ -7,6 +7,7 @@ import occtWasmUrl from "occt-import-js/dist/occt-import-js.wasm?url";
 import occtWorkerUrl from "occt-import-js/dist/occt-import-js-worker.js?url";
 import type { ResolvedTheme } from "../constants/settingsOptions";
 import { buildTheme } from "../theme";
+import { buildBambuModelGroup, parseBambuThreeMF, type Parsed3MFData, type PlateSummary } from "./bambuThreeMf";
 
 export type ModelPalette = {
   color: THREE.Color;
@@ -57,8 +58,10 @@ export function applyThemeToObject(obj: THREE.Object3D, palette: ModelPalette) {
 
 export async function loadObjectFromAsset(ext: string, url: string): Promise<THREE.Object3D | null> {
   const obj = await loadRawObjectFromAsset(ext, url);
-  if (obj) {
-    // Print files (STL/3MF/OBJ/STEP) are authored Z-up (Z = the model's height off the bed), but
+  // 3MF already comes out Y-up from bambuThreeMf.ts's own (unrelated) coordinate swap -- see the
+  // comment at the top of that file for why it must not also get this rotation.
+  if (obj && ext.toLowerCase() !== "3mf") {
+    // Print files (STL/OBJ/STEP) are authored Z-up (Z = the model's height off the bed), but
     // three.js's world/camera "up" is Y. Without this, a tall model ends up lying on its side.
     obj.rotateX(-Math.PI / 2);
   }
@@ -514,11 +517,47 @@ async function loadStepGroup(url: string) {
 
 async function load3MFObject(url: string) {
   try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`3MF fetch failed with status ${res.status}`);
+    const buffer = await res.arrayBuffer();
+    const { parsed, filamentColors } = await parseBambuThreeMF(buffer);
+    if (parsed.objects.size > 0) {
+      // No plate selected: renders every plate's build items together. Good enough for the
+      // generic/single-object case (and for ModelSnapshot's card thumbnails); the interactive
+      // ModelViewer uses loadBambuThreeMFForViewer directly so it can offer a plate picker.
+      const group = buildBambuModelGroup(parsed, null, filamentColors);
+      if (group.children.length > 0) return group;
+    }
+    throw new Error("Bambu 3MF parse produced no meshes");
+  } catch (err) {
+    console.warn("Bambu 3MF parse failed, falling back to simple 3MF parse", err);
+  }
+  try {
     return await loadSimple3MFGroup(url);
   } catch (err) {
     console.warn("Simple 3MF parse failed, falling back to ThreeMFLoader", err);
     return await loadViaThreeMFLoader(url);
   }
+}
+
+/** Richer 3MF load for the interactive viewer: keeps the parsed data around so switching the
+ *  selected plate rebuilds the THREE.Group locally (no refetch), and exposes the detected plate
+ *  list + filament palette + a thumbnail lookup for a plate-picker UI. Returns null for anything
+ *  that isn't a 3MF the Bambu-aware parser can make sense of (caller falls back to
+ *  loadObjectFromAsset). */
+export async function loadBambuThreeMFForViewer(url: string): Promise<{
+  parsedData: Parsed3MFData;
+  plates: PlateSummary[];
+  filamentColors: string[];
+  buildVolume: { x: number; y: number };
+  getPlateThumbnail: (plateIndex: number) => Promise<string | null>;
+} | null> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`3MF fetch failed with status ${res.status}`);
+  const rawBuffer = await res.arrayBuffer();
+  const { parsed, plates, filamentColors, buildVolume, getPlateThumbnail } = await parseBambuThreeMF(rawBuffer);
+  if (parsed.objects.size === 0) return null;
+  return { parsedData: parsed, plates, filamentColors, buildVolume, getPlateThumbnail };
 }
 
 async function loadViaThreeMFLoader(url: string) {

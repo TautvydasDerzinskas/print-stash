@@ -7,7 +7,7 @@ import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
-import { type Folder, foldersApi } from "../../api/folders";
+import { type Folder, type FolderMetaInput, foldersApi } from "../../api/folders";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import CategoriesPanel from "./CategoriesPanel";
@@ -135,6 +135,24 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     }
   };
 
+  const reorderCategories = async (folderIds: string[]) => {
+    try {
+      await foldersApi.reorder(folderIds);
+      onFoldersChanged();
+    } catch (err) {
+      handleError(err, t("models:errors.reorderCategoryFailed"));
+    }
+  };
+
+  const updateCategoryMeta = async (id: string, meta: FolderMetaInput) => {
+    try {
+      await foldersApi.updateMeta(id, meta);
+      onFoldersChanged();
+    } catch (err) {
+      handleError(err, t("models:errors.updateCategoryMetaFailed"));
+    }
+  };
+
   return (
     <Stack direction="row" spacing={2} alignItems="flex-start">
       <CategoriesPanel
@@ -145,6 +163,8 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
         onCreate={createCategory}
         onRename={renameCategory}
         onDelete={deleteCategory}
+        onReorder={reorderCategories}
+        onUpdateMeta={updateCategoryMeta}
       />
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {loading ? (

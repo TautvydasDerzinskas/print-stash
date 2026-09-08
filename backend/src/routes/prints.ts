@@ -180,6 +180,23 @@ router.get(
   }),
 );
 
+// ---- POST /print/:id/download --------------------------------------------------------------
+
+router.post(
+  "/print/:id/download",
+  asyncHandler(async (req, res) => {
+    // Recorded explicitly from the detail page's download actions (single-file, per-plate, or
+    // "download all as zip"), rather than inside the plate-file/zip routes themselves -- those
+    // are shared by the 3D viewer, snapshot generation, and bulk tag/folder zips, none of which
+    // are a user downloading *this* model.
+    await prisma.print.updateMany({
+      where: { id: req.params.id, userId: req.userId },
+      data: { printCount: { increment: 1 } },
+    });
+    res.json({ ok: true });
+  }),
+);
+
 // ---- GET /tags ----------------------------------------------------------------------------
 
 router.get(

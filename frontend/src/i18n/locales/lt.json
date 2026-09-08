@@ -277,6 +277,8 @@
     "remove": "Pašalinti",
     "rename": "Pervadinti",
     "edit": "Redaguoti",
+    "moveUp": "Perkelti aukštyn",
+    "moveDown": "Perkelti žemyn",
     "add": "Pridėti",
     "upload": "Įkelti",
     "download": "Atsisiųsti",
@@ -471,6 +473,10 @@
       "description": "Aprašymas",
       "noDescription": "Aprašymo dar nėra.",
       "plateLabel": "Plokštė {{n}}",
+      "internalPlatesDivider": "{{count}} plokščių šiame faile",
+      "internalPlateObjectCount_one": "{{count}} objektas",
+      "internalPlateObjectCount_few": "{{count}} objektai",
+      "internalPlateObjectCount_other": "{{count}} objektų",
       "downloadFailed": "Nepavyko atsisiųsti. Bandykite dar kartą.",
       "deleteFailed": "Nepavyko ištrinti modelio.",
       "confirmDelete": "Ištrinti „{{name}}“? Šio veiksmo nebus galima atšaukti.",
@@ -492,6 +498,8 @@
       "createCategoryFailed": "Nepavyko sukurti kategorijos. Bandykite dar kartą.",
       "renameCategoryFailed": "Nepavyko pervadinti kategorijos. Bandykite dar kartą.",
       "deleteCategoryFailed": "Nepavyko ištrinti kategorijos. Bandykite dar kartą.",
+      "reorderCategoryFailed": "Nepavyko pakeisti kategorijų tvarkos. Bandykite dar kartą.",
+      "updateCategoryMetaFailed": "Nepavyko išsaugoti kategorijos informacijos. Bandykite dar kartą.",
       "notFound": "Modelis nerastas."
     },
     "categories": {
@@ -508,7 +516,15 @@
         "noCategories": "Kol kas nėra kategorijų. Pridėkite pirmąją.",
         "confirmDeleteCategory": "Ištrinti „{{name}}“? Joje esantys modeliai taps nepriskirti.",
         "confirmDeleteCategoryWithSub": "Ištrinti „{{name}}“? Jos subkategorijos taps pagrindinėmis kategorijomis, o jose esantys modeliai taps nepriskirti.",
-        "confirmDeleteSubcategory": "Ištrinti „{{name}}“? Joje esantys modeliai taps nepriskirti."
+        "confirmDeleteSubcategory": "Ištrinti „{{name}}“? Joje esantys modeliai taps nepriskirti.",
+        "addDetailsTooltip": "Pridėti informaciją",
+        "editDetailsTooltip": "Redaguoti informaciją",
+        "metaDialogTitle": "Informacija — {{name}}",
+        "metaTitleLabel": "Meta pavadinimas",
+        "metaDescriptionLabel": "Meta aprašymas",
+        "makerworldCatIdLabel": "MakerWorld kategorijos ID",
+        "thingiverseCatIdLabel": "Thingiverse kategorijos ID",
+        "printablesCatIdLabel": "Printables kategorijos ID"
       }
     }
   }

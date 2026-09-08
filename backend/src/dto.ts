@@ -102,6 +102,7 @@ export type PrintOut = {
   slicer_url: string | null;
   slicer_filename: string | null;
   view_count: number;
+  print_count: number;
 };
 
 export type FolderOut = {
@@ -109,6 +110,12 @@ export type FolderOut = {
   name: string;
   tags: string[];
   parent_id: string | null;
+  position: number;
+  meta_title: string | null;
+  meta_description: string | null;
+  makerworld_cat_id: number | null;
+  thingiverse_cat_id: number | null;
+  printables_cat_id: number | null;
 };
 
 function plateThumbUrl(plateId: string): string | null {
@@ -236,6 +243,7 @@ export function toPrintOut(
     slicer_url: slicerUrl,
     slicer_filename: slicerFilename,
     view_count: print.viewCount,
+    print_count: print.printCount,
   };
 }
 
@@ -245,5 +253,11 @@ export function toFolderOut(folder: Folder): FolderOut {
     name: folder.name,
     tags: folder.tags,
     parent_id: folder.parentId,
+    position: folder.position,
+    meta_title: folder.metaTitle,
+    meta_description: folder.metaDescription,
+    makerworld_cat_id: folder.makerworldCatId,
+    thingiverse_cat_id: folder.thingiverseCatId,
+    printables_cat_id: folder.printablesCatId,
   };
 }

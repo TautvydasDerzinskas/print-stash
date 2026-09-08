@@ -234,6 +234,8 @@ export async function openImportResponse(
       filename: extracted.filename ?? inheritedMeta.filename,
       galleryImages: extracted.galleryImages.length ? extracted.galleryImages : inheritedMeta.galleryImages,
       author: extracted.author ?? inheritedMeta.author,
+      siteCategoryIds: extracted.siteCategoryIds.length ? extracted.siteCategoryIds : inheritedMeta.siteCategoryIds,
+      categorySite: extracted.categorySite ?? inheritedMeta.categorySite,
     };
     if (pageHost.endsWith("makerworld.com")) {
       if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
@@ -388,6 +390,31 @@ export async function attachImportedPreviewImages(
   }
 }
 
+const CATEGORY_SITE_FOLDER_FIELD = {
+  makerworld: "makerworldCatId",
+  thingiverse: "thingiverseCatId",
+  printables: "printablesCatId",
+} as const;
+
+/** When the caller didn't pick a folder explicitly, checks whether any of the user's folders
+ * declared a `*CatId` for this source site matching one of the model's own category ids -- if
+ * so, the import auto-lands there instead of staying uncategorized. Site-scoped (each site's
+ * category ids are an independent namespace) and best-effort: a lookup failure just leaves the
+ * print uncategorized rather than failing the import. */
+async function resolveFolderIdByCategory(
+  userId: string,
+  categorySite: ImportedPageMetadata["categorySite"],
+  siteCategoryIds: number[],
+): Promise<string | null> {
+  if (!categorySite || !siteCategoryIds.length) return null;
+  const field = CATEGORY_SITE_FOLDER_FIELD[categorySite];
+  const folder = await prisma.folder.findFirst({
+    where: { userId, [field]: { in: siteCategoryIds } },
+    orderBy: { position: "asc" },
+  });
+  return folder?.id ?? null;
+}
+
 /** Downloads a URL and creates a single-plate Print from it (POST /import). */
 export async function importPrintFromUrl(
   userId: string,
@@ -396,11 +423,13 @@ export async function importPrintFromUrl(
 ): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[] }> {
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
   const author = await upsertAuthorFromImport(meta.author);
+  const folderId =
+    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite, meta.siteCategoryIds));
   const printMeta: PrintMetaInput = {
     title: body.title ?? meta.title ?? null,
     notes: body.notes ?? meta.description ?? null,
     tags: body.tags && body.tags.length ? body.tags : meta.tags,
-    folderId: body.folder_id ?? null,
+    folderId,
     creator: meta.creator ?? null,
     authorId: author?.id ?? null,
   };

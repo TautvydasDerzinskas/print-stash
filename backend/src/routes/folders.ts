@@ -23,8 +23,39 @@ const folderSchema = z.object({
 router.get(
   "/folders",
   asyncHandler(async (req, res) => {
-    const folders = await prisma.folder.findMany({ where: { userId: req.userId } });
+    const folders = await prisma.folder.findMany({
+      where: { userId: req.userId },
+      orderBy: [{ position: "asc" }, { name: "asc" }],
+    });
     res.json(folders.map(toFolderOut));
+  }),
+);
+
+const reorderSchema = z.object({ folder_ids: z.array(z.string()).min(1) });
+
+router.post(
+  "/folders/reorder",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(reorderSchema, req.body);
+    const folders = await prisma.folder.findMany({
+      where: { id: { in: body.folder_ids }, userId: req.userId },
+    });
+    if (folders.length !== body.folder_ids.length) {
+      throw new HttpError(400, "folder_ids must reference existing categories");
+    }
+    const parentIds = new Set(folders.map((f) => f.parentId ?? null));
+    if (parentIds.size > 1) {
+      throw new HttpError(400, "folder_ids must all share the same parent category");
+    }
+    const [parentId] = parentIds;
+    const siblings = await prisma.folder.findMany({ where: { userId: req.userId, parentId } });
+    if (siblings.length !== body.folder_ids.length) {
+      throw new HttpError(400, "folder_ids must contain exactly this category's current siblings");
+    }
+    await prisma.$transaction(
+      body.folder_ids.map((id, idx) => prisma.folder.update({ where: { id }, data: { position: idx } })),
+    );
+    res.json({ ok: true });
   }),
 );
 
@@ -52,6 +83,35 @@ router.patch(
       data: { name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
     });
     await reorganizeManagedPrints(undefined, req.userId);
+    res.json(toFolderOut(updated));
+  }),
+);
+
+const catIdField = z.number().int().positive().nullable().optional();
+const folderMetaSchema = z.object({
+  meta_title: z.string().trim().max(200).nullable().optional(),
+  meta_description: z.string().trim().max(2000).nullable().optional(),
+  makerworld_cat_id: catIdField,
+  thingiverse_cat_id: catIdField,
+  printables_cat_id: catIdField,
+});
+
+router.patch(
+  "/folder/:id/meta",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(folderMetaSchema, req.body);
+    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!folder) throw new HttpError(404, "Not found");
+    const updated = await prisma.folder.update({
+      where: { id: folder.id },
+      data: {
+        metaTitle: body.meta_title || null,
+        metaDescription: body.meta_description || null,
+        makerworldCatId: body.makerworld_cat_id ?? null,
+        thingiverseCatId: body.thingiverse_cat_id ?? null,
+        printablesCatId: body.printables_cat_id ?? null,
+      },
+    });
     res.json(toFolderOut(updated));
   }),
 );

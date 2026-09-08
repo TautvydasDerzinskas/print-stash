@@ -232,6 +232,24 @@ function extractGalleryImages(design: Record<string, unknown>): MakerworldGaller
   return images;
 }
 
+/** design.categories -- a flat array of `{id, name, ...}` objects, most-specific first (e.g.
+ * "Cosplay Weapons" then its parent "Props & Cosplays"). Used to auto-land the import into a
+ * Folder whose makerworldCatId matches one of these (see importService.ts's
+ * resolveFolderIdByCategory); every id is kept, not just the first, so a folder configured for
+ * either the specific or the parent category still matches. */
+function extractCategoryIds(design: Record<string, unknown>): number[] {
+  const categories = design.categories;
+  if (!Array.isArray(categories)) return [];
+  const ids: number[] = [];
+  for (const category of categories) {
+    if (!isRecord(category)) continue;
+    const id = category.id;
+    if (typeof id === "number" && Number.isInteger(id)) ids.push(id);
+    else if (typeof id === "string" && /^\d+$/.test(id)) ids.push(Number(id));
+  }
+  return ids;
+}
+
 /**
  * Resolves a MakerWorld design to a real, directly-downloadable (signed S3) URL entirely
  * through api.bambulab.com -- no Cloudflare, no cookie-gated web session, no HTML scraping.
@@ -302,6 +320,7 @@ export async function resolveMakerworldViaCloudApi(
   const title = pickString(design, ["title"]);
   const galleryImages = extractGalleryImages(design);
   const author = creatorUid ? await fetchMakerworldAuthorInfo(creatorUid) : null;
+  const siteCategoryIds = extractCategoryIds(design);
 
   return {
     downloadUrl: body.url,
@@ -314,6 +333,8 @@ export async function resolveMakerworldViaCloudApi(
       filename: pickString(body, ["filename"]),
       galleryImages,
       author,
+      siteCategoryIds,
+      categorySite: siteCategoryIds.length ? "makerworld" : null,
     },
   };
 }

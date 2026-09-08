@@ -25,47 +25,65 @@ model User {
 }
 
 model Folder {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  tags      String[] @default([])
-  parentId  String?
-  parent    Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children  Folder[] @relation("FolderTree")
-  prints    Print[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  tags             String[] @default([])
+  parentId         String?
+  parent           Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Folder[] @relation("FolderTree")
+  // Manual sort order within a sibling group (same userId + parentId), set by the "move up/down"
+  // controls in the category manager. Not DB-uniqueness-constrained (parentId is nullable, and
+  // Postgres treats NULLs as distinct, so a unique index wouldn't actually cover the root-level
+  // sibling group) -- ordering is only ever applied via the reorder endpoint, which always
+  // rewrites every sibling's position together.
+  position         Int      @default(0)
+  metaTitle        String?
+  metaDescription  String?
+  // When set, an import from that site whose own category id matches one of these auto-lands
+  // in this folder (see importService.ts's resolveFolderIdByCategory), unless the caller already
+  // picked a folder explicitly. Each site's category ids are independent integer namespaces.
+  makerworldCatId  Int?
+  thingiverseCatId Int?
+  printablesCatId  Int?
+  prints           Print[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  @@index([userId, parentId])
+  @@index([userId, parentId, position])
   @@index([tags], type: Gin)
+  @@index([userId, makerworldCatId])
+  @@index([userId, thingiverseCatId])
+  @@index([userId, printablesCatId])
 }
 
 model Print {
-  id             String      @id @default(cuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name           String
-  nameNormalized String
-  title          String?
-  notes          String?
-  creator        String?
-  collection     String?
-  tags           String[]    @default([])
-  viewCount      Int         @default(0)
-  folderId       String?
-  folder         Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
-  authorId       String?
-  author         Author?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  sourcePath     String?
-  plates         Plate[]
-  previewImages  PreviewImage[]
-  files          PrintFile[] @relation("PrintFiles")
-  preparedFileId String?     @unique
-  preparedFile   PrintFile?  @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name             String
+  nameNormalized   String
+  title            String?
+  notes            String?
+  creator          String?
+  collection       String?
+  tags             String[]       @default([])
+  viewCount        Int            @default(0)
+  printCount       Int            @default(0)
+  folderId         String?
+  folder           Folder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  authorId         String?
+  author           Author?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  sourcePath       String?
+  plates           Plate[]
+  previewImages    PreviewImage[]
+  files            PrintFile[]    @relation("PrintFiles")
+  preparedFileId   String?        @unique
+  preparedFile     PrintFile?     @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
   preparedMetadata Json?
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@unique([userId, folderId, nameNormalized])
   @@index([userId, folderId, name])

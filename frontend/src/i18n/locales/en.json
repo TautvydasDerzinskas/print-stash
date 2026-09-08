@@ -277,6 +277,8 @@
     "remove": "Remove",
     "rename": "Rename",
     "edit": "Edit",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
     "add": "Add",
     "upload": "Upload",
     "download": "Download",
@@ -471,6 +473,9 @@
       "description": "Description",
       "noDescription": "No description yet.",
       "plateLabel": "Plate {{n}}",
+      "internalPlatesDivider": "{{count}} plates in this file",
+      "internalPlateObjectCount_one": "{{count}} object",
+      "internalPlateObjectCount_other": "{{count}} objects",
       "downloadFailed": "Download failed. Please try again.",
       "deleteFailed": "Failed to delete the model.",
       "confirmDelete": "Delete \"{{name}}\"? This cannot be undone.",
@@ -492,6 +497,8 @@
       "createCategoryFailed": "Failed to create the category. Please try again.",
       "renameCategoryFailed": "Failed to rename the category. Please try again.",
       "deleteCategoryFailed": "Failed to delete the category. Please try again.",
+      "reorderCategoryFailed": "Failed to reorder categories. Please try again.",
+      "updateCategoryMetaFailed": "Failed to save category details. Please try again.",
       "notFound": "Model not found."
     },
     "categories": {
@@ -508,7 +515,15 @@
         "noCategories": "No categories yet. Add one to get started.",
         "confirmDeleteCategory": "Delete \"{{name}}\"? Any models in it move to Unassigned.",
         "confirmDeleteCategoryWithSub": "Delete \"{{name}}\"? Its subcategories become top-level categories, and any models in them move to Unassigned.",
-        "confirmDeleteSubcategory": "Delete \"{{name}}\"? Any models in it move to Unassigned."
+        "confirmDeleteSubcategory": "Delete \"{{name}}\"? Any models in it move to Unassigned.",
+        "addDetailsTooltip": "Add details",
+        "editDetailsTooltip": "Edit details",
+        "metaDialogTitle": "Details — {{name}}",
+        "metaTitleLabel": "Meta title",
+        "metaDescriptionLabel": "Meta description",
+        "makerworldCatIdLabel": "MakerWorld category ID",
+        "thingiverseCatIdLabel": "Thingiverse category ID",
+        "printablesCatIdLabel": "Printables category ID"
       }
     }
   }

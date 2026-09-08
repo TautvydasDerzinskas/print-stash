@@ -12,7 +12,7 @@ import Collapse from "@mui/material/Collapse";
 import CircularProgress from "@mui/material/CircularProgress";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import type { Folder } from "../../api/folders";
+import type { Folder, FolderMetaInput } from "../../api/folders";
 import CategoryManagerModal from "./CategoryManagerModal";
 
 type Props = {
@@ -23,6 +23,8 @@ type Props = {
   onCreate: (name: string, parentId: string | null) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onReorder: (folderIds: string[]) => Promise<void>;
+  onUpdateMeta: (id: string, meta: FolderMetaInput) => Promise<void>;
 };
 
 /** The Models page's own category browser: a pinned "All" row, then a strictly two-level tree --
@@ -31,7 +33,7 @@ type Props = {
  *  just that one. Only one top-level category can be expanded at a time, and it only collapses
  *  when another one is clicked. Creating, renaming, and deleting categories all happen in the
  *  cog-triggered CategoryManagerModal, not inline here. */
-export default function CategoriesPanel({ folders, loading, selectedId, onSelect, onCreate, onRename, onDelete }: Props) {
+export default function CategoriesPanel({ folders, loading, selectedId, onSelect, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
@@ -49,11 +51,12 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
         rootList.push(f);
       }
     });
+    const byPosition = (a: Folder, b: Folder) => a.position - b.position || a.name.localeCompare(b.name);
     Object.keys(childrenMap).forEach(key => {
-      childrenMap[key] = childrenMap[key].toSorted((a, b) => a.name.localeCompare(b.name));
+      childrenMap[key] = childrenMap[key].toSorted(byPosition);
     });
     return {
-      roots: rootList.toSorted((a, b) => a.name.localeCompare(b.name)),
+      roots: rootList.toSorted(byPosition),
       childrenByParent: childrenMap,
     };
   }, [folders]);
@@ -192,6 +195,8 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
           onCreate={onCreate}
           onRename={onRename}
           onDelete={onDelete}
+          onReorder={onReorder}
+          onUpdateMeta={onUpdateMeta}
         />
       )}
     </>
