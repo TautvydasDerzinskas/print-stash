@@ -185,6 +185,7 @@ async function runThingiverseThingsImportJob(
     let alreadyInLibrary = 0;
     let processed = 0;
     let unavailable = 0;
+    let rateLimited = 0;
     let authFailed = 0;
     const failed: string[] = [];
     const successPrintIds: string[] = [];
@@ -206,6 +207,7 @@ async function runThingiverseThingsImportJob(
         failed.push(thingId);
         const reason = classifyImportFailure(err);
         if (reason === "unavailable") unavailable++;
+        else if (reason === "rateLimited") rateLimited++;
         else if (reason === "auth") authFailed++;
       } finally {
         processed++;
@@ -234,8 +236,17 @@ async function runThingiverseThingsImportJob(
 
     const bodyParts: string[] = [];
     if (alreadyInLibrary) bodyParts.push(`${alreadyInLibrary} already in your library`);
-    const otherFailed = failed.length - unavailable - authFailed;
+    const otherFailed = failed.length - unavailable - rateLimited - authFailed;
     if (unavailable) bodyParts.push(`${unavailable} unavailable (private, deleted, or hidden)`);
+    // Same idea as the MakerWorld CAPTCHA case above: once Thingiverse's Cloudflare bot-management
+    // trips, every remaining item fails the same way for a while, so call out the actionable
+    // cause instead of a vague "N failed" -- especially since this is usually the bulk of a
+    // large batch's failures once it trips.
+    if (rateLimited) {
+      bodyParts.push(
+        `${rateLimited} blocked by Thingiverse's rate-limit protection (too many requests at once) — wait a while, then retry`,
+      );
+    }
     if (authFailed) bodyParts.push(`${authFailed} failed because the configured Access Token was rejected`);
     if (otherFailed) bodyParts.push(`${otherFailed} failed`);
     const label = sourceLabel(collectionTitle);

@@ -1,15 +1,28 @@
 import { IMPORT_BROWSER_USER_AGENT, IMPORT_TIMEOUT_SECONDS } from "../config";
 import type { ImportedAuthorInfo, ImportedPageMetadata } from "./importResolvers";
+import {
+  extractJsonFromBrowserBody,
+  fetchViaFlaresolverr,
+  isFlaresolverrEnabled,
+  looksLikeCloudflareBlock,
+  shouldProxyHost,
+} from "./flaresolverr";
 
-// The official, documented Thingiverse Developer API -- confirmed live to be a clean JSON API
-// with none of www.thingiverse.com's Cloudflare bot-management (that domain actively challenges
-// automated requests, including its own legacy `download:{id}` links and the internal
-// `/api/v2/*` endpoints the website's own frontend uses). api.thingiverse.com sits on a
-// separate host, requires its own Access Token (from an app registered at
+// The official, documented Thingiverse Developer API -- much less aggressively gated than
+// www.thingiverse.com (that domain actively challenges automated requests, including its own
+// legacy `download:{id}` links and the internal `/api/v2/*` endpoints the website's own frontend
+// uses), and it requires its own Access Token (from an app registered at
 // thingiverse.com/apps/create -- NOT a browser session cookie, confirmed by a clean
-// INVALID_ACCESS_TOKEN response when a real logged-in session token was tried against it), and
-// answers with well-formed JSON/plain HTTP errors instead of a challenge page.
+// INVALID_ACCESS_TOKEN response when a real logged-in session token was tried against it).
+// BUT it is still sitting behind Cloudflare (`server: cloudflare`, `cf-mitigated: challenge`
+// response headers) and confirmed live to start returning a Cloudflare managed-challenge page
+// (HTTP 429, HTML body) after only a handful of rapid requests -- sticky for a while once
+// tripped, every subsequent request fails the same way. classifyImportFailure/ThingiverseRateLimitError
+// exist to surface that distinctly instead of misreporting it as "not found", and
+// fetchThingiverseApiJson below falls back to FlareSolverr (when configured -- see
+// flaresolverr.ts) to push through a challenge rather than just failing the whole batch.
 const THINGIVERSE_API_BASE = "https://api.thingiverse.com";
+const THINGIVERSE_API_HOSTNAME = new URL(THINGIVERSE_API_BASE).hostname;
 const API_TIMEOUT_MS = IMPORT_TIMEOUT_SECONDS * 1000;
 const THINGIVERSE_PROVIDER = "thingiverse";
 
@@ -24,6 +37,20 @@ export class ThingiverseAuthError extends Error {
         "update it in Admin Settings (a new one can be generated at thingiverse.com/apps/create).",
     );
     this.name = "ThingiverseAuthError";
+  }
+}
+
+/** api.thingiverse.com tripped its Cloudflare bot-management (a "managed challenge" HTML page,
+ * HTTP 429) rather than answering the request -- distinct from a genuine 404 (Thing doesn't
+ * exist/isn't accessible) or a rejected token, and worth its own bucket since the fix (wait,
+ * then retry) is completely different. See classifyImportFailure in importJobRunner.ts. */
+export class ThingiverseRateLimitError extends Error {
+  constructor() {
+    super(
+      "Thingiverse blocked this request with a rate-limit challenge (Cloudflare). This usually " +
+        "clears after a while -- wait, then retry the same import.",
+    );
+    this.name = "ThingiverseRateLimitError";
   }
 }
 
@@ -58,28 +85,64 @@ export function parseThingiverseLikesUrl(url: string): { username: string } | nu
   return m ? { username: m[1] } : null;
 }
 
-async function fetchThingiverseApiJson(path: string, accessToken: string): Promise<unknown> {
-  const url = `${THINGIVERSE_API_BASE}${path}${path.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(accessToken)}`;
+async function rawApiFetch(url: string): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   try {
-    const res = await fetch(url, { headers: { "User-Agent": IMPORT_BROWSER_USER_AGENT, Accept: "application/json" }, signal: controller.signal });
-    const text = await res.text();
-    let data: unknown = null;
-    if (text.trim()) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-    }
-    if (res.status === 401 || res.status === 403) throw new ThingiverseAuthError();
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    return data;
+    return await fetch(url, { headers: { "User-Agent": IMPORT_BROWSER_USER_AGENT, Accept: "application/json" }, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/** Same detect-a-Cloudflare-block-then-proxy-through-FlareSolverr pattern as importService.ts's
+ * fetchWithGuard (used for Printables/MakerWorld page scraping), adapted for a JSON API instead
+ * of an HTML page: once api.thingiverse.com has been seen returning its managed-challenge page
+ * for this run, every subsequent call goes straight through FlareSolverr's real headless browser
+ * for a while (shouldProxyHost's TTL) instead of wasting a direct request that would just get
+ * challenged again. A browser-rendered JSON response comes back as Chrome's own JSON-viewer DOM,
+ * not raw text -- extractJsonFromBrowserBody unwraps that. Only ever used for the JSON API calls
+ * (GET, no body) -- file downloads from Thingiverse's CDN are a separate, unguarded path (see
+ * downloadPlainFileToTemp in importService.ts): FlareSolverr renders pages, it can't relay
+ * arbitrary binary bytes back, so it isn't a fit there. */
+async function fetchThingiverseApiJson(path: string, accessToken: string): Promise<unknown> {
+  const url = `${THINGIVERSE_API_BASE}${path}${path.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(accessToken)}`;
+
+  let res: Response;
+  let viaBrowser = false;
+  if (isFlaresolverrEnabled() && shouldProxyHost(THINGIVERSE_API_HOSTNAME)) {
+    const solved = await fetchViaFlaresolverr(url);
+    if (solved) {
+      viaBrowser = true;
+      res = new Response(solved.body, { status: solved.status });
+    } else {
+      res = await rawApiFetch(url);
+    }
+  } else {
+    res = await rawApiFetch(url);
+    if ((res.status === 429 || res.status === 403) && isFlaresolverrEnabled() && looksLikeCloudflareBlock(res.headers)) {
+      const solved = await fetchViaFlaresolverr(url);
+      if (solved) {
+        viaBrowser = true;
+        res = new Response(solved.body, { status: solved.status });
+      }
+    }
+  }
+
+  const text = await res.text();
+  let data: unknown = null;
+  if (text.trim()) {
+    try {
+      data = viaBrowser ? extractJsonFromBrowserBody(text) : JSON.parse(text);
+    } catch {
+      data = null;
+    }
+  }
+  if (res.status === 429) throw new ThingiverseRateLimitError();
+  if (res.status === 401 || res.status === 403) throw new ThingiverseAuthError();
+  if (res.status === 404) return null;
+  if (!res.ok) return null;
+  return data;
 }
 
 export type ThingiversePlateFile = { name: string; url: string };

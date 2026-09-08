@@ -37,6 +37,7 @@ import {
   parseThingiverseThingUrl,
   resolveThingiverseThing,
   ThingiverseAuthError,
+  ThingiverseRateLimitError,
   type ThingiversePlateFile,
 } from "./thingiverseApi";
 import { getThingiverseAccessToken } from "./settingsService";
@@ -336,7 +337,6 @@ const PREVIEW_IMAGE_MAX_COUNT = 20;
 
 async function fetchImageBytes(url: string): Promise<Buffer | null> {
   try {
-  console.error("DEBUG fetchImageBytes url=", url);
     const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "image/*" });
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
@@ -463,12 +463,21 @@ async function findExistingImportedPrint(
 
 const THINGIVERSE_PLATE_EXTS = new Set([...IMPORT_ALLOWED_EXTS].filter((ext) => ext !== ".zip"));
 
+type PlainDownloadResult = { input: NewPlateInput } | { rateLimited: true } | null;
+
 /** Downloads one plain, unauthenticated file URL (a Thingiverse CDN asset -- see
  * thingiverseApi.ts's zip_data.files) to a temp file. Best-effort: returns null instead of
- * throwing, so one unreachable file among several doesn't fail the whole Thing import. */
-async function downloadPlainFileToTemp(url: string, suggestedName: string): Promise<NewPlateInput | null> {
+ * throwing, so one unreachable file among several doesn't fail the whole Thing import -- except
+ * a 429 (Cloudflare rate-limit challenge, same as api.thingiverse.com can return -- see
+ * ThingiverseRateLimitError), which is reported back distinctly since the caller needs to know
+ * *why* every file failed to report that honestly instead of a generic "couldn't be downloaded". */
+async function downloadPlainFileToTemp(url: string, suggestedName: string): Promise<PlainDownloadResult> {
   try {
     const res = await rawFetch(url, { "User-Agent": IMPORT_USER_AGENT, Accept: "*/*" });
+    if (res.status === 429) {
+      await res.body?.cancel().catch(() => undefined);
+      return { rateLimited: true };
+    }
     if (!res.ok) {
       await res.body?.cancel().catch(() => undefined);
       return null;
@@ -479,7 +488,7 @@ async function downloadPlainFileToTemp(url: string, suggestedName: string): Prom
       `printstash-thingiverse-${crypto.randomBytes(8).toString("hex")}${path.extname(filename)}`,
     );
     await streamToFileCapped(res, tempFilePath, IMPORT_MAX_BYTES);
-    return { filename, mime: guessMimeFromPath(filename), tempFilePath };
+    return { input: { filename, mime: guessMimeFromPath(filename), tempFilePath } };
   } catch {
     return null;
   }
@@ -508,6 +517,7 @@ async function importThingiverseThing(
   try {
     resolved = await resolveThingiverseThing(source.externalId, accessToken);
   } catch (err) {
+    if (err instanceof ThingiverseRateLimitError) throw new HttpError(429, err.message);
     if (err instanceof ThingiverseAuthError) throw new HttpError(401, err.message);
     throw err;
   }
@@ -531,10 +541,18 @@ async function importThingiverseThing(
   };
 
   const modelFiles = plateFiles.filter((f: ThingiversePlateFile) => THINGIVERSE_PLATE_EXTS.has(path.extname(f.name).toLowerCase()));
-  const downloaded = (
-    await Promise.all(modelFiles.map((f: ThingiversePlateFile) => downloadPlainFileToTemp(f.url, f.name)))
-  ).filter((input): input is NewPlateInput => input !== null);
+  const downloadResults = await Promise.all(modelFiles.map((f: ThingiversePlateFile) => downloadPlainFileToTemp(f.url, f.name)));
+  const downloaded = downloadResults
+    .filter((result): result is { input: NewPlateInput } => result !== null && "input" in result)
+    .map((result) => result.input);
   if (!downloaded.length) {
+    const wasRateLimited = downloadResults.some((result) => result !== null && "rateLimited" in result);
+    if (wasRateLimited) {
+      throw new HttpError(
+        429,
+        "Thingiverse blocked a file download with a rate-limit challenge (Cloudflare). This usually clears after a while -- wait, then retry the same import.",
+      );
+    }
     throw new HttpError(400, "None of this Thing's files could be downloaded.");
   }
 
