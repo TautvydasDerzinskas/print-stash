@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { Author, Collection, Folder, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
+import type { Author, Collection, Folder, ImportJob, Notification, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
@@ -315,5 +315,61 @@ export function toFolderOut(folder: Folder): FolderOut {
     makerworld_cat_id: folder.makerworldCatId,
     thingiverse_cat_id: folder.thingiverseCatId,
     printables_cat_id: folder.printablesCatId,
+  };
+}
+
+export type ImportJobOut = {
+  id: string;
+  type: "COLLECTION" | "ZIP";
+  status: "RUNNING" | "DONE" | "ERROR";
+  source_url: string;
+  source_label: string | null;
+  provider: string | null;
+  total: number;
+  processed: number;
+  imported: number;
+  already_in_library: number;
+  failed_count: number;
+  error_message: string | null;
+  result_collection_id: string | null;
+};
+
+export function toImportJobOut(job: ImportJob): ImportJobOut {
+  return {
+    id: job.id,
+    type: job.type,
+    status: job.status,
+    source_url: job.sourceUrl,
+    source_label: job.sourceLabel,
+    provider: job.provider,
+    total: job.total,
+    processed: job.processed,
+    imported: job.imported,
+    already_in_library: job.alreadyInLibrary,
+    failed_count: job.failedCount,
+    error_message: job.errorMessage,
+    result_collection_id: job.resultCollectionId,
+  };
+}
+
+export type NotificationOut = {
+  id: string;
+  title: string;
+  body: string | null;
+  external_url: string | null;
+  internal_path: string | null;
+  read: boolean;
+  created_at: string;
+};
+
+export function toNotificationOut(notification: Notification): NotificationOut {
+  return {
+    id: notification.id,
+    title: notification.title,
+    body: notification.body,
+    external_url: notification.externalUrl,
+    internal_path: notification.internalPath,
+    read: notification.readAt !== null,
+    created_at: notification.createdAt.toISOString(),
   };
 }

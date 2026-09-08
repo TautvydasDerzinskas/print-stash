@@ -9,6 +9,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
 import { useConfirm } from "../../components/ConfirmProvider";
@@ -19,11 +20,15 @@ type Props = {
   onUpdated: (collection: Collection) => void;
   onUnauthorized?: () => void;
   onDeleted: () => void;
+  /** Lets callers restyle the trigger button -- e.g. the Collections grid's hover overlay,
+   *  which needs to read over an arbitrary cover photo instead of the header's plain icon. */
+  triggerSx?: SxProps<Theme>;
 };
 
-/** The collection detail page's "..." header menu: Edit (opens the same create/edit modal used
- *  from the Collections grid, prefilled) and Delete (confirm, then delete + navigate back). */
-export default function CollectionActionsMenu({ collection, onUpdated, onUnauthorized, onDeleted }: Props) {
+/** The "..." menu for a collection: Edit (opens the same create/edit modal used from the
+ *  Collections grid, prefilled) and Delete (confirm, then delete). Shared by the collection
+ *  detail page's header and the Collections grid's per-card hover overlay. */
+export default function CollectionActionsMenu({ collection, onUpdated, onUnauthorized, onDeleted, triggerSx }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -74,6 +79,7 @@ export default function CollectionActionsMenu({ collection, onUpdated, onUnautho
         onClick={e => setAnchorEl(e.currentTarget)}
         aria-label={t("common:more") ?? undefined}
         disabled={deleting}
+        sx={triggerSx}
       >
         {deleting ? <CircularProgress size={18} /> : <MoreVertIcon fontSize="small" />}
       </IconButton>

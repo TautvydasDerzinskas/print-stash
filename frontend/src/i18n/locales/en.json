@@ -84,7 +84,6 @@
       "importing": "Importing…",
       "importFailed": "Import failed",
       "uploadFailed": "Failed to upload: {{files}}",
-      "importFailedList": "Failed to import: {{files}}",
       "multiplateImportFailedWithMessage": "Multi-plate import ({{message}})",
       "multiplateImportFailed": "Multi-plate import"
     },
@@ -212,7 +211,8 @@
       }
     },
     "addMenu": {
-      "importTitle": "Import from link"
+      "importTitle": "Import from link",
+      "disabledWhileImporting": "Wait for the current import to finish before starting another"
     },
     "userMenu": {
       "theme": "Theme",
@@ -222,7 +222,21 @@
       "serviceNotConnected": "{{service}}: not connected"
     },
     "notifications": {
-      "label": "Notifications"
+      "label": "Notifications",
+      "empty": "No notifications yet.",
+      "viewSource": "View source",
+      "justNow": "Just now",
+      "minutesAgo_one": "{{count}} minute ago",
+      "minutesAgo_other": "{{count}} minutes ago",
+      "hoursAgo_one": "{{count}} hour ago",
+      "hoursAgo_other": "{{count}} hours ago",
+      "daysAgo_one": "{{count}} day ago",
+      "daysAgo_other": "{{count}} days ago"
+    },
+    "importProgress": {
+      "starting": "Starting import…",
+      "label": "Importing… {{processed}} of {{total}}",
+      "tooltip": "{{imported}} imported, {{alreadyInLibrary}} already in your library, {{failedCount}} failed"
     },
     "dashboard": {
       "comingSoon": "Dashboard panels are coming soon."
@@ -236,7 +250,10 @@
         "storageDesc": "Organize files with folders, model names, creators, tags, and collections.",
         "previewsTitle": "Performance",
         "previewsHeading": "Model Previews",
-        "previewsDesc": "Choose automatic, on-demand, or disabled preview generation."
+        "previewsDesc": "Choose automatic, on-demand, or disabled preview generation.",
+        "triggersTitle": "Actions",
+        "triggersHeading": "Triggers",
+        "triggersDesc": "One-off actions that operate on another user's data."
       },
       "storage": {
         "heading": "Storage Structure",
@@ -267,6 +284,23 @@
         "disabledDesc": "Never generate card previews. Interactive viewing remains available by opening a model.",
         "footerNote": "Embedded 3MF thumbnails and previously generated server thumbnails are always used when available.",
         "failed": "Failed to save preview settings."
+      },
+      "triggers": {
+        "heading": "Triggers",
+        "subtitle": "Irreversible, one-off actions run against another user's account. Use with care.",
+        "deleteAllTitle": "Delete all models for a user",
+        "deleteAllDesc": "Permanently deletes every model a user created, uploaded, or imported — files included. Their categories and collections are left in place, just empty.",
+        "userLabel": "User",
+        "userOption": "{{name}} ({{email}}) — {{count}} models",
+        "deleteAllButton": "Delete all models…",
+        "loadFailed": "Unable to load users.",
+        "deleteSuccess": "Deleted {{count}} model(s) for {{email}}.",
+        "deleteFailed": "Failed to delete this user's models.",
+        "confirmTitle": "Delete all models for this user?",
+        "confirmWarning": "This permanently deletes all {{count}} model(s) belonging to {{email}}, including their files. This cannot be undone.",
+        "confirmInstructions": "Type {{email}} to confirm.",
+        "confirmButton": "Delete all models",
+        "deleting": "Deleting…"
       }
     }
   },

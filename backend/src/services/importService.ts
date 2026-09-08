@@ -41,7 +41,12 @@ import { createPrint, type PrintMetaInput } from "./printCreation";
 import { plateThumbExists, saveThumbFromBytes } from "./printService";
 import { addPreviewImage } from "./previewImageService";
 import { prisma } from "../db";
+import { Prisma } from "@prisma/client";
 import type { Author, Plate, PreviewImage, Print } from "@prisma/client";
+
+function isUniqueConstraintError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002";
+}
 
 export type ImportRequestBody = ImportCookies & {
   url: string;
@@ -415,12 +420,48 @@ async function resolveFolderIdByCategory(
   return folder?.id ?? null;
 }
 
-/** Downloads a URL and creates a single-plate Print from it (POST /import). */
+/** Identifies a provider + stable external id for a model URL, when possible -- used to dedup
+ * imports (see importPrintFromUrl below) so re-importing the same design, whether pasted again
+ * directly or pulled in as part of a different collection's batch import, reuses the existing
+ * Print instead of re-downloading a duplicate. MakerWorld only for now; a URL that doesn't match
+ * any known provider (or isn't from one at all -- a generic file host, say) returns null and is
+ * simply never deduped, same as today. */
+export function identifySourceModel(url: string): { provider: string; externalId: string } | null {
+  const makerworld = parseMakerworldModelUrl(url);
+  if (makerworld) return { provider: "makerworld", externalId: makerworld.designId };
+  return null;
+}
+
+async function findExistingImportedPrint(
+  userId: string,
+  source: { provider: string; externalId: string },
+): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[] } | null> {
+  const print = await prisma.print.findFirst({
+    where: { userId, sourceProvider: source.provider, sourceExternalId: source.externalId },
+    include: { author: true },
+  });
+  if (!print) return null;
+  const [plates, previewImages] = await Promise.all([
+    prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } }),
+    prisma.previewImage.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } }),
+  ]);
+  return { print, plates, author: print.author, previewImages };
+}
+
+/** Downloads a URL and creates a single-plate Print from it (POST /import). Returns
+ * `alreadyImported: true` (and the existing print, left untouched) instead of re-downloading
+ * when this exact source model has already been imported by this user. */
 export async function importPrintFromUrl(
   userId: string,
   url: string,
   body: ImportRequestBody,
-): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[] }> {
+): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[]; alreadyImported: boolean }> {
+  const source = identifySourceModel(url);
+  if (source) {
+    const existing = await findExistingImportedPrint(userId, source);
+    if (existing) return { ...existing, alreadyImported: true };
+  }
+
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
   const author = await upsertAuthorFromImport(meta.author);
   const folderId =
@@ -432,17 +473,30 @@ export async function importPrintFromUrl(
     folderId,
     creator: meta.creator ?? null,
     authorId: author?.id ?? null,
+    sourceProvider: source?.provider ?? null,
+    sourceExternalId: source?.externalId ?? null,
   };
   try {
-    const result = await createPrint(userId, printMeta, path.parse(filename).name, [
-      { filename, mime, tempFilePath: tempPath },
-    ]);
+    let result: { print: Print; plates: Plate[] };
+    try {
+      result = await createPrint(userId, printMeta, path.parse(filename).name, [
+        { filename, mime, tempFilePath: tempPath },
+      ]);
+    } catch (err) {
+      // Race guard: another concurrent import of the same source model won between our
+      // dedup check above and this create -- treat it the same as finding it up front.
+      if (source && isUniqueConstraintError(err)) {
+        const existing = await findExistingImportedPrint(userId, source);
+        if (existing) return { ...existing, alreadyImported: true };
+      }
+      throw err;
+    }
     await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl, meta.galleryImages);
     const previewImages = await prisma.previewImage.findMany({
       where: { printId: result.print.id },
       orderBy: { position: "asc" },
     });
-    return { ...result, author, previewImages };
+    return { ...result, author, previewImages, alreadyImported: false };
   } finally {
     if (fsSync.existsSync(tempPath)) await fs.rm(tempPath, { force: true }).catch(() => undefined);
   }

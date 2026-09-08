@@ -11,11 +11,15 @@ import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { collectionDisplayName } from "../../utils/collectionDisplay";
+import CollectionActionsMenu from "../CollectionDetailPage/CollectionActionsMenu";
 
 type Props = {
   collection: Collection;
   theme: ResolvedTheme;
   previewMode: PreviewMode;
+  onUpdated: (collection: Collection) => void;
+  onDeleted: (id: string) => void;
+  onUnauthorized?: () => void;
 };
 
 const COVER_TILE_LIMIT = 4;
@@ -65,21 +69,27 @@ function CoverTile({
   );
 }
 
-export default function CollectionCard({ collection, theme, previewMode }: Props) {
+export default function CollectionCard({ collection, theme, previewMode, onUpdated, onDeleted, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
   const coverItems = collection.cover_items.slice(0, COVER_TILE_LIMIT);
   const extraCount = collection.item_count > COVER_TILE_LIMIT ? collection.item_count - COVER_TILE_LIMIT : 0;
   const displayName = collectionDisplayName(collection, t);
+  // With a single model, opening the collection would just show that one card again -- go
+  // straight to the model instead, same as clicking its cover tile above already does.
+  const soleModelId = collection.item_count === 1 ? coverItems[0]?.id : undefined;
+  const openTarget = soleModelId ? `/models/${soleModelId}` : `/models/collections/${collection.id}`;
 
   return (
     <Paper
       variant="outlined"
       sx={{
+        position: "relative",
         overflow: "hidden",
         borderRadius: "12px",
         borderColor: "divider",
         bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.palette.grey[800] : muiTheme.palette.grey[100]),
+        "&:hover .collection-card-actions": { opacity: 1 },
       }}
     >
       <Box
@@ -121,8 +131,32 @@ export default function CollectionCard({ collection, theme, previewMode }: Props
         )}
       </Box>
 
+      {!collection.system_key && (
+        <Box
+          className="collection-card-actions"
+          onClick={e => e.stopPropagation()}
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            opacity: 0,
+            transition: "opacity .15s ease",
+            bgcolor: "rgba(0, 0, 0, 0.55)",
+            borderRadius: "50%",
+          }}
+        >
+          <CollectionActionsMenu
+            collection={collection}
+            onUpdated={onUpdated}
+            onDeleted={() => onDeleted(collection.id)}
+            onUnauthorized={onUnauthorized}
+            triggerSx={{ color: "#fff" }}
+          />
+        </Box>
+      )}
+
       <Box
-        onClick={() => navigate(`/models/collections/${collection.id}`)}
+        onClick={() => navigate(openTarget)}
         sx={{
           p: 1.5,
           cursor: "pointer",

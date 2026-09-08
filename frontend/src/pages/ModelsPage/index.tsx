@@ -10,6 +10,7 @@ import { type Print, printsApi } from "../../api/prints";
 import { type Folder, type FolderMetaInput, foldersApi } from "../../api/folders";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
+import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import CategoriesPanel from "./CategoriesPanel";
 import ModelCard from "./ModelCard";
 
@@ -49,6 +50,15 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     const childIds = folders.filter(f => f.parent_id === folderId).map(f => f.id);
     return [folderId, ...childIds];
   }, [folderId, folders]);
+
+  // Plain "Models" (and the route's default back-to-Dashboard) while nothing's selected; once a
+  // category is active, the title reflects it and back instead clears the filter -- "back to
+  // all" one level at a time, matching the sidebar's own initial-vs-filtered framing.
+  const selectedFolder = folderId ? folders.find(f => f.id === folderId) ?? null : null;
+  usePageHeader({
+    title: selectedFolder ? `${t("models:pageTitle")} - ${selectedFolder.name || t("models:categories.untitled")}` : undefined,
+    onBack: folderId ? () => onSelectFolder(null) : undefined,
+  });
 
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -173,7 +183,7 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
           </Stack>
         ) : items.length ? (
           <Stack spacing={2}>
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
               {items.map(item => (
                 <ModelCard key={item.id} item={item} theme={theme} previewMode={previewMode} />
               ))}

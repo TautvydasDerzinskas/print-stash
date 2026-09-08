@@ -13,16 +13,18 @@ enum Role {
 }
 
 model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  passwordHash String
-  displayName  String
-  role         Role         @default(MEMBER)
-  folders      Folder[]
-  prints       Print[]
-  collections  Collection[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  displayName   String
+  role          Role           @default(MEMBER)
+  folders       Folder[]
+  prints        Print[]
+  collections   Collection[]
+  importJobs    ImportJob[]
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Folder {
@@ -78,6 +80,12 @@ model Print {
   // falls out of `orderBy: lastViewedAt desc` with no separate event log.
   favoritedAt      DateTime?
   lastViewedAt     DateTime?
+  // Identifies the source design this print was imported from (MakerWorld today), so a
+  // re-import of the same design -- whether via a plain link paste or as part of a different
+  // collection's batch import -- reuses this row instead of re-downloading a duplicate. Null
+  // for uploads, zip/folder-scan imports, and anything not resolvable to a stable provider id.
+  sourceProvider   String?
+  sourceExternalId String?
   folderId         String?
   folder           Folder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
   authorId         String?
@@ -94,6 +102,7 @@ model Print {
   updatedAt        DateTime       @updatedAt
 
   @@unique([userId, folderId, nameNormalized])
+  @@unique([userId, sourceProvider, sourceExternalId])
   @@index([userId, folderId, name])
   @@index([tags], type: Gin)
   @@index([authorId])
@@ -136,6 +145,63 @@ model CollectionItem {
   @@unique([collectionId, printId])
   @@index([collectionId, position])
   @@index([printId])
+}
+
+enum ImportJobType {
+  COLLECTION
+  ZIP
+}
+
+enum ImportJobStatus {
+  RUNNING
+  DONE
+  ERROR
+}
+
+/// Tracks one background batch import (a MakerWorld collection, or a remote zip's selected
+/// entries) so the triggering request can return immediately instead of blocking on however
+/// long the whole batch takes -- see services/importJobRunner.ts. At most one RUNNING job per
+/// user is ever allowed (enforced in routes/imports.ts); that single row doubles as the "an
+/// import is already in progress" lock, and survives a page refresh since the frontend can just
+/// ask for the user's active job again.
+model ImportJob {
+  id                  String          @id @default(cuid())
+  userId              String
+  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type                ImportJobType
+  status              ImportJobStatus @default(RUNNING)
+  sourceUrl           String
+  sourceLabel         String?
+  provider            String?
+  total               Int             @default(0)
+  processed           Int             @default(0)
+  imported            Int             @default(0)
+  alreadyInLibrary    Int             @default(0)
+  failedCount         Int             @default(0)
+  errorMessage        String?
+  resultCollectionId  String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  @@index([userId, status])
+}
+
+/// A generic per-user notification -- today only ever created by importJobRunner.ts when a
+/// batch import finishes, but the shape (title/body + an optional in-app and/or external link)
+/// is deliberately not import-specific so a future notification source can reuse it.
+model Notification {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  body         String?
+  externalUrl  String?
+  internalPath String?
+  readAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 /// A creator/designer on some source platform (MakerWorld today; Printables/Thingiverse etc.

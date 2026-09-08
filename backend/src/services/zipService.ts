@@ -109,6 +109,7 @@ export async function extractZipEntriesToPrints(
   zipPath: string,
   selections: string[],
   options: ZipExtractOptions,
+  onProgress?: (processed: number, total: number, imported: number, failed: number) => void,
 ): Promise<{ prints: (Print & { plates: Plate[]; previewImages: PreviewImage[] })[]; failed: string[] }> {
   const normalized = selections.map((s) => normalizeZipEntryPath(s));
   const ordered: string[] = [];
@@ -135,6 +136,7 @@ export async function extractZipEntriesToPrints(
   const prints: (Print & { plates: Plate[]; previewImages: PreviewImage[] })[] = [];
   const failed: string[] = [];
   const folderCache: FolderCache = new Map();
+  let processedCount = 0;
 
   for (const entryName of ordered) {
     const info = entryMap.get(entryName);
@@ -178,6 +180,7 @@ export async function extractZipEntriesToPrints(
       if (tempPath) await fs.rm(tempPath, { force: true }).catch(() => undefined);
       failed.push(entryName);
     }
+    onProgress?.(++processedCount, ordered.length, prints.length, failed.length);
   }
 
   return { prints, failed };

@@ -8,6 +8,7 @@ import { buildUploadEntriesFromZip, isZipFile, readZipEntries } from "../../util
 import { useZipImportPrompt } from "./ZipImportModal";
 import { useCollectionImportPrompt } from "./CollectionImportModal";
 import { useImportModePrompt, type ImportMode } from "./ImportModeModal";
+import { useImportJob } from "../Layout/ImportJobContext";
 
 /** MakerWorld collection URLs (`/en/collections/{id}-{slug}`) list many models rather than
  * being one model page -- route those to the collection picker instead of the single-link
@@ -48,6 +49,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
   const zipPrompt = useZipImportPrompt();
   const collectionPrompt = useCollectionImportPrompt();
   const importModePrompt = useImportModePrompt();
+  const { startCollectionImport, startZipImport } = useImportJob();
   const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
@@ -180,11 +182,11 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
             }
           },
           onImportSelected: async (designIds: string[]) => {
+            // Registers the batch as a background job and returns almost immediately -- the
+            // global progress bar (ImportJobContext) takes over from here, and a notification
+            // + grid refresh follow once it actually finishes.
             try {
-              const result = await importsApi.fromCollection({ ...payload, design_ids: designIds });
-              if (result.failed.length) {
-                alert(t("uploadBar.importFailedList", { files: result.failed.join(", ") }));
-              }
+              await startCollectionImport({ ...payload, design_ids: designIds });
             } catch (err) {
               if (err instanceof UnauthorizedError) {
                 onUnauthorized?.();
@@ -192,7 +194,6 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
               }
               throw err;
             }
-            onUploaded();
           },
         });
         return;
@@ -231,11 +232,10 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
           }
         },
         onImportSelected: async (entries: string[]) => {
+          // Same deal as the collection branch above: hands off to the background job +
+          // global progress bar instead of blocking here.
           try {
-            const result = await importsApi.zipFromLink({ ...payload, entries });
-            if (result.failed.length) {
-              alert(t("uploadBar.importFailedList", { files: result.failed.join(", ") }));
-            }
+            await startZipImport({ ...payload, entries });
           } catch (err) {
             if (err instanceof UnauthorizedError) {
               onUnauthorized?.();
@@ -243,7 +243,6 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, thingi
             }
             throw err;
           }
-          onUploaded();
         },
       });
     } catch (err) {

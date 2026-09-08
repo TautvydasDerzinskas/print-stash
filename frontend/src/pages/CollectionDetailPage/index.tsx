@@ -126,7 +126,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
       )}
       {items.length ? (
         <Stack spacing={2}>
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
             {items.map(item => (
               <ModelCard key={item.id} item={item} theme={theme} previewMode={previewMode} />
             ))}

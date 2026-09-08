@@ -12,6 +12,8 @@ import printFilesRoutes from "./routes/printFiles";
 import settingsRoutes from "./routes/settings";
 import importsRoutes from "./routes/imports";
 import collectionsRoutes from "./routes/collections";
+import notificationsRoutes from "./routes/notifications";
+import adminRoutes from "./routes/admin";
 
 export function createApp(): Express {
   const app = express();
@@ -38,6 +40,8 @@ export function createApp(): Express {
   app.use("/api", printFilesRoutes);
   app.use("/api", importsRoutes);
   app.use("/api", collectionsRoutes);
+  app.use("/api", notificationsRoutes);
+  app.use("/api", adminRoutes);
 
   // 404 fallback for unmatched routes.
   app.use((_req: Request, res: Response) => {

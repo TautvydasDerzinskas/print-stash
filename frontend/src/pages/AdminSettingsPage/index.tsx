@@ -8,13 +8,14 @@ import Typography from "@mui/material/Typography";
 import type { PreviewMode } from "../../api/settings";
 import StorageSection from "./StorageSection";
 import PreviewsSection from "./PreviewsSection";
+import TriggersSection from "./TriggersSection";
 
 type Props = {
   onUnauthorized?: () => void;
   onPreviewModeChanged?: (mode: PreviewMode) => void;
 };
 
-type Section = "root" | "storage" | "previews";
+type Section = "root" | "storage" | "previews" | "triggers";
 
 // Instance-wide config, gated to admins by the sidebar link that opens this page -- unlike
 // SettingsPage, nothing here is a per-user preference.
@@ -37,6 +38,10 @@ export default function AdminSettingsPage({ onUnauthorized, onPreviewModeChanged
     );
   }
 
+  if (section === "triggers") {
+    return <TriggersSection onUnauthorized={onUnauthorized} onBack={backToRoot} />;
+  }
+
   const rootCards: Array<{ eyebrow: string; heading: string; desc: string; onClick: () => void }> = [
     {
       eyebrow: t("adminSettings.root.storageTitle"),
@@ -49,6 +54,12 @@ export default function AdminSettingsPage({ onUnauthorized, onPreviewModeChanged
       heading: t("adminSettings.root.previewsHeading"),
       desc: t("adminSettings.root.previewsDesc"),
       onClick: () => setSection("previews"),
+    },
+    {
+      eyebrow: t("adminSettings.root.triggersTitle"),
+      heading: t("adminSettings.root.triggersHeading"),
+      desc: t("adminSettings.root.triggersDesc"),
+      onClick: () => setSection("triggers"),
     },
   ];
 

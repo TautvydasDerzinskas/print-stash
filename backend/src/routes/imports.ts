@@ -7,18 +7,14 @@ import { HttpError } from "../utils/fileUtils";
 import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { downloadImportToTemp, importPrintFromUrl, inspectImportLink, type ImportRequestBody } from "../services/importService";
+import { downloadImportToTemp, importPrintFromUrl, inspectImportLink } from "../services/importService";
 import { resolveMakerworldCookie } from "../services/importResolvers";
-import { upsertAuthorFromImport } from "../services/authorService";
 import { extractMakerworldBearerToken } from "../services/makerworldCloudApi";
-import {
-  fetchMakerworldCollectionEntries,
-  fetchMakerworldCollectionTitle,
-  parseMakerworldCollectionUrl,
-} from "../services/makerworldCollections";
-import { addPrintsToCollection, findOrCreateCollectionByName } from "../services/collectionService";
-import { extractZipEntriesToPrints, listZipEntries } from "../services/zipService";
-import { toPrintOut, type PrintOut } from "../dto";
+import { fetchMakerworldCollectionEntries, fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "../services/makerworldCollections";
+import { listZipEntries } from "../services/zipService";
+import { createJob, getActiveJob, getJob } from "../services/importJobService";
+import { runCollectionImportJob, runZipImportJob } from "../services/importJobRunner";
+import { toImportJobOut, toPrintOut } from "../dto";
 
 const router = Router();
 router.use(requireAuth);
@@ -71,33 +67,6 @@ router.post(
   }),
 );
 
-const zipExtractRequestSchema = importRequestSchema.extend({ entries: z.array(z.string()) });
-router.post(
-  "/import/zip",
-  asyncHandler(async (req, res) => {
-    const body = parseBody(zipExtractRequestSchema, req.body);
-    const url = await normalizeImportUrl(body.url);
-    const { tempPath, filename, meta } = await downloadImportToTemp(url, body);
-    try {
-      if (path.extname(filename).toLowerCase() !== ".zip") throw new HttpError(415, "Imported file is not a zip");
-      const author = await upsertAuthorFromImport(meta.author);
-      const { prints, failed } = await extractZipEntriesToPrints(req.userId!, tempPath, body.entries, {
-        title: body.title ?? meta.title,
-        notes: body.notes ?? meta.description,
-        tags: body.tags && body.tags.length ? body.tags : meta.tags,
-        folderId: body.folder_id,
-        creator: meta.creator,
-        authorId: author?.id ?? null,
-        previewImageUrl: meta.previewImageUrl,
-        galleryImages: meta.galleryImages,
-      });
-      res.json({ prints: prints.map((p) => toPrintOut(p, p.plates, [], null, author, p.previewImages)), failed });
-    } finally {
-      await fs.rm(tempPath, { force: true }).catch(() => undefined);
-    }
-  }),
-);
-
 router.post(
   "/import/collection/entries",
   asyncHandler(async (req, res) => {
@@ -122,74 +91,69 @@ router.post(
   }),
 );
 
-/** Runs `worker` over `items` with at most `limit` in flight at once, preserving item order
- * in the returned results. Used to import a batch of MakerWorld designs without either running
- * hundreds of downloads fully sequentially (slow) or firing them all at once (hammers the
- * upstream API right after we specifically built cool-off handling to avoid that). */
-async function mapWithConcurrency<T, R>(items: T[], limit: number, worker: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = Array.from({ length: items.length });
-  let next = 0;
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    for (;;) {
-      const index = next++;
-      if (index >= items.length) return;
-      results[index] = await worker(items[index]);
-    }
-  });
-  await Promise.all(runners);
-  return results;
+// ---- Background batch imports (MakerWorld collection / remote zip) ---------------------------
+//
+// Both of these can involve downloading dozens to hundreds of files, which used to happen
+// synchronously inside the request -- long enough to run past reverse-proxy read timeouts with
+// no feedback. They now just register an ImportJob and return immediately; the actual work runs
+// in the background (importJobRunner.ts) and is polled via GET /import/jobs/:id. At most one
+// job may be RUNNING per user at a time -- that's both the "already in progress" guard and what
+// lets the frontend restore its progress bar after a page refresh via GET /import/jobs/active.
+
+async function assertNoActiveJob(userId: string): Promise<void> {
+  const active = await getActiveJob(userId);
+  if (active) throw new HttpError(409, "An import is already in progress");
 }
 
-const COLLECTION_IMPORT_CONCURRENCY = 3;
 const collectionImportRequestSchema = importRequestSchema.extend({ design_ids: z.array(z.string()).min(1) });
 
 router.post(
   "/import/collection",
   asyncHandler(async (req, res) => {
     const body = parseBody(collectionImportRequestSchema, req.body);
-
-    const results = await mapWithConcurrency(body.design_ids, COLLECTION_IMPORT_CONCURRENCY, async (designId) => {
-      const modelUrl = `https://makerworld.com/en/models/${designId}`;
-      const itemBody: ImportRequestBody = {
-        url: modelUrl,
-        notes: body.notes ?? null,
-        tags: body.tags ?? [],
-        folder_id: body.folder_id ?? null,
-        makerworld_cookie: body.makerworld_cookie,
-        thingiverse_cookie: body.thingiverse_cookie,
-      };
-      try {
-        const { print, plates, author, previewImages } = await importPrintFromUrl(req.userId!, modelUrl, itemBody);
-        return { ok: true as const, print: toPrintOut(print, plates, [], null, author, previewImages) };
-      } catch {
-        return { ok: false as const, designId };
-      }
+    await assertNoActiveJob(req.userId!);
+    const url = await normalizeImportUrl(body.url);
+    const job = await createJob(req.userId!, "COLLECTION", {
+      sourceUrl: url,
+      provider: "makerworld",
+      total: body.design_ids.length,
     });
+    void runCollectionImportJob(job.id, req.userId!, { ...body, url });
+    res.status(202).json({ job_id: job.id });
+  }),
+);
 
-    const prints: PrintOut[] = [];
-    const failed: string[] = [];
-    for (const result of results) {
-      if (result.ok) prints.push(result.print);
-      else failed.push(result.designId);
-    }
+const zipExtractRequestSchema = importRequestSchema.extend({ entries: z.array(z.string()) });
 
-    // Re-derive the source MakerWorld collection's title from the same URL the client sent to
-    // /import/collection/entries, and file every successfully imported print under a Collection
-    // of that name -- reusing (rather than duplicating) it if one already exists for this user.
-    if (prints.length) {
-      const url = await normalizeImportUrl(body.url);
-      const parsed = parseMakerworldCollectionUrl(url);
-      if (parsed) {
-        const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
-        const title = await fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken);
-        if (title) {
-          const collection = await findOrCreateCollectionByName(req.userId!, title);
-          await addPrintsToCollection(collection.id, prints.map((p) => p.id));
-        }
-      }
-    }
+router.post(
+  "/import/zip",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(zipExtractRequestSchema, req.body);
+    await assertNoActiveJob(req.userId!);
+    const url = await normalizeImportUrl(body.url);
+    const job = await createJob(req.userId!, "ZIP", {
+      sourceUrl: url,
+      total: body.entries.length,
+    });
+    void runZipImportJob(job.id, req.userId!, { ...body, url });
+    res.status(202).json({ job_id: job.id });
+  }),
+);
 
-    res.json({ prints, failed });
+router.get(
+  "/import/jobs/active",
+  asyncHandler(async (req, res) => {
+    const job = await getActiveJob(req.userId!);
+    res.json(job ? toImportJobOut(job) : null);
+  }),
+);
+
+router.get(
+  "/import/jobs/:id",
+  asyncHandler(async (req, res) => {
+    const job = await getJob(req.params.id, req.userId!);
+    if (!job) throw new HttpError(404, "Import job not found");
+    res.json(toImportJobOut(job));
   }),
 );
 

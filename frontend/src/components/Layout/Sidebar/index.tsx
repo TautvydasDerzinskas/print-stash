@@ -9,6 +9,7 @@ import ListItemButton from "@mui/material/ListItemButton";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
 import Collapse from "@mui/material/Collapse";
+import Divider from "@mui/material/Divider";
 import Tooltip from "@mui/material/Tooltip";
 import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
@@ -52,8 +53,8 @@ type Props = {
   isAdmin: boolean;
 };
 
-/** The persistent app-wide navigation rail: Dashboard, Models, and (for admins) Administration.
- *  Folder browsing lives inside the Models page itself, not here. */
+/** The persistent app-wide navigation rail: Dashboard, Models, Collections, and (for admins)
+ *  Administration. Folder browsing lives inside the Models page itself, not here. */
 export default function Sidebar({ isAdmin }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const location = useLocation();
@@ -65,8 +66,8 @@ export default function Sidebar({ isAdmin }: Props) {
   const [adminExpanded, setAdminExpanded] = useState(false);
 
   const onDashboard = location.pathname === "/";
-  const onModels = location.pathname.startsWith("/models") || location.pathname.startsWith("/authors");
   const onCollections = location.pathname.startsWith("/models/collections");
+  const onModels = (location.pathname.startsWith("/models") && !onCollections) || location.pathname.startsWith("/authors");
   const onAdmin = location.pathname.startsWith("/admin-settings");
   const adminOpen = adminExpanded || onAdmin;
 
@@ -106,7 +107,7 @@ export default function Sidebar({ isAdmin }: Props) {
         direction="row"
         alignItems="center"
         justifyContent={collapsed ? "center" : "space-between"}
-        sx={{ px: collapsed ? 1 : 2, pt: 2, pb: 1.5 }}
+        sx={{ px: collapsed ? 1 : 2, pt: "20px", pb: "20px" }}
       >
         {!collapsed && <Wordmark size="sm" />}
         <Tooltip title={collapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}>
@@ -142,71 +143,78 @@ export default function Sidebar({ isAdmin }: Props) {
               onClick={() => navigate("/models")}
             />
           ) : (
-            <>
-              <ListItemButton
-                selected={onModels && !onCollections}
-                onClick={() => navigate("/models")}
-                sx={{ borderRadius: 1, mb: 0.5 }}
-              >
-                <ListItemIcon sx={{ minWidth: 30 }}>
-                  <ViewInArIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText primary={t("sidebar.models")} primaryTypographyProps={{ variant: "body2" }} />
-              </ListItemButton>
-              <Collapse in={onModels}>
-                <List disablePadding>
-                  <ListItemButton
-                    selected={onCollections}
-                    onClick={() => navigate("/models/collections")}
-                    sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 30 }}>
-                      <CollectionsIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={t("sidebar.collections")} primaryTypographyProps={{ variant: "body2" }} />
-                  </ListItemButton>
-                </List>
-              </Collapse>
-            </>
+            <ListItemButton
+              selected={onModels}
+              onClick={() => navigate("/models")}
+              sx={{ borderRadius: 1, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <ViewInArIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={t("sidebar.models")} primaryTypographyProps={{ variant: "body2" }} />
+            </ListItemButton>
+          )}
+
+          {collapsed ? (
+            <CollapsedNavIcon
+              icon={<CollectionsIcon fontSize="small" />}
+              label={t("sidebar.collections")}
+              selected={onCollections}
+              onClick={() => navigate("/models/collections")}
+            />
+          ) : (
+            <ListItemButton
+              selected={onCollections}
+              onClick={() => navigate("/models/collections")}
+              sx={{ borderRadius: 1, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <CollectionsIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={t("sidebar.collections")} primaryTypographyProps={{ variant: "body2" }} />
+            </ListItemButton>
           )}
 
           {isAdmin && (
-            collapsed ? (
-              <CollapsedNavIcon
-                icon={<AdminPanelSettingsIcon fontSize="small" />}
-                label={t("sidebar.administration")}
-                selected={onAdmin}
-                onClick={() => navigate("/admin-settings")}
-              />
-            ) : (
-              <>
-                <ListItemButton
-                  selected={false}
-                  onClick={() => setAdminExpanded(v => !v)}
-                  sx={{ borderRadius: 1, mb: 0.5 }}
-                >
-                  <ListItemIcon sx={{ minWidth: 30 }}>
-                    <AdminPanelSettingsIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText primary={t("sidebar.administration")} primaryTypographyProps={{ variant: "body2" }} />
-                  {adminOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                </ListItemButton>
-                <Collapse in={adminOpen}>
-                  <List disablePadding>
-                    <ListItemButton
-                      selected={onAdmin}
-                      onClick={() => navigate("/admin-settings")}
-                      sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 30 }}>
-                        <SettingsIcon fontSize="small" />
-                      </ListItemIcon>
-                      <ListItemText primary={t("common:settings")} primaryTypographyProps={{ variant: "body2" }} />
-                    </ListItemButton>
-                  </List>
-                </Collapse>
-              </>
-            )
+            <>
+              <Divider sx={{ my: 1 }} />
+              {collapsed ? (
+                <CollapsedNavIcon
+                  icon={<AdminPanelSettingsIcon fontSize="small" />}
+                  label={t("sidebar.administration")}
+                  selected={onAdmin}
+                  onClick={() => navigate("/admin-settings")}
+                />
+              ) : (
+                <>
+                  <ListItemButton
+                    selected={false}
+                    onClick={() => setAdminExpanded(v => !v)}
+                    sx={{ borderRadius: 1, mb: 0.5 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 30 }}>
+                      <AdminPanelSettingsIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary={t("sidebar.administration")} primaryTypographyProps={{ variant: "body2" }} />
+                    {adminOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                  </ListItemButton>
+                  <Collapse in={adminOpen}>
+                    <List disablePadding>
+                      <ListItemButton
+                        selected={onAdmin}
+                        onClick={() => navigate("/admin-settings")}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <SettingsIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={t("common:settings")} primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                    </List>
+                  </Collapse>
+                </>
+              )}
+            </>
           )}
         </List>
       </Box>

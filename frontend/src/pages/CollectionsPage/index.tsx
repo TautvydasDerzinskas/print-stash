@@ -10,6 +10,7 @@ import { UnauthorizedError } from "../../api/client";
 import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
+import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import CollectionCard from "./CollectionCard";
 import CollectionFormModal from "./CollectionFormModal";
 
@@ -24,6 +25,19 @@ export default function CollectionsPage({ onUnauthorized, theme, previewMode }: 
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+
+  usePageHeader({
+    actions: (
+      <Button
+        variant="contained"
+        size="small"
+        startIcon={<AddIcon fontSize="small" />}
+        onClick={() => setFormOpen(true)}
+      >
+        {t("models:collections.newCollection")}
+      </Button>
+    ),
+  });
 
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -56,27 +70,32 @@ export default function CollectionsPage({ onUnauthorized, theme, previewMode }: 
     await load();
   };
 
+  const handleCollectionUpdated = (updated: Collection) => {
+    setCollections(prev => prev.map(c => (c.id === updated.id ? updated : c)));
+  };
+
+  const handleCollectionDeleted = (id: string) => {
+    setCollections(prev => prev.filter(c => c.id !== id));
+  };
+
   return (
     <Stack spacing={2}>
-      <Stack direction="row" justifyContent="flex-end">
-        <Button
-          variant="contained"
-          size="small"
-          startIcon={<AddIcon fontSize="small" />}
-          onClick={() => setFormOpen(true)}
-        >
-          {t("models:collections.newCollection")}
-        </Button>
-      </Stack>
-
       {loading ? (
         <Stack alignItems="center" sx={{ py: 8 }}>
           <CircularProgress size={22} />
         </Stack>
       ) : collections.length ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", columnGap: "20px", rowGap: "20px" }}>
           {collections.map(collection => (
-            <CollectionCard key={collection.id} collection={collection} theme={theme} previewMode={previewMode} />
+            <CollectionCard
+              key={collection.id}
+              collection={collection}
+              theme={theme}
+              previewMode={previewMode}
+              onUpdated={handleCollectionUpdated}
+              onDeleted={handleCollectionDeleted}
+              onUnauthorized={onUnauthorized}
+            />
           ))}
         </Box>
       ) : (

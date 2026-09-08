@@ -39,6 +39,11 @@ export type PrintMetaInput = {
   collection?: string | null;
   /** Id of an already-upserted Author row (see authorService.ts), e.g. "makerworld:12345". */
   authorId?: string | null;
+  /** Set when this print was resolved from a known provider's model URL (see
+   * importService.ts's identifySourceModel) -- backs de-duplication of future imports of the
+   * same source model. Null for uploads, zip/folder-scan imports, and unrecognized sources. */
+  sourceProvider?: string | null;
+  sourceExternalId?: string | null;
 };
 
 async function placeFile(input: NewPlateInput, destAbsPath: string): Promise<string | null> {
@@ -171,6 +176,8 @@ export async function createPrint(
       tags: (meta.tags || []).map((t) => t.trim()).filter(Boolean),
       folderId: meta.folderId ?? null,
       authorId: meta.authorId ?? null,
+      sourceProvider: meta.sourceProvider ?? null,
+      sourceExternalId: meta.sourceExternalId ?? null,
     },
   });
 

@@ -1,6 +1,5 @@
 import { authHeaders } from "../utils/auth";
 import { apiBase, readErrorMessage, UnauthorizedError } from "./client";
-import type { Print } from "./prints";
 
 export type ImportInspectInfo = {
   filename: string;
@@ -11,11 +10,6 @@ export type ImportInspectInfo = {
 export type ZipEntryInfo = {
   path: string;
   size: number;
-};
-
-export type ImportZipResult = {
-  prints: Print[];
-  failed: string[];
 };
 
 export type ImportCollectionEntry = {
@@ -31,9 +25,26 @@ export type ImportCollectionEntriesResult = {
   entries: ImportCollectionEntry[];
 };
 
-export type ImportCollectionResult = {
-  prints: Print[];
-  failed: string[];
+export type ImportJobType = "COLLECTION" | "ZIP";
+export type ImportJobStatus = "RUNNING" | "DONE" | "ERROR";
+
+/** A batch import (MakerWorld collection, or a remote zip's selected entries) running in the
+ *  background -- see ImportJobContext, which polls GET /import/jobs/:id for this shape until
+ *  status leaves RUNNING. */
+export type ImportJob = {
+  id: string;
+  type: ImportJobType;
+  status: ImportJobStatus;
+  source_url: string;
+  source_label: string | null;
+  provider: string | null;
+  total: number;
+  processed: number;
+  imported: number;
+  already_in_library: number;
+  failed_count: number;
+  error_message: string | null;
+  result_collection_id: string | null;
 };
 
 type ImportLinkPayload = {
@@ -102,7 +113,9 @@ export const importsApi = {
     return res.json();
   },
 
-  zipFromLink: async (payload: ImportLinkPayload & { entries: string[] }): Promise<ImportZipResult> => {
+  /** Registers a background job for the selected zip entries and returns immediately -- see
+   *  ImportJobContext.startZipImport, which follows up with the actual polling. */
+  zipFromLink: async (payload: ImportLinkPayload & { entries: string[] }): Promise<{ job_id: string }> => {
     const res = await fetch(`${apiBase()}/import/zip`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
@@ -134,7 +147,9 @@ export const importsApi = {
     return res.json();
   },
 
-  fromCollection: async (payload: ImportLinkPayload & { design_ids: string[] }): Promise<ImportCollectionResult> => {
+  /** Registers a background job for the selected designs and returns immediately -- see
+   *  ImportJobContext.startCollectionImport, which follows up with the actual polling. */
+  fromCollection: async (payload: ImportLinkPayload & { design_ids: string[] }): Promise<{ job_id: string }> => {
     const res = await fetch(`${apiBase()}/import/collection`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
@@ -147,6 +162,20 @@ export const importsApi = {
       const message = await readErrorMessage(res, "Collection import failed");
       throw new Error(message);
     }
+    return res.json();
+  },
+
+  getActiveImportJob: async (): Promise<ImportJob | null> => {
+    const res = await fetch(`${apiBase()}/import/jobs/active`, { headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to check for an active import"));
+    return res.json();
+  },
+
+  getImportJob: async (jobId: string): Promise<ImportJob> => {
+    const res = await fetch(`${apiBase()}/import/jobs/${jobId}`, { headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to load import progress"));
     return res.json();
   },
 };

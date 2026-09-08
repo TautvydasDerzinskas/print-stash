@@ -11,10 +11,12 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import CircularProgress from "@mui/material/CircularProgress";
+import Tooltip from "@mui/material/Tooltip";
 import AddIcon from "@mui/icons-material/Add";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import LinkIcon from "@mui/icons-material/Link";
 import { useUploadImport } from "../uploads/useUploadImport";
+import { useImportJob } from "./ImportJobContext";
 
 type Props = {
   folderId?: string | null;
@@ -32,6 +34,7 @@ export default function AddMenu({ folderId, makerworldCookie, thingiverseCookie,
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [linkValue, setLinkValue] = React.useState("");
+  const { isImporting } = useImportJob();
   const upload = useUploadImport({ folderId, makerworldCookie, thingiverseCookie, onUploaded, onUnauthorized });
 
   const closeMenu = () => setAnchorEl(null);
@@ -61,15 +64,19 @@ export default function AddMenu({ folderId, makerworldCookie, thingiverseCookie,
   return (
     <>
       {upload.fileInput}
-      <Button
-        variant="contained"
-        size="small"
-        startIcon={<AddIcon fontSize="small" />}
-        disabled={upload.isBusy}
-        onClick={e => setAnchorEl(e.currentTarget)}
-      >
-        {upload.uploading ? t("uploadBar.uploading") : t("common:add")}
-      </Button>
+      <Tooltip title={isImporting ? t("addMenu.disabledWhileImporting") : ""}>
+        <span>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<AddIcon fontSize="small" />}
+            disabled={upload.isBusy || isImporting}
+            onClick={e => setAnchorEl(e.currentTarget)}
+          >
+            {upload.uploading ? t("uploadBar.uploading") : t("common:add")}
+          </Button>
+        </span>
+      </Tooltip>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
         <MenuItem onClick={handleUpload}>
           <ListItemIcon><UploadFileIcon fontSize="small" /></ListItemIcon>

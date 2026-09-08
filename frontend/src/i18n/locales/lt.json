@@ -84,7 +84,6 @@
       "importing": "Importuojama…",
       "importFailed": "Importuoti nepavyko",
       "uploadFailed": "Nepavyko įkelti: {{files}}",
-      "importFailedList": "Nepavyko importuoti: {{files}}",
       "multiplateImportFailedWithMessage": "Kelių plokščių importas ({{message}})",
       "multiplateImportFailed": "Kelių plokščių importas"
     },
@@ -212,7 +211,8 @@
       }
     },
     "addMenu": {
-      "importTitle": "Importuoti iš nuorodos"
+      "importTitle": "Importuoti iš nuorodos",
+      "disabledWhileImporting": "Palaukite, kol baigsis dabartinis importas, prieš pradėdami kitą"
     },
     "userMenu": {
       "theme": "Tema",
@@ -222,7 +222,21 @@
       "serviceNotConnected": "{{service}}: neprijungta"
     },
     "notifications": {
-      "label": "Pranešimai"
+      "label": "Pranešimai",
+      "empty": "Kol kas nėra pranešimų.",
+      "viewSource": "Žiūrėti šaltinį",
+      "justNow": "Ką tik",
+      "minutesAgo_one": "prieš {{count}} minutę",
+      "minutesAgo_other": "prieš {{count}} minučių",
+      "hoursAgo_one": "prieš {{count}} valandą",
+      "hoursAgo_other": "prieš {{count}} valandų",
+      "daysAgo_one": "prieš {{count}} dieną",
+      "daysAgo_other": "prieš {{count}} dienų"
+    },
+    "importProgress": {
+      "starting": "Pradedamas importas…",
+      "label": "Importuojama… {{processed}} iš {{total}}",
+      "tooltip": "{{imported}} importuota, {{alreadyInLibrary}} jau bibliotekoje, {{failedCount}} nepavyko"
     },
     "dashboard": {
       "comingSoon": "Valdymo skydo panelės netrukus atsiras."
@@ -236,7 +250,10 @@
         "storageDesc": "Tvarkykite failus pagal aplankus, modelių pavadinimus, autorius, žymas ir kolekcijas.",
         "previewsTitle": "Našumas",
         "previewsHeading": "Modelių peržiūros",
-        "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą."
+        "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą.",
+        "triggersTitle": "Veiksmai",
+        "triggersHeading": "Trigeriai",
+        "triggersDesc": "Vienkartiniai veiksmai, veikiantys kito naudotojo duomenis."
       },
       "storage": {
         "heading": "Saugojimo struktūra",
@@ -267,6 +284,23 @@
         "disabledDesc": "Niekada negeneruoti kortelių peržiūrų. Interaktyvi peržiūra vis tiek pasiekiama atidarius modelį.",
         "footerNote": "Įtaisytosios 3MF miniatiūros ir anksčiau sugeneruotos serverio miniatiūros visada naudojamos, kai jos yra.",
         "failed": "Nepavyko išsaugoti peržiūrų nustatymų."
+      },
+      "triggers": {
+        "heading": "Trigeriai",
+        "subtitle": "Negrįžtami, vienkartiniai veiksmai, atliekami su kito naudotojo paskyra. Naudokite atsargiai.",
+        "deleteAllTitle": "Ištrinti visus naudotojo modelius",
+        "deleteAllDesc": "Negrįžtamai ištrina visus naudotojo sukurtus, įkeltus ar importuotus modelius — kartu su failais. Jo kategorijos ir kolekcijos lieka, tik tuščios.",
+        "userLabel": "Naudotojas",
+        "userOption": "{{name}} ({{email}}) — {{count}} modelių",
+        "deleteAllButton": "Ištrinti visus modelius…",
+        "loadFailed": "Nepavyko įkelti naudotojų.",
+        "deleteSuccess": "Ištrinta {{count}} modelis(-ių), priklausančių {{email}}.",
+        "deleteFailed": "Nepavyko ištrinti šio naudotojo modelių.",
+        "confirmTitle": "Ištrinti visus šio naudotojo modelius?",
+        "confirmWarning": "Tai negrįžtamai ištrins visus {{count}} modelį(-ius), priklausantį(-čius) {{email}}, įskaitant jų failus. Šio veiksmo anuliuoti negalima.",
+        "confirmInstructions": "Norėdami patvirtinti, įveskite {{email}}.",
+        "confirmButton": "Ištrinti visus modelius",
+        "deleting": "Trinama…"
       }
     }
   },
