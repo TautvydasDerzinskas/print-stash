@@ -461,6 +461,20 @@ async function findExistingImportedPrint(
   return { print, plates, author: print.author, previewImages };
 }
 
+/** Bulk version of findExistingImportedPrint's lookup -- used by the collection/likes ".../entries"
+ * routes to flag which entries in a listing the user already has, *before* they pick what to
+ * import, instead of only finding out one by one as each import attempt hits the unique
+ * constraint. Returns just the set of already-imported external ids (one indexed query), not
+ * full Print records -- the entries list only needs a yes/no per item. */
+export async function findImportedExternalIds(userId: string, provider: string, externalIds: string[]): Promise<Set<string>> {
+  if (!externalIds.length) return new Set();
+  const prints = await prisma.print.findMany({
+    where: { userId, sourceProvider: provider, sourceExternalId: { in: externalIds } },
+    select: { sourceExternalId: true },
+  });
+  return new Set(prints.map((p) => p.sourceExternalId).filter((id): id is string => id !== null));
+}
+
 const THINGIVERSE_PLATE_EXTS = new Set([...IMPORT_ALLOWED_EXTS].filter((ext) => ext !== ".zip"));
 
 type PlainDownloadResult = { input: NewPlateInput } | { rateLimited: true } | null;

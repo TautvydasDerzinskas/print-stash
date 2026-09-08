@@ -9,6 +9,7 @@ import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import ImportProgressBar from "./ImportProgressBar";
 import { ConfirmProvider } from "../ConfirmProvider";
+import { ToastProvider } from "../ToastProvider";
 import { PageHeaderContext, type PageHeader } from "./PageHeaderContext";
 import { ImportJobProvider } from "./ImportJobContext";
 import { NotificationsProvider, useNotifications } from "./NotificationsContext";
@@ -152,9 +153,11 @@ export default function AppLayout({ muiTheme, onUnauthorized, ...shellProps }: A
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <ConfirmProvider>
-        <NotificationsProvider onUnauthorized={onUnauthorized}>
-          <AppLayoutShell onUnauthorized={onUnauthorized} {...shellProps} />
-        </NotificationsProvider>
+        <ToastProvider>
+          <NotificationsProvider onUnauthorized={onUnauthorized}>
+            <AppLayoutShell onUnauthorized={onUnauthorized} {...shellProps} />
+          </NotificationsProvider>
+        </ToastProvider>
       </ConfirmProvider>
     </ThemeProvider>
   );

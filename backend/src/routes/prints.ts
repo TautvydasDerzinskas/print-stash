@@ -112,6 +112,13 @@ router.post(
 
 // ---- GET /prints ------------------------------------------------------------------------------
 
+type PrintSortMode = "newest" | "popular" | "downloads";
+
+function parseSortMode(raw: unknown): PrintSortMode {
+  if (raw === "popular" || raw === "downloads") return raw;
+  return "newest";
+}
+
 router.get(
   "/prints",
   asyncHandler(async (req, res) => {
@@ -146,24 +153,24 @@ router.get(
       filesByPrint.set(f.printId, list);
     }
 
-    // The "Favourites"/"Browsing History" pseudo-collections are ordered most-recent-first (by
-    // when they were favorited/last viewed) rather than the default alphabetical grid order.
+    // The "Favourites"/"Browsing History" pseudo-collections default to most-recent-first (by
+    // when they were favorited/last viewed) under the "newest" sort -- "popular"/"downloads"
+    // still sort by their own metric even inside those collections, same as anywhere else.
     const collectionIdParam = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
     const systemKey = systemCollectionKeyForId(collectionIdParam);
     const recencyField = systemKey === "favorites" ? "favoritedAt" : systemKey === "history" ? "lastViewedAt" : null;
+    const sortMode = parseSortMode(req.query.orderBy);
+
+    const sortValue = (p: (typeof prints)[number]): number => {
+      if (sortMode === "popular") return p.viewCount;
+      if (sortMode === "downloads") return p.printCount;
+      if (recencyField) return p[recencyField]?.getTime() ?? 0;
+      return p.createdAt.getTime();
+    };
 
     const sorted = prints.toSorted((a, b) => {
-      if (recencyField) {
-        const at = a[recencyField]?.getTime() ?? 0;
-        const bt = b[recencyField]?.getTime() ?? 0;
-        if (at !== bt) return bt - at;
-      }
-      const nameCmp = a.name.localeCompare(b.name);
-      if (nameCmp !== 0) return nameCmp;
-      const af = a.plates[0]?.filename ?? "";
-      const bf = b.plates[0]?.filename ?? "";
-      const fCmp = af.localeCompare(bf);
-      if (fCmp !== 0) return fCmp;
+      const diff = sortValue(b) - sortValue(a);
+      if (diff !== 0) return diff;
       return a.id.localeCompare(b.id);
     });
 

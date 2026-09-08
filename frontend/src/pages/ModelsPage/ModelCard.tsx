@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import Paper from "@mui/material/Paper";
@@ -5,11 +6,18 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import CircularProgress from "@mui/material/CircularProgress";
+import Tooltip from "@mui/material/Tooltip";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
-import { type Print } from "../../api/prints";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import { type Print, printsApi } from "../../api/prints";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
+import { UnauthorizedError } from "../../api/client";
+import { useToast } from "../../components/ToastProvider";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { importProviderInfo } from "../../constants/importProviders";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
@@ -19,15 +27,45 @@ type Props = {
   theme: ResolvedTheme;
   previewMode: PreviewMode;
   onDeleted?: (id: string) => void;
+  onFavoriteChange?: (print: Print) => void;
   onUnauthorized?: () => void;
 };
 
-export default function ModelCard({ item, theme, previewMode, onDeleted, onUnauthorized }: Props) {
+const hoverActionBg = { bgcolor: "rgba(0, 0, 0, 0.55)", borderRadius: "50%" };
+
+export default function ModelCard({ item, theme, previewMode, onDeleted, onFavoriteChange, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
+  const showToast = useToast();
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
   const author = item.author;
   const authorName = author?.name || author?.handle || item.creator || null;
   const providerInfo = importProviderInfo(item.source_provider);
+
+  const toggleFavorite = async () => {
+    if (favoriteBusy) return;
+    setFavoriteBusy(true);
+    try {
+      const updated = item.is_favorite ? await printsApi.unfavorite(item.id) : await printsApi.favorite(item.id);
+      onFavoriteChange?.(updated);
+      showToast({
+        message: t(updated.is_favorite ? "models:card.addedToFavorites" : "models:card.removedFromFavorites", {
+          name: updated.title || updated.name,
+        }),
+      });
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        onUnauthorized?.();
+        return;
+      }
+      console.error(err);
+      showToast({ message: t("models:detail.favoriteFailed"), severity: "error" });
+    } finally {
+      setFavoriteBusy(false);
+    }
+  };
+
+  const favoriteLabel = item.is_favorite ? t("models:detail.removeFromFavorites") : t("models:detail.addToFavorites");
 
   return (
     <Paper
@@ -80,8 +118,10 @@ export default function ModelCard({ item, theme, previewMode, onDeleted, onUnaut
         </Box>
       )}
 
-      <Box
+      <Stack
         className="model-card-actions"
+        direction="row"
+        spacing={0.5}
         onClick={e => e.stopPropagation()}
         sx={{
           position: "absolute",
@@ -89,17 +129,30 @@ export default function ModelCard({ item, theme, previewMode, onDeleted, onUnaut
           right: 8,
           opacity: 0,
           transition: "opacity .15s ease",
-          bgcolor: "rgba(0, 0, 0, 0.55)",
-          borderRadius: "50%",
         }}
       >
-        <ModelActionsMenu
-          print={item}
-          onUnauthorized={onUnauthorized}
-          onDeleted={() => onDeleted?.(item.id)}
-          triggerSx={{ color: "#fff" }}
-        />
-      </Box>
+        <Tooltip title={favoriteLabel}>
+          <Box sx={hoverActionBg}>
+            <IconButton size="small" onClick={toggleFavorite} disabled={favoriteBusy} aria-label={favoriteLabel ?? undefined}>
+              {favoriteBusy ? (
+                <CircularProgress size={16} sx={{ color: "#fff" }} />
+              ) : item.is_favorite ? (
+                <FavoriteIcon fontSize="small" color="error" />
+              ) : (
+                <FavoriteBorderIcon fontSize="small" sx={{ color: "#fff" }} />
+              )}
+            </IconButton>
+          </Box>
+        </Tooltip>
+        <Box sx={hoverActionBg}>
+          <ModelActionsMenu
+            print={item}
+            onUnauthorized={onUnauthorized}
+            onDeleted={() => onDeleted?.(item.id)}
+            triggerSx={{ color: "#fff" }}
+          />
+        </Box>
+      </Stack>
       <Box sx={{ p: 1.5 }}>
         <Typography variant="body2" fontWeight={600} noWrap title={item.title || item.name}>
           {item.title || item.name}

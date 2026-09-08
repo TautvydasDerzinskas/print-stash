@@ -1,5 +1,6 @@
 import { authHeaders } from "../utils/auth";
 import { apiBase, readErrorMessage, UnauthorizedError } from "./client";
+import type { Print } from "./prints";
 
 export type ImportInspectInfo = {
   filename: string;
@@ -16,6 +17,7 @@ export type ImportCollectionEntry = {
   design_id: string;
   title: string;
   cover: string | null;
+  already_imported: boolean;
 };
 
 export type ImportCollectionEntriesResult = {
@@ -58,7 +60,7 @@ type ImportLinkPayload = {
 };
 
 export const importsApi = {
-  fromLink: async (payload: ImportLinkPayload) => {
+  fromLink: async (payload: ImportLinkPayload): Promise<Print> => {
     const res = await fetch(`${apiBase()}/import`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),

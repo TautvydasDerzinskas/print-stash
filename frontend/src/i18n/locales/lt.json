@@ -85,7 +85,8 @@
       "importFailed": "Importuoti nepavyko",
       "uploadFailed": "Nepavyko įkelti: {{files}}",
       "multiplateImportFailedWithMessage": "Kelių plokščių importas ({{message}})",
-      "multiplateImportFailed": "Kelių plokščių importas"
+      "multiplateImportFailed": "Kelių plokščių importas",
+      "imported": "Importuota „{{name}}“"
     },
     "zipImport": {
       "title": "Importuoti zip",
@@ -111,6 +112,7 @@
       "selectedCount": "Pažymėta {{selected}} iš {{total}}",
       "selectAll": "Pažymėti visus",
       "clear": "Išvalyti",
+      "alreadyImported": "Jau bibliotekoje",
       "noEntries": "Šioje kolekcijoje modelių nerasta.",
       "importSelected": "Importuoti pažymėtus",
       "importing": "Importuojama...",
@@ -514,8 +516,15 @@
       "empty": "Kol kas nėra modelių.",
       "loadingMore": "Įkeliama…"
     },
+    "sort": {
+      "newest": "Naujausi",
+      "popular": "Populiariausi",
+      "downloads": "Atsisiuntimai"
+    },
     "card": {
-      "unknownAuthor": "Nežinomas"
+      "unknownAuthor": "Nežinomas",
+      "addedToFavorites": "\"{{name}}\" pridėtas prie Mėgstamiausių",
+      "removedFromFavorites": "\"{{name}}\" pašalintas iš Mėgstamiausių"
     },
     "detail": {
       "preview3d": "3D peržiūra",

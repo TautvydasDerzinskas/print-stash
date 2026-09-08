@@ -3,6 +3,7 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { fetchThingiverseUserLikes, parseThingiverseLikesUrl } from "../src/services/thingiverseApi";
 import { setThingiverseAccessToken } from "../src/services/settingsService";
+import { prisma } from "../src/db";
 
 const ACCESS_TOKEN = "test-access-token";
 const USERNAME = "Derzinskas";
@@ -73,6 +74,7 @@ describe("fetchThingiverseUserLikes", () => {
 describe("POST /import/thingiverse-likes/entries", () => {
   const app = createApp();
   let token: string;
+  let userId: string;
   const originalFetch = global.fetch;
 
   beforeAll(async () => {
@@ -84,6 +86,7 @@ describe("POST /import/thingiverse-likes/entries", () => {
       throw new Error(`Failed to register during test setup: ${res.status} ${JSON.stringify(res.body)}`);
     }
     token = res.body.token;
+    userId = res.body.user.id;
   });
 
   afterEach(async () => {
@@ -115,8 +118,35 @@ describe("POST /import/thingiverse-likes/entries", () => {
     expect(res.status).toBe(200);
     expect(res.body.title).toBe(`${USERNAME}'s Thingiverse Likes`);
     expect(res.body.entries).toEqual([
-      { design_id: "1", title: "Liked Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg" },
-      { design_id: "2", title: "Liked Thing 2", cover: "https://cdn.thingiverse.com/assets/test/2.jpg" },
+      { design_id: "1", title: "Liked Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg", already_imported: false },
+      { design_id: "2", title: "Liked Thing 2", cover: "https://cdn.thingiverse.com/assets/test/2.jpg", already_imported: false },
+    ]);
+  });
+
+  it("flags entries already in the user's library instead of letting them be re-selected", async () => {
+    await setThingiverseAccessToken(ACCESS_TOKEN);
+    await prisma.print.create({
+      data: {
+        userId,
+        name: "Already imported",
+        nameNormalized: "already imported",
+        sourceProvider: "thingiverse",
+        sourceExternalId: "1",
+      },
+    });
+    global.fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async () =>
+      jsonResponse(200, [likeEntry(1), likeEntry(2)]),
+    ) as unknown as typeof fetch;
+
+    const res = await request(app)
+      .post("/api/import/thingiverse-likes/entries")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ url: `https://www.thingiverse.com/${USERNAME}/likes`, tags: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([
+      { design_id: "1", title: "Liked Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg", already_imported: true },
+      { design_id: "2", title: "Liked Thing 2", cover: "https://cdn.thingiverse.com/assets/test/2.jpg", already_imported: false },
     ]);
   });
 

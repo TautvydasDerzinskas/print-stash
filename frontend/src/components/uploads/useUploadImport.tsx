@@ -9,6 +9,7 @@ import { useZipImportPrompt } from "./ZipImportModal";
 import { useCollectionImportPrompt } from "./CollectionImportModal";
 import { useImportModePrompt, type ImportMode } from "./ImportModeModal";
 import { useImportJob } from "../Layout/ImportJobContext";
+import { useToast } from "../ToastProvider";
 
 /** MakerWorld collection URLs (`/en/collections/{id}-{slug}`) list many models rather than
  * being one model page -- route those to the collection picker instead of the single-link
@@ -87,6 +88,7 @@ type Props = {
  *  elsewhere in the app, so `modals` must be rendered by the caller alongside the menu. */
 export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnauthorized }: Props) {
   const { t } = useTranslation("app");
+  const showToast = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -298,14 +300,16 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
       if (isThingiverseThingUrl(url)) {
         // A Thing always resolves to a zip; skip straight past the inspect/zip-picker steps --
         // the backend already splits it into plates automatically.
-        await importsApi.fromLink(payload);
+        const imported = await importsApi.fromLink(payload);
+        showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
         return;
       }
 
       const inspect = await importsApi.inspectLink(payload);
       if (!inspect.is_zip) {
-        await importsApi.fromLink(payload);
+        const imported = await importsApi.fromLink(payload);
+        showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
         return;
       }
@@ -314,7 +318,8 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
         label: inspect.filename,
         onImportAsZip: async () => {
           try {
-            await importsApi.fromLink(payload);
+            const imported = await importsApi.fromLink(payload);
+            showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
           } catch (err) {
             if (err instanceof UnauthorizedError) {
               onUnauthorized?.();

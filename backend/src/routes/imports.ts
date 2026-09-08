@@ -7,7 +7,7 @@ import { HttpError } from "../utils/fileUtils";
 import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { downloadImportToTemp, importPrintFromUrl, inspectImportLink } from "../services/importService";
+import { downloadImportToTemp, findImportedExternalIds, importPrintFromUrl, inspectImportLink } from "../services/importService";
 import { resolveMakerworldCookie } from "../services/importResolvers";
 import { extractMakerworldBearerToken } from "../services/makerworldCloudApi";
 import { fetchMakerworldCollectionEntries, fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "../services/makerworldCollections";
@@ -94,11 +94,21 @@ router.post(
     ]);
     if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
 
+    const alreadyImported = await findImportedExternalIds(
+      req.userId!,
+      "makerworld",
+      listing.entries.map((e) => e.designId),
+    );
     res.json({
       title,
       total: listing.total,
       truncated: listing.truncated,
-      entries: listing.entries.map((e) => ({ design_id: e.designId, title: e.title, cover: e.cover })),
+      entries: listing.entries.map((e) => ({
+        design_id: e.designId,
+        title: e.title,
+        cover: e.cover,
+        already_imported: alreadyImported.has(e.designId),
+      })),
     });
   }),
 );
@@ -121,11 +131,21 @@ router.post(
     const listing = await fetchThingiverseUserLikes(parsed.username, accessToken);
     if (!listing.entries.length) throw new HttpError(400, "Could not load this user's likes -- check the username and try again");
 
+    const alreadyImported = await findImportedExternalIds(
+      req.userId!,
+      "thingiverse",
+      listing.entries.map((e) => e.thingId),
+    );
     res.json({
       title: `${parsed.username}'s Thingiverse Likes`,
       total: listing.entries.length,
       truncated: listing.truncated,
-      entries: listing.entries.map((e) => ({ design_id: e.thingId, title: e.title, cover: e.cover })),
+      entries: listing.entries.map((e) => ({
+        design_id: e.thingId,
+        title: e.title,
+        cover: e.cover,
+        already_imported: alreadyImported.has(e.thingId),
+      })),
     });
   }),
 );
@@ -151,11 +171,21 @@ router.post(
     ]);
     if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
 
+    const alreadyImported = await findImportedExternalIds(
+      req.userId!,
+      "thingiverse",
+      listing.entries.map((e) => e.thingId),
+    );
     res.json({
       title,
       total: listing.entries.length,
       truncated: listing.truncated,
-      entries: listing.entries.map((e) => ({ design_id: e.thingId, title: e.title, cover: e.cover })),
+      entries: listing.entries.map((e) => ({
+        design_id: e.thingId,
+        title: e.title,
+        cover: e.cover,
+        already_imported: alreadyImported.has(e.thingId),
+      })),
     });
   }),
 );

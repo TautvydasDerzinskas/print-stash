@@ -87,6 +87,8 @@ export type UploadPrintsResult = {
   prints: Print[];
 };
 
+export type PrintSortMode = "newest" | "popular" | "downloads";
+
 export const printsApi = {
   // API returns relative URLs. Join with API base.
   fileUrl: (rel: string) => {
@@ -99,6 +101,7 @@ export const printsApi = {
     tags?: string[];
     folder_id?: string | string[];
     collection_id?: string;
+    order_by?: PrintSortMode;
     limit?: number;
     offset?: number;
   } = {}): Promise<ListPrintsResult> => {
@@ -109,6 +112,7 @@ export const printsApi = {
       qs.set("folder_id", Array.isArray(params.folder_id) ? params.folder_id.join(",") : params.folder_id);
     }
     if (params.collection_id) qs.set("collection_id", params.collection_id);
+    if (params.order_by) qs.set("orderBy", params.order_by);
     if (typeof params.limit === "number") qs.set("limit", String(params.limit));
     if (typeof params.offset === "number") qs.set("offset", String(params.offset));
     const res = await fetch(`${apiBase()}/prints?${qs.toString()}`, {

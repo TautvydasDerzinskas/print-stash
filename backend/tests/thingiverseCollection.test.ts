@@ -7,6 +7,7 @@ import {
   parseThingiverseCollectionUrl,
 } from "../src/services/thingiverseApi";
 import { setThingiverseAccessToken } from "../src/services/settingsService";
+import { prisma } from "../src/db";
 
 const ACCESS_TOKEN = "test-access-token";
 const COLLECTION_ID = "40781574";
@@ -79,6 +80,7 @@ describe("fetchThingiverseCollectionThings / fetchThingiverseCollectionTitle", (
 describe("POST /import/thingiverse-collection/entries", () => {
   const app = createApp();
   let token: string;
+  let userId: string;
 
   const originalFetch = global.fetch;
 
@@ -91,6 +93,7 @@ describe("POST /import/thingiverse-collection/entries", () => {
       throw new Error(`Failed to register during test setup: ${res.status} ${JSON.stringify(res.body)}`);
     }
     token = res.body.token;
+    userId = res.body.user.id;
   });
 
   afterEach(async () => {
@@ -115,7 +118,35 @@ describe("POST /import/thingiverse-collection/entries", () => {
     expect(res.status).toBe(200);
     expect(res.body.title).toBe(COLLECTION_TITLE);
     expect(res.body.entries).toEqual([
-      { design_id: "1", title: "Collected Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg" },
+      { design_id: "1", title: "Collected Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg", already_imported: false },
+    ]);
+  });
+
+  it("flags an entry already in the user's library instead of letting it be re-selected", async () => {
+    await setThingiverseAccessToken(ACCESS_TOKEN);
+    await prisma.print.create({
+      data: {
+        userId,
+        name: "Already imported",
+        nameNormalized: "already imported",
+        sourceProvider: "thingiverse",
+        sourceExternalId: "1",
+      },
+    });
+    global.fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input) => {
+      const url = String(input);
+      if (url.includes("/things?")) return jsonResponse(200, [thingEntry(1)]);
+      return jsonResponse(200, { id: Number(COLLECTION_ID), name: COLLECTION_TITLE });
+    }) as unknown as typeof fetch;
+
+    const res = await request(app)
+      .post("/api/import/thingiverse-collection/entries")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ url: `https://www.thingiverse.com/Derzinskas/collections/${COLLECTION_ID}/things`, tags: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toEqual([
+      { design_id: "1", title: "Collected Thing 1", cover: "https://cdn.thingiverse.com/assets/test/1.jpg", already_imported: true },
     ]);
   });
 

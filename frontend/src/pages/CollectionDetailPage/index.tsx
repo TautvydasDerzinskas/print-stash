@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
 import { type Collection, collectionsApi } from "../../api/collections";
-import { type Print, printsApi } from "../../api/prints";
+import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import { collectionDisplayName } from "../../utils/collectionDisplay";
 import ModelCard from "../ModelsPage/ModelCard";
+import SortTabs from "../ModelsPage/SortTabs";
 import CollectionActionsMenu from "./CollectionActionsMenu";
 
 const PAGE_SIZE = 24;
@@ -35,6 +36,18 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortModeParam = searchParams.get("orderBy");
+  const sortMode: PrintSortMode = sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
+
+  const setSortMode = (mode: PrintSortMode) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (mode === "newest") next.delete("orderBy");
+      else next.set("orderBy", mode);
+      return next;
+    });
+  };
 
   const goBack = () => navigate("/models/collections");
 
@@ -69,7 +82,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
       try {
         const [collectionResult, printsResult] = await Promise.all([
           collectionsApi.get(collectionId),
-          printsApi.list({ collection_id: collectionId, limit: PAGE_SIZE, offset: 0 }),
+          printsApi.list({ collection_id: collectionId, order_by: sortMode, limit: PAGE_SIZE, offset: 0 }),
         ]);
         if (cancelled) return;
         setCollection(collectionResult);
@@ -86,13 +99,13 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionId]);
+  }, [collectionId, sortMode]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore || !collectionId) return;
     setLoadingMore(true);
     try {
-      const result = await printsApi.list({ collection_id: collectionId, limit: PAGE_SIZE, offset });
+      const result = await printsApi.list({ collection_id: collectionId, order_by: sortMode, limit: PAGE_SIZE, offset });
       setItems(prev => [...prev, ...result.items]);
       setOffset(offset + result.items.length);
       setHasMore(result.hasMore);
@@ -126,6 +139,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
       {collection.description && (
         <Typography variant="body2" color="text.secondary">{collection.description}</Typography>
       )}
+      <SortTabs value={sortMode} onChange={setSortMode} />
       {items.length ? (
         <Stack spacing={2}>
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
@@ -136,6 +150,16 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
                 theme={theme}
                 previewMode={previewMode}
                 onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
+                onFavoriteChange={updated =>
+                  setItems(prev =>
+                    // Viewing the built-in Favourites collection itself: unfavoriting an item here
+                    // should drop it from view immediately, same as any other removal, instead of
+                    // leaving a now-stale entry until the next full reload.
+                    collection?.system_key === "favorites" && !updated.is_favorite
+                      ? prev.filter(i => i.id !== updated.id)
+                      : prev.map(i => (i.id === updated.id ? updated : i)),
+                  )
+                }
                 onUnauthorized={onUnauthorized}
               />
             ))}

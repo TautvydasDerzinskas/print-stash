@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
-import { type Print, printsApi } from "../../api/prints";
+import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type Folder, type FolderMetaInput, foldersApi } from "../../api/folders";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
@@ -13,6 +14,7 @@ import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import CategoriesPanel from "./CategoriesPanel";
 import ModelCard from "./ModelCard";
+import SortTabs from "./SortTabs";
 
 const PAGE_SIZE = 24;
 
@@ -39,6 +41,18 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sortModeParam = searchParams.get("orderBy");
+  const sortMode: PrintSortMode = sortModeParam === "popular" || sortModeParam === "downloads" ? sortModeParam : "newest";
+
+  const setSortMode = (mode: PrintSortMode) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (mode === "newest") next.delete("orderBy");
+      else next.set("orderBy", mode);
+      return next;
+    });
+  };
 
   // A root category has no models of its own directly in the tree UI, so selecting one should
   // pull in every model filed under any of its subcategories (plus the root itself, since prints
@@ -88,7 +102,7 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     setLoading(true);
     (async () => {
       try {
-        const result = await printsApi.list({ folder_id: folderIdFilter, limit: PAGE_SIZE, offset: 0 });
+        const result = await printsApi.list({ folder_id: folderIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset: 0 });
         setItems(result.items);
         setOffset(result.items.length);
         setHasMore(result.hasMore);
@@ -99,13 +113,13 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folderIdFilter, printsVersion]);
+  }, [folderIdFilter, printsVersion, sortMode]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const result = await printsApi.list({ folder_id: folderIdFilter, limit: PAGE_SIZE, offset });
+      const result = await printsApi.list({ folder_id: folderIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset });
       setItems(prev => [...prev, ...result.items]);
       setOffset(offset + result.items.length);
       setHasMore(result.hasMore);
@@ -184,6 +198,9 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
         onUpdateMeta={updateCategoryMeta}
       />
       <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Box sx={{ mb: 2 }}>
+          <SortTabs value={sortMode} onChange={setSortMode} />
+        </Box>
         {loading ? (
           <Stack alignItems="center" sx={{ py: 8 }}>
             <CircularProgress size={22} />
@@ -198,6 +215,7 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
                   theme={theme}
                   previewMode={previewMode}
                   onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
+                  onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                   onUnauthorized={onUnauthorized}
                 />
               ))}

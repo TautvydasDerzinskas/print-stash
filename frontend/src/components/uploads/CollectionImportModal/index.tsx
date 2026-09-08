@@ -71,7 +71,7 @@ export function useCollectionImportPrompt() {
       setTotal(result.total);
       setTruncated(result.truncated);
       setEntries(result.entries);
-      setSelected(new Set(result.entries.map(entry => entry.design_id)));
+      setSelected(new Set(result.entries.filter(entry => !entry.already_imported).map(entry => entry.design_id)));
       setStage("select");
     } catch (err) {
       setError(errorMessage(err, t("collectionImport.loadError")));
@@ -110,6 +110,8 @@ export function useCollectionImportPrompt() {
   };
 
   const toggleEntry = (designId: string) => {
+    const entry = entries.find(e => e.design_id === designId);
+    if (entry?.already_imported) return;
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(designId)) next.delete(designId);
@@ -118,8 +120,10 @@ export function useCollectionImportPrompt() {
     });
   };
 
+  const selectableEntries = entries.filter(entry => !entry.already_imported);
+
   const selectAll = () => {
-    setSelected(new Set(entries.map(entry => entry.design_id)));
+    setSelected(new Set(selectableEntries.map(entry => entry.design_id)));
   };
 
   const clearAll = () => {
@@ -127,7 +131,7 @@ export function useCollectionImportPrompt() {
   };
 
   const selectedCount = selected.size;
-  const allSelected = entries.length > 0 && selectedCount === entries.length;
+  const allSelected = selectableEntries.length > 0 && selectedCount === selectableEntries.length;
 
   const modal = state ? (
     <CollectionImportModalView

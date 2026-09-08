@@ -85,7 +85,8 @@
       "importFailed": "Import failed",
       "uploadFailed": "Failed to upload: {{files}}",
       "multiplateImportFailedWithMessage": "Multi-plate import ({{message}})",
-      "multiplateImportFailed": "Multi-plate import"
+      "multiplateImportFailed": "Multi-plate import",
+      "imported": "Imported \"{{name}}\""
     },
     "zipImport": {
       "title": "Import zip",
@@ -111,6 +112,7 @@
       "selectedCount": "{{selected}} of {{total}} selected",
       "selectAll": "Select all",
       "clear": "Clear",
+      "alreadyImported": "Already in library",
       "noEntries": "No models found in this collection.",
       "importSelected": "Import selected",
       "importing": "Importing...",
@@ -514,8 +516,15 @@
       "empty": "No models yet.",
       "loadingMore": "Loading…"
     },
+    "sort": {
+      "newest": "Newest",
+      "popular": "Popular",
+      "downloads": "Downloads"
+    },
     "card": {
-      "unknownAuthor": "Unknown"
+      "unknownAuthor": "Unknown",
+      "addedToFavorites": "Added \"{{name}}\" to Favourites",
+      "removedFromFavorites": "Removed \"{{name}}\" from Favourites"
     },
     "detail": {
       "preview3d": "3D Preview",
