@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
-import { STORAGE, THUMBS, BUNDLES, PREVIEWS } from "./config";
+import { STORAGE, THUMBS, BUNDLES, PREVIEWS, MODEL_PREVIEWS } from "./config";
 
-for (const dir of [STORAGE, THUMBS, BUNDLES, PREVIEWS]) {
+for (const dir of [STORAGE, THUMBS, BUNDLES, PREVIEWS, MODEL_PREVIEWS]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 

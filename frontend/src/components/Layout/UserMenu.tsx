@@ -107,8 +107,11 @@ export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout,
               sx={{
                 px: 1, py: 0.375, borderRadius: 1, fontSize: 11, fontWeight: 600, lineHeight: 1.4,
                 whiteSpace: "nowrap", color: "#fff",
-                bgcolor: svc.color,
-                opacity: svc.connected ? 1 : 0.45,
+                // Dimming the brand color alone (e.g. 45% opacity orange) still reads as
+                // "connected" at a glance -- desaturate to a neutral grey when not connected so
+                // the two states are unmistakable, not just slightly different intensities.
+                bgcolor: svc.connected ? svc.color : "grey.500",
+                opacity: svc.connected ? 1 : 0.5,
               }}
             >
               {svc.label}

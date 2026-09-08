@@ -27,6 +27,7 @@
     "multer": "^2.0.1",
     "prisma": "^5.20.0",
     "sharp": "^0.35.4",
+    "three": "^0.160.1",
     "yauzl": "^3.2.0",
     "zod": "^3.23.8"
   },
@@ -38,6 +39,7 @@
     "@types/multer": "^2.2.0",
     "@types/node": "^20.14.0",
     "@types/supertest": "^7.2.1",
+    "@types/three": "^0.160.0",
     "@types/yauzl": "^2.10.3",
     "oxlint": "^1.81.0",
     "supertest": "^7.2.2",

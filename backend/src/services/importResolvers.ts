@@ -876,6 +876,57 @@ function thingiverseThingIdFromUrl(url: string): string | null {
   }
 }
 
+/** Same shape as makerworldCloudApi.ts's parseMakerworldModelUrl -- used by
+ * importService.ts's identifySourceModel for import dedup. */
+export function parseThingiverseThingUrl(url: string): { thingId: string } | null {
+  const thingId = thingiverseThingIdFromUrl(url);
+  return thingId ? { thingId } : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Thingiverse's `GET /api/v2/things/{id}` -- confirmed live to return a `creator` object
+ * (`{id, name, public_url, thumbnail}`) and a `preview_image`/`thumbnail`, but critically no
+ * `description`, `tags`, or `categories` field at all (verified against a real response, not
+ * assumed from docs) -- unlike MakerWorld, Thingiverse's public API exposes no per-Thing
+ * category/tag data anywhere, so there is nothing here to populate `siteCategoryIds`/
+ * `categorySite` from. `/api/v2/things/{id}/files` (tried first in the loop below, for the
+ * actual download URL) 404s in practice -- the real download always falls through to the
+ * `/thing:{id}/zip` URL -- so this detail response only ever contributes metadata, never a URL. */
+function extractThingiverseMeta(detail: Record<string, unknown>): Partial<ImportedPageMetadata> {
+  const meta: Partial<ImportedPageMetadata> = {};
+  if (typeof detail.name === "string" && detail.name.trim()) meta.title = detail.name.trim();
+  const previewUrl =
+    (typeof detail.preview_image === "string" && detail.preview_image.trim() && detail.preview_image) ||
+    (typeof detail.thumbnail === "string" && detail.thumbnail.trim() && detail.thumbnail) ||
+    null;
+  if (previewUrl) meta.previewImageUrl = previewUrl;
+  const creator = isRecord(detail.creator) ? detail.creator : null;
+  if (creator) {
+    const name = typeof creator.name === "string" && creator.name.trim() ? creator.name.trim() : null;
+    const externalId = creator.id != null ? String(creator.id) : null;
+    if (name) meta.creator = name;
+    if (externalId) {
+      const publicUrl = typeof creator.public_url === "string" && creator.public_url.trim() ? creator.public_url.trim() : null;
+      meta.author = {
+        provider: "thingiverse",
+        externalId,
+        name,
+        // Thingiverse's creator object has no separate handle field distinct from name.
+        handle: name,
+        bio: null,
+        bioTranslated: null,
+        links: publicUrl ? [publicUrl] : [],
+        avatarUrl: typeof creator.thumbnail === "string" && creator.thumbnail.trim() ? creator.thumbnail.trim() : null,
+        backgroundUrl: null,
+      };
+    }
+  }
+  return meta;
+}
+
 async function fetchThingiverseJson(
   url: string,
   pageUrl: string,
@@ -940,7 +991,12 @@ async function fetchThingiverseViewToken(pageUrl: string, cookie: string | null)
   return null;
 }
 
-export async function resolveThingiverseDownloadUrl(pageUrl: string, thingiverseCookie: string | null): Promise<string | null> {
+export type ThingiverseResolution = { downloadUrl: string; meta: Partial<ImportedPageMetadata> };
+
+export async function resolveThingiverseDownloadUrl(
+  pageUrl: string,
+  thingiverseCookie: string | null,
+): Promise<ThingiverseResolution | null> {
   const thingId = thingiverseThingIdFromUrl(pageUrl);
   if (!thingId) return null;
   const token = await fetchThingiverseViewToken(pageUrl, thingiverseCookie);
@@ -954,11 +1010,18 @@ export async function resolveThingiverseDownloadUrl(pageUrl: string, thingiverse
     `https://www.thingiverse.com/api/v2/things/${thingId}/files`,
     `https://www.thingiverse.com/api/v2/things/${thingId}`,
   ];
+  let downloadUrl: string | null = null;
+  let meta: Partial<ImportedPageMetadata> = {};
   for (const apiUrl of apiCandidates) {
     const data = await fetchThingiverseJson(apiUrl, pageUrl, thingiverseCookie, token);
     if (!data) continue;
-    const url = findDownloadUrlInJson(data, apiUrl);
-    if (url) return url;
+    // Only the /things/{id} response (an object with a `name`) carries metadata -- /files
+    // returns an array of file entries with nothing about the Thing itself.
+    if (isRecord(data) && typeof data.name === "string") meta = extractThingiverseMeta(data);
+    if (!downloadUrl) {
+      const url = findDownloadUrlInJson(data, apiUrl);
+      if (url) downloadUrl = url;
+    }
   }
-  return `https://www.thingiverse.com/thing:${thingId}/zip`;
+  return { downloadUrl: downloadUrl ?? `https://www.thingiverse.com/thing:${thingId}/zip`, meta };
 }

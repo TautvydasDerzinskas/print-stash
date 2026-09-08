@@ -1,3 +1,7 @@
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /** Runs `worker` over `items` with at most `limit` in flight at once, preserving item order in
  * the returned results. Used by the batch import job runner to avoid either running hundreds of
  * downloads fully sequentially (slow) or firing them all at once (hammers the upstream host). */

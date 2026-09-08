@@ -14,7 +14,7 @@ import {
   loadObjectFromAsset,
   paletteForTheme,
 } from "../../../utils/modelLoaders";
-import { buildBambuModelGroup, type Parsed3MFData, type PlateSummary } from "../../../utils/bambuThreeMf";
+import { buildBambuModelGroup, loadCachedBambuGlb, type Parsed3MFData, type PlateSummary } from "../../../utils/bambuThreeMf";
 import { createOrientationGizmo } from "./orientationGizmo";
 import Wordmark from "../../Wordmark";
 
@@ -35,6 +35,10 @@ type ModelViewerProps = {
   /** For a multi-plate Bambu Studio 3MF: which internal plate to render (null renders every
    *  plate's build items together). Ignored for every other format. */
   selectedPlateId?: number | null;
+  /** Server pre-rendered GLB for this plate (see backend/src/services/modelPreviewCache.ts) --
+   *  when present, tried first for a 3MF instead of parsing the raw file client-side. Null/
+   *  undefined (not yet generated, or a non-3MF) falls back to the existing live parse. */
+  previewGlbUrl?: string | null;
   /** Fired once after a 3MF's internal plates are known -- empty for a single-plate/non-Bambu
    *  file. `getThumbnail` is bound to the already-fetched file bytes, so a caller building a
    *  plate picker doesn't need to refetch the (often tens of MB) file itself. */
@@ -78,7 +82,7 @@ function fitCameraToBox(
   controls.update();
 }
 
-export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, selectedPlateId = null, onPlatesDetected }: ModelViewerProps) {
+export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, selectedPlateId = null, previewGlbUrl, onPlatesDetected }: ModelViewerProps) {
   const { t } = useTranslation(["library"]);
   const mountRef = useRef<HTMLDivElement | null>(null);
   // Bridges the setup effect below to the selectedPlateId effect further down, so switching
@@ -232,6 +236,35 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
     let bambuParsed: Parsed3MFData | null = null;
     let bambuFilamentColors: string[] = [];
     let currentPlateId: number | null = selectedPlateId;
+    // Set instead of bambuParsed when a cached GLB (server pre-render) loads successfully --
+    // its meshes are already built/merged/colored, so switching plates is just a visibility
+    // toggle on its child groups rather than rebuilding geometry from raw parsed data.
+    let cachedGlbRoot: THREE.Group | null = null;
+
+    // Shared tail for both the live-parse and cached-GLB paths: position the (already-built)
+    // group on the build plate, frame the camera, and clear loading -- an empty box (e.g. a
+    // plate with no visible geometry) must still clear loading rather than leaving the spinner
+    // stuck forever, regardless of which path produced it.
+    const finalizeGroupPlacement = (group: THREE.Object3D, centerOnBuildPlate: boolean) => {
+      const box = new THREE.Box3().setFromObject(group);
+      if (box.isEmpty()) {
+        setIsLoading(false);
+        return;
+      }
+      const center = box.getCenter(new THREE.Vector3());
+      group.position.y = -box.min.y;
+      if (centerOnBuildPlate) {
+        group.position.x = -center.x + buildVolume.x / 2;
+        group.position.z = -center.z + buildVolume.y / 2;
+      }
+      plateMesh.position.set(buildVolume.x / 2, plateMesh.position.y, buildVolume.y / 2);
+      shadowCatcher.position.set(buildVolume.x / 2, shadowCatcher.position.y, buildVolume.y / 2);
+      gridHelper.position.set(buildVolume.x / 2, 0, buildVolume.y / 2);
+
+      const finalBox = new THREE.Box3().setFromObject(group);
+      if (!loadSavedView()) fitCameraToBox(camera, controls, finalBox);
+      setIsLoading(false);
+    };
 
     const renderBambuGroup = (centerOnBuildPlate: boolean) => {
       if (!bambuParsed) return;
@@ -253,22 +286,25 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
       });
       activeObject = group;
       scene.add(group);
+      finalizeGroupPlacement(group, centerOnBuildPlate);
+    };
 
-      const box = new THREE.Box3().setFromObject(group);
-      if (box.isEmpty()) return;
-      const center = box.getCenter(new THREE.Vector3());
-      group.position.y = -box.min.y;
-      if (centerOnBuildPlate) {
-        group.position.x = -center.x + buildVolume.x / 2;
-        group.position.z = -center.z + buildVolume.y / 2;
-      }
-      plateMesh.position.set(buildVolume.x / 2, plateMesh.position.y, buildVolume.y / 2);
-      shadowCatcher.position.set(buildVolume.x / 2, shadowCatcher.position.y, buildVolume.y / 2);
-      gridHelper.position.set(buildVolume.x / 2, 0, buildVolume.y / 2);
-
-      const finalBox = new THREE.Box3().setFromObject(group);
-      if (!loadSavedView()) fitCameraToBox(camera, controls, finalBox);
-      setIsLoading(false);
+    // Cached-GLB equivalent of renderBambuGroup: the group (and every plate's meshes) is already
+    // in the scene from the initial load below -- switching plates is just showing the matching
+    // "plate-{id}" child group and hiding the rest, no rebuild/refetch.
+    const showCachedGlbPlate = (plateId: number | null, centerOnBuildPlate: boolean) => {
+      if (!cachedGlbRoot) return;
+      const targetName = plateId != null ? `plate-${plateId}` : null;
+      let matched = false;
+      cachedGlbRoot.children.forEach(child => {
+        const visible = !targetName || child.name === targetName;
+        child.visible = visible;
+        if (visible) matched = true;
+      });
+      // Requested plate id isn't one of this file's plates (shouldn't normally happen) -- show
+      // everything rather than an empty scene.
+      if (!matched) cachedGlbRoot.children.forEach(child => { child.visible = true; });
+      finalizeGroupPlacement(cachedGlbRoot, centerOnBuildPlate);
     };
 
     (async () => {
@@ -287,36 +323,68 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
 
         const e = (ext || "").toLowerCase();
 
+        // Tries the server pre-rendered GLB cache for a 3MF; returns true if it was used (scene
+        // already fully set up), false if there's no cache yet (or it failed to load) and the
+        // caller should fall back to the live parser exactly as if this function didn't exist.
+        const tryLoadCachedGlb = async (): Promise<boolean> => {
+          if (!previewGlbUrl) return false;
+          const cached = await loadCachedBambuGlb(previewGlbUrl);
+          if (!cached || disposed) return false;
+          cachedGlbRoot = cached.rootGroup;
+          buildVolume = cached.buildVolume;
+          layoutBuildPlate();
+          if (colorOverride) {
+            cachedGlbRoot.traverse(child => {
+              if (child instanceof THREE.Mesh) {
+                const mat = child.material as THREE.MeshStandardMaterial;
+                mat.color?.set(colorOverride);
+              }
+            });
+          }
+          cachedGlbRoot.traverse(child => {
+            if (child instanceof THREE.Mesh) child.castShadow = true;
+          });
+          activeObject = cachedGlbRoot;
+          scene.add(cachedGlbRoot);
+          if (currentPlateId == null && cached.plates.length > 0) currentPlateId = cached.plates[0].index;
+          onPlatesDetected?.(cached.plates, cached.getPlateThumbnail);
+          showCachedGlbPlate(currentPlateId, true);
+          return true;
+        };
+
         try {
           if (e === "3mf") {
-            const result = await loadBambuThreeMFForViewer(url);
-            if (!result) {
-              // Not a 3MF the Bambu-aware parser could make sense of -- fall back to the
-              // generic loader chain (simple parse, then three.js's own ThreeMFLoader).
-              const obj = await loadObjectFromAsset(e, url);
-              if (!obj) {
-                reportError("unsupported");
-                return;
+            if (disposed) return;
+            const usedCache = await tryLoadCachedGlb();
+            if (!usedCache && !disposed) {
+              const result = await loadBambuThreeMFForViewer(url);
+              if (!result) {
+                // Not a 3MF the Bambu-aware parser could make sense of -- fall back to the
+                // generic loader chain (simple parse, then three.js's own ThreeMFLoader).
+                const obj = await loadObjectFromAsset(e, url);
+                if (!obj) {
+                  reportError("unsupported");
+                  return;
+                }
+                if (disposed) {
+                  disposeObject3D(obj);
+                  return;
+                }
+                applyThemeToObject(obj, palette);
+                activeObject = obj;
+                scene.add(obj);
+                if (!disposed) setIsLoading(false);
+                const box = new THREE.Box3().setFromObject(obj);
+                if (!box.isEmpty()) centerSceneOn(box);
+              } else if (!disposed) {
+                bambuParsed = result.parsedData;
+                bambuFilamentColors = result.filamentColors;
+                buildVolume = result.buildVolume;
+                layoutBuildPlate();
+                if (currentPlateId == null && result.plates.length > 0) currentPlateId = result.plates[0].index;
+                onPlatesDetected?.(result.plates, result.getPlateThumbnail);
+                renderBambuGroup(true);
               }
-              if (disposed) {
-                disposeObject3D(obj);
-                return;
-              }
-              applyThemeToObject(obj, palette);
-              activeObject = obj;
-              scene.add(obj);
-              if (!disposed) setIsLoading(false);
-              const box = new THREE.Box3().setFromObject(obj);
-              if (!box.isEmpty()) centerSceneOn(box);
-            } else {
-              if (disposed) return;
-              bambuParsed = result.parsedData;
-              bambuFilamentColors = result.filamentColors;
-              buildVolume = result.buildVolume;
-              layoutBuildPlate();
-              if (currentPlateId == null && result.plates.length > 0) currentPlateId = result.plates[0].index;
-              onPlatesDetected?.(result.plates, result.getPlateThumbnail);
-              renderBambuGroup(true);
             }
           } else {
             const obj = await loadObjectFromAsset(e, url);
@@ -379,7 +447,8 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
 
       rebuildBambuPlateRef.current = plateId => {
         currentPlateId = plateId;
-        renderBambuGroup(true);
+        if (cachedGlbRoot) showCachedGlbPlate(plateId, true);
+        else renderBambuGroup(true);
       };
     })();
 
@@ -414,7 +483,7 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
   // unmemoized callback prop).
   // oxlint-disable-next-line react/exhaustive-effect-dependencies
   // oxlint-disable-next-line react-hooks/exhaustive-deps
-}, [url, ext, viewKey, theme, colorOverride]);
+}, [url, ext, viewKey, theme, colorOverride, previewGlbUrl]);
 
   // Switching the selected plate rebuilds the already-parsed group in place (no refetch).
   useEffect(() => {

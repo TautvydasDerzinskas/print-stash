@@ -1,6 +1,7 @@
 import { IMPORT_BROWSER_USER_AGENT, IMPORT_TIMEOUT_SECONDS } from "../config";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock } from "./flaresolverr";
 import { decodeHtmlEntities, htmlToPlainText, type ImportedAuthorInfo, type ImportedPageMetadata } from "./importResolvers";
+import { sleep } from "../utils/concurrency";
 
 // MakerWorld's own website (makerworld.com) sits behind Cloudflare bot management and a
 // separate Geetest CAPTCHA on its download-resolution endpoints. api.bambulab.com is the
@@ -30,29 +31,43 @@ function cloudApiHeaders(bearerToken: string): Record<string, string> {
   };
 }
 
+// A single 418 is sometimes just a request-scoped flag that clears on the very next call,
+// not yet the full IP-level block -- confirmed independently by maziggy/bambuddy (#2790),
+// which retries once after a short backoff before treating a 418 as real. One retry costs
+// little on the (rare) 418 path and can save an entire batch import from tripping the harder,
+// hours-long cooloff (see CAPTCHA_COOLOFF_MS below) over what would have been a one-off blip.
+const TRANSIENT_418_RETRY_DELAY_MS = 1500;
+
 async function fetchCloudJson(
   url: string,
   bearerToken: string,
 ): Promise<{ status: number; data: unknown } | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), CLOUD_API_TIMEOUT_MS);
-  try {
-    const res = await fetch(url, { headers: cloudApiHeaders(bearerToken), redirect: "follow", signal: controller.signal });
-    const text = await res.text();
-    let data: unknown = null;
-    if (text.trim()) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CLOUD_API_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, { headers: cloudApiHeaders(bearerToken), redirect: "follow", signal: controller.signal });
+      if (res.status === 418 && attempt === 0) {
+        await sleep(TRANSIENT_418_RETRY_DELAY_MS);
+        continue;
       }
+      const text = await res.text();
+      let data: unknown = null;
+      if (text.trim()) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = null;
+        }
+      }
+      return { status: res.status, data };
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timeout);
     }
-    return { status: res.status, data };
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timeout);
   }
+  return null;
 }
 
 /** Users paste the raw browser `Cookie:` header into Settings (unchanged UX) -- this pulls
@@ -109,7 +124,13 @@ export const MAKERWORLD_CAPTCHA_MESSAGE =
 
 // Once we've seen the challenge, stop sending more automated requests for a while instead
 // of retrying into a deepening block (the exact mistake that extends these in practice).
-const CAPTCHA_COOLOFF_MS = 5 * 60 * 1000;
+// The block itself is IP-scoped and typically runs 1-4 hours before clearing on its own --
+// maziggy/bambuddy's independent writeup of the same upstream behavior (#2790) confirms this
+// against live traffic, and their own comment notes that retrying too soon is "exactly the
+// traffic pattern that deepens the block." Two hours undershoots their observed range on
+// purpose: the goal here is just to stop a batch import from hammering a block that's already
+// known to be active, not to guarantee the very first retry after cooloff succeeds.
+const CAPTCHA_COOLOFF_MS = 2 * 60 * 60 * 1000;
 let captchaBlockedUntil = 0;
 
 export function makerworldCaptchaCooloffActive(): boolean {

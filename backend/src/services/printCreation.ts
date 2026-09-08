@@ -14,6 +14,7 @@ import {
   renderPlateStoragePath,
   saveThumbFromFile,
 } from "./printService";
+import { generateModelPreviewGlb } from "./modelPreviewCache";
 import { Prisma } from "@prisma/client";
 import type { Plate, Print } from "@prisma/client";
 
@@ -87,6 +88,11 @@ async function thumbnailAndSniff(plateId: string, filename: string, mime: string
     await saveThumbFromFile(plateId, effectivePath);
   } else if (ext === ".3mf") {
     await ensurePlateThumbnail(plateId, effectivePath);
+    // Not awaited: pre-rendering the interactive 3D preview can take real time for a large/
+    // high-poly model, and doing it here would block the upload/import response on that. It
+    // runs in the background and self-heals (see routes/plates.ts's preview.glb route) if this
+    // fires before the process is ready or somehow never completes.
+    void generateModelPreviewGlb(plateId, effectivePath);
   }
 }
 

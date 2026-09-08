@@ -446,6 +446,59 @@ export async function parseBambuThreeMF(buffer: ArrayBuffer): Promise<ParsedBamb
   return parse3MF(zipEntries);
 }
 
+export type CachedBambuGlb = {
+  /** Already-built scene graph -- one named "plate-{index}" child THREE.Group per plate, each
+   *  holding meshes already merged by extruder (see backend/src/services/modelPreviewCache.ts).
+   *  Unlike parseBambuThreeMF's result, switching the active plate here is just toggling which
+   *  child group is visible -- no client-side geometry work needed. */
+  rootGroup: THREE.Group;
+  plates: PlateSummary[];
+  filamentColors: string[];
+  buildVolume: { x: number; y: number };
+  getPlateThumbnail: (plateIndex: number) => Promise<string | null>;
+};
+
+/** Loads the server pre-rendered GLB for a plate (see backend/src/services/modelPreviewCache.ts)
+ *  instead of parsing the raw .3mf -- the fast path. Returns null for anything that doesn't look
+ *  like a cache this app produced (wrong shape, fetch failure, load failure); callers fall back
+ *  to parseBambuThreeMF/loadBambuThreeMFForViewer exactly as if no cache existed yet. */
+export async function loadCachedBambuGlb(url: string): Promise<CachedBambuGlb | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const arrayBuffer = await res.arrayBuffer();
+
+    const { GLTFLoader } = await import("three/examples/jsm/loaders/GLTFLoader.js");
+    const gltf = await new Promise<{ scene: THREE.Group }>((resolve, reject) => {
+      new GLTFLoader().parse(arrayBuffer, "", (result) => resolve(result as unknown as { scene: THREE.Group }), reject);
+    });
+
+    let root: THREE.Object3D | null = null;
+    gltf.scene.traverse((obj) => {
+      if (!root && typeof obj.userData?.printstashPreview === "string") root = obj;
+    });
+    if (!root) return null;
+
+    const meta = JSON.parse((root as THREE.Object3D).userData.printstashPreview) as {
+      plates: PlateSummary[];
+      plateThumbnails: Record<string, string>;
+      filamentColors: string[];
+      buildVolume: { x: number; y: number };
+    };
+
+    return {
+      rootGroup: root as THREE.Group,
+      plates: meta.plates,
+      filamentColors: meta.filamentColors,
+      buildVolume: meta.buildVolume,
+      getPlateThumbnail: async (plateIndex: number) => meta.plateThumbnails[String(plateIndex)] ?? null,
+    };
+  } catch (err) {
+    console.warn("Cached GLB preview load failed, falling back to live 3MF parse", err);
+    return null;
+  }
+}
+
 function createGeometryFromMesh(mesh: MeshData): THREE.BufferGeometry {
   const geometry = new THREE.BufferGeometry();
   // 3MF: X right, Y back, Z up -> three.js: X right, Y up, Z forward. This is a Y/Z swap with

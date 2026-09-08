@@ -82,6 +82,7 @@ export function renderPreviewContent(
         ext={ext}
         viewKey={`${print.id}-${plate.id}`}
         theme={theme}
+        previewGlbUrl={plate.preview_glb_url ? printsApi.fileUrl(plate.preview_glb_url) : undefined}
       />
     );
   }

@@ -200,6 +200,7 @@ export default function Model3DPreviewModal({ print, onClose }: Props) {
               theme="light"
               colorOverride={PREVIEW_MODEL_COLOR}
               selectedPlateId={selectedInternalPlateId}
+              previewGlbUrl={activePlate.preview_glb_url ? printsApi.fileUrl(activePlate.preview_glb_url) : null}
               onPlatesDetected={handlePlatesDetected}
             />
           ) : (

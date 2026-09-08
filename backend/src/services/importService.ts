@@ -19,6 +19,7 @@ import {
   isPrintablesPageHost,
   isThingiversePageHost,
   makerworldHtmlHeaders,
+  parseThingiverseThingUrl,
   printablesHtmlHeaders,
   resolveMakerworldCookie,
   resolveMakerworldDownloadUrl,
@@ -248,7 +249,17 @@ export async function openImportResponse(
     }
     if (!downloadUrl && isThingiversePageHost(pageHost)) {
       if (thingiverseCookie === null) thingiverseCookie = resolveThingiverseCookie(body);
-      downloadUrl = await resolveThingiverseDownloadUrl(finalUrl, thingiverseCookie);
+      const resolved = await resolveThingiverseDownloadUrl(finalUrl, thingiverseCookie);
+      if (resolved) {
+        downloadUrl = resolved.downloadUrl;
+        // Thingiverse has no server-rendered per-Thing page (confirmed live -- it's a client
+        // SPA shell), so extractPageMetadata's HTML pass above never finds anything for it;
+        // this is the only source of title/creator/author/preview for a Thingiverse import.
+        if (resolved.meta.title) resolvedMeta.title = resolved.meta.title;
+        if (resolved.meta.creator) resolvedMeta.creator = resolved.meta.creator;
+        if (resolved.meta.author) resolvedMeta.author = resolved.meta.author;
+        if (resolved.meta.previewImageUrl) resolvedMeta.previewImageUrl = resolved.meta.previewImageUrl;
+      }
     }
     if (!downloadUrl && isPrintablesPageHost(pageHost)) {
       downloadUrl = await resolvePrintablesDownloadUrl(finalUrl);
@@ -429,6 +440,8 @@ async function resolveFolderIdByCategory(
 export function identifySourceModel(url: string): { provider: string; externalId: string } | null {
   const makerworld = parseMakerworldModelUrl(url);
   if (makerworld) return { provider: "makerworld", externalId: makerworld.designId };
+  const thingiverse = parseThingiverseThingUrl(url);
+  if (thingiverse) return { provider: "thingiverse", externalId: thingiverse.thingId };
   return null;
 }
 

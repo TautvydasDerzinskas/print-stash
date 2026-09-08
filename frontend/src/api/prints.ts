@@ -20,6 +20,7 @@ export type Plate = {
   size: number;
   url: string; // /print/{printId}/plate/{plateId}/file/{filename}
   thumb_url?: string | null; // /plate/{plateId}/thumb.jpg?v=... if a thumb exists
+  preview_glb_url?: string | null; // /plate/{plateId}/preview.glb?v=... once background pre-render finishes
 };
 
 export type PrintFile = {

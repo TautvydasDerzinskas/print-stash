@@ -12,11 +12,13 @@ import {
   addPlatesToPrint,
   deletePlateFiles,
   refreshAutoPreparedMetadata,
+  resolvePlateFilePath,
   type NewPlateInput,
 } from "../services/printCreation";
 import { availablePlateFilename, plateThumbPath, relocatePrint, saveThumbFromBytes } from "../services/printService";
 import { addGeneratedPreviewImageIfNone } from "../services/previewImageService";
 import { printOutById } from "../services/printLoader";
+import { generateModelPreviewGlb, modelPreviewGlbPath } from "../services/modelPreviewCache";
 
 const router = Router();
 router.use(requireAuth);
@@ -152,6 +154,30 @@ router.get(
     res.setHeader("Content-Type", "image/jpeg");
     res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
     res.sendFile(path.resolve(thumbPath));
+  }),
+);
+
+// ---- Cached 3D preview (GLB) -------------------------------------------------------------------
+
+router.get(
+  "/plate/:plateId/preview.glb",
+  asyncHandler(async (req, res) => {
+    const plate = await prisma.plate.findFirst({
+      where: { id: req.params.plateId, print: { userId: req.userId } },
+    });
+    if (!plate) throw new HttpError(404, "Not found");
+    const glbPath = modelPreviewGlbPath(plate.id);
+    if (!fs.existsSync(glbPath)) {
+      // Self-heal for a plate that predates this cache (or whose background generation hasn't
+      // finished/started yet): kick it off and let the client fall back to the live parser for
+      // this one request -- generateModelPreviewGlb no-ops if it's already running or exists.
+      const srcPath = plate.filename.toLowerCase().endsWith(".3mf") ? resolvePlateFilePath(plate) : null;
+      if (srcPath) void generateModelPreviewGlb(plate.id, srcPath);
+      throw new HttpError(404, "Not found");
+    }
+    res.setHeader("Content-Type", "model/gltf-binary");
+    res.setHeader("Cache-Control", "private, max-age=31536000, immutable");
+    res.sendFile(path.resolve(glbPath));
   }),
 );
 

@@ -11,6 +11,9 @@ export const STORAGE = path.resolve(process.env.FILE_STORAGE || "./storage");
 export const THUMBS = path.join(STORAGE, "thumbs");
 export const BUNDLES = path.join(STORAGE, "bundles");
 export const PREVIEWS = path.join(STORAGE, "previews");
+// Pre-rendered GLB caches for the interactive 3D preview (see services/modelPreviewCache.ts) --
+// generated once per .3mf Plate so the viewer never has to re-parse a huge raw 3MF on every open.
+export const MODEL_PREVIEWS = path.join(STORAGE, "model-previews");
 
 export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
 export const AUTH_TOKEN_TTL = envInt("AUTH_TOKEN_TTL", 43200);
@@ -31,6 +34,10 @@ export const IMPORT_MAX_MB = envInt("IMPORT_MAX_MB", 512);
 export const IMPORT_MAX_BYTES = Math.max(1, IMPORT_MAX_MB) * 1024 * 1024;
 export const IMPORT_HTML_MAX_KB = envInt("IMPORT_HTML_MAX_KB", 4096);
 export const IMPORT_HTML_MAX_BYTES = Math.max(64, IMPORT_HTML_MAX_KB) * 1024;
+// Pacing gap between designs in a MakerWorld collection batch import (see importJobRunner.ts) --
+// exists to avoid the burst request pattern most likely to trip MakerWorld's anti-abuse CAPTCHA.
+// Overridable mainly so tests don't have to actually wait it out.
+export const IMPORT_COLLECTION_DELAY_MS = envInt("IMPORT_COLLECTION_DELAY_MS", 1000);
 export const IMPORT_USER_AGENT = "PrintStash/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";

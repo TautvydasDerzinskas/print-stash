@@ -3,6 +3,7 @@ import type { Author, Collection, Folder, ImportJob, Notification, Plate, Previe
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
+import { modelPreviewGlbExists, modelPreviewGlbPath } from "./services/modelPreviewCache";
 
 export type UserOut = {
   id: string;
@@ -67,6 +68,10 @@ export type PlateOut = {
   size: number;
   url: string;
   thumb_url: string | null;
+  /** Cached pre-rendered GLB for the interactive 3D preview (see services/modelPreviewCache.ts)
+   *  -- null until background generation finishes (or for non-3MF plates, which never get one).
+   *  The viewer falls back to its live client-side parser whenever this is null. */
+  preview_glb_url: string | null;
 };
 
 export type PrintFileOut = {
@@ -125,6 +130,12 @@ function plateThumbUrl(plateId: string): string | null {
   return `/plate/${plateId}/thumb.jpg?v=${mtime}`;
 }
 
+function previewGlbUrl(plateId: string): string | null {
+  if (!modelPreviewGlbExists(plateId)) return null;
+  const mtime = fs.statSync(modelPreviewGlbPath(plateId)).mtimeMs;
+  return `/plate/${plateId}/preview.glb?v=${mtime}`;
+}
+
 export function toPlateOut(printId: string, plate: Plate): PlateOut {
   return {
     id: plate.id,
@@ -135,6 +146,7 @@ export function toPlateOut(printId: string, plate: Plate): PlateOut {
     size: plate.size,
     url: `/print/${printId}/plate/${plate.id}/file/${encodeURIComponent(plate.filename)}`,
     thumb_url: plateThumbUrl(plate.id),
+    preview_glb_url: previewGlbUrl(plate.id),
   };
 }
 

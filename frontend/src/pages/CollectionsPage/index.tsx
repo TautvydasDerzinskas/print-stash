@@ -3,9 +3,7 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
-import AddIcon from "@mui/icons-material/Add";
 import { UnauthorizedError } from "../../api/client";
 import { type Collection, type CollectionInput, collectionsApi } from "../../api/collections";
 import { type PreviewMode } from "../../api/settings";
@@ -13,6 +11,7 @@ import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import CollectionCard from "./CollectionCard";
 import CollectionFormModal from "./CollectionFormModal";
+import CollectionsActionsMenu from "./CollectionsActionsMenu";
 
 type Props = {
   onUnauthorized?: () => void;
@@ -27,16 +26,7 @@ export default function CollectionsPage({ onUnauthorized, theme, previewMode }: 
   const [formOpen, setFormOpen] = useState(false);
 
   usePageHeader({
-    actions: (
-      <Button
-        variant="contained"
-        size="small"
-        startIcon={<AddIcon fontSize="small" />}
-        onClick={() => setFormOpen(true)}
-      >
-        {t("models:collections.newCollection")}
-      </Button>
-    ),
+    actions: <CollectionsActionsMenu onAddCollection={() => setFormOpen(true)} />,
   });
 
   const handleError = (err: unknown, message?: string) => {
