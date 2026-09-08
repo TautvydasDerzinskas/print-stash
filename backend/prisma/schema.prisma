@@ -52,6 +52,7 @@ model Print {
   creator        String?
   collection     String?
   tags           String[]    @default([])
+  viewCount      Int         @default(0)
   folderId       String?
   folder         Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
   authorId       String?

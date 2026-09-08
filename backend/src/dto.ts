@@ -101,6 +101,7 @@ export type PrintOut = {
   prepared_print: PreparedPrintOut | null;
   slicer_url: string | null;
   slicer_filename: string | null;
+  view_count: number;
 };
 
 export type FolderOut = {
@@ -234,6 +235,7 @@ export function toPrintOut(
     prepared_print: prepared,
     slicer_url: slicerUrl,
     slicer_filename: slicerFilename,
+    view_count: print.viewCount,
   };
 }
 

@@ -26,13 +26,14 @@ type Props = {
 };
 
 /** The Models page's own category browser: a pinned "All" row, then a strictly two-level tree --
- *  top-level categories hold only subcategories (clicking one just expands/collapses it),
- *  subcategories hold only models (clicking one selects it, filtering the grid). Creating,
- *  renaming, and deleting categories all happen in the cog-triggered CategoryManagerModal, not
- *  inline here. */
+ *  top-level categories expand to reveal their subcategories AND select themselves, filtering the
+ *  grid to every model under any of their subcategories; subcategories narrow the filter down to
+ *  just that one. Only one top-level category can be expanded at a time, and it only collapses
+ *  when another one is clicked. Creating, renaming, and deleting categories all happen in the
+ *  cog-triggered CategoryManagerModal, not inline here. */
 export default function CategoriesPanel({ folders, loading, selectedId, onSelect, onCreate, onRename, onDelete }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
 
   const untitledLabel = t("models:categories.untitled");
@@ -57,13 +58,9 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
     };
   }, [folders]);
 
-  const toggleExpand = (id: string) => {
-    setExpanded(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const handleRootClick = (id: string) => {
+    setExpandedId(id);
+    onSelect(id);
   };
 
   return (
@@ -90,9 +87,13 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
 
         <List disablePadding>
           <ListItemButton
-            selected={selectedId === null}
             onClick={() => onSelect(null)}
-            sx={{ borderRadius: 1.5, mb: 0.25 }}
+            sx={{
+              borderRadius: 1.5,
+              mb: 0.25,
+              bgcolor: selectedId === null ? "action.selected" : "transparent",
+              "&:hover": { bgcolor: "background.default" },
+            }}
           >
             <ListItemText primary={t("models:categories.all")} primaryTypographyProps={{ variant: "body2", fontWeight: 600 }} />
           </ListItemButton>
@@ -105,41 +106,66 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
 
           {!loading && roots.map(root => {
             const children = childrenByParent[root.id] || [];
-            const isOpen = expanded.has(root.id);
+            const isOpen = expandedId === root.id;
+            const isRootActive = isOpen && selectedId === root.id;
             return (
               <Stack key={root.id}>
-                <ListItemButton onClick={() => toggleExpand(root.id)} sx={{ borderRadius: 1.5, mb: 0.25 }}>
-                  <IconButton
-                    size="small"
-                    component="span"
-                    onClick={e => { e.stopPropagation(); toggleExpand(root.id); }}
-                    sx={{ mr: 0.5, p: 0.25 }}
-                  >
-                    <ChevronRightIcon
-                      fontSize="small"
-                      sx={{ transform: isOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}
-                    />
-                  </IconButton>
+                <ListItemButton
+                  onClick={() => handleRootClick(root.id)}
+                  sx={{
+                    borderRadius: 1.5,
+                    mb: 0.25,
+                    bgcolor: isOpen ? (isRootActive ? "rgba(0, 174, 66, 0.08)" : "#ffffff") : "transparent",
+                    "&:hover": { bgcolor: isRootActive ? "rgba(0, 174, 66, 0.08)" : "background.default" },
+                  }}
+                >
                   <ListItemText
                     primary={root.name || untitledLabel}
-                    primaryTypographyProps={{ noWrap: true, variant: "body2", fontWeight: 600 }}
+                    primaryTypographyProps={{
+                      noWrap: true,
+                      variant: "body2",
+                      fontWeight: 600,
+                      sx: { color: isOpen ? (isRootActive ? "primary.main" : "#5c5c5c") : "#212b36" },
+                    }}
+                  />
+                  <ChevronRightIcon
+                    fontSize="small"
+                    sx={{
+                      ml: 0.5,
+                      flexShrink: 0,
+                      transform: isOpen ? "rotate(90deg)" : "none",
+                      transition: "transform 0.15s",
+                      color: isOpen ? (isRootActive ? "primary.main" : "#a3a3a3") : "#a3a3a3",
+                    }}
                   />
                 </ListItemButton>
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
                   <List component="div" disablePadding>
-                    {children.map(child => (
-                      <ListItemButton
-                        key={child.id}
-                        selected={selectedId === child.id}
-                        onClick={() => onSelect(child.id)}
-                        sx={{ pl: 4, borderRadius: 1.5, mb: 0.25 }}
-                      >
-                        <ListItemText
-                          primary={child.name || untitledLabel}
-                          primaryTypographyProps={{ noWrap: true, variant: "body2" }}
-                        />
-                      </ListItemButton>
-                    ))}
+                    {children.map(child => {
+                      const isChildSelected = selectedId === child.id;
+                      return (
+                        <ListItemButton
+                          key={child.id}
+                          onClick={() => onSelect(child.id)}
+                          sx={{
+                            pl: 4,
+                            borderRadius: 1.5,
+                            mb: 0.25,
+                            bgcolor: "rgba(242, 242, 242, 0.3)",
+                            "&:hover": { bgcolor: "background.default" },
+                          }}
+                        >
+                          <ListItemText
+                            primary={child.name || untitledLabel}
+                            primaryTypographyProps={{
+                              noWrap: true,
+                              variant: "body2",
+                              sx: isChildSelected ? { color: "primary.main", fontWeight: 700 } : undefined,
+                            }}
+                          />
+                        </ListItemButton>
+                      );
+                    })}
                     {!children.length && (
                       <Typography variant="caption" color="text.secondary" sx={{ pl: 4, display: "block", py: 0.5 }}>
                         {t("models:categories.noSubcategories")}

@@ -120,8 +120,8 @@ export function buildTheme(id: ResolvedTheme): Theme {
       fontSize: 13,
       fontFamily: BODY_FONT_STACK,
       button: { textTransform: "none", fontWeight: 600 },
-      h5: { fontFamily: DISPLAY_FONT_STACK },
-      h6: { fontFamily: DISPLAY_FONT_STACK },
+      h5: { fontFamily: DISPLAY_FONT_STACK, fontWeight: 500 },
+      h6: { fontFamily: DISPLAY_FONT_STACK, fontWeight: 500 },
     },
     components: {
       MuiPaper: { styleOverrides: { root: { backgroundImage: "none", backgroundColor: d.panel } } },

@@ -56,37 +56,38 @@ export default function ModelCard({ item, theme, previewMode }: Props) {
         <Typography variant="body2" fontWeight={600} noWrap title={item.title || item.name}>
           {item.title || item.name}
         </Typography>
-        <Stack
-          direction="row"
-          alignItems="center"
-          spacing={0.75}
-          sx={{ mt: 0.75, minWidth: 0 }}
-          onClick={e => {
-            if (!author) return;
-            e.stopPropagation();
-            navigate(`/authors/${author.id}`);
-          }}
-        >
-          <Avatar src={author?.avatar_url || undefined} sx={{ width: 20, height: 20, fontSize: 11 }}>
-            {(authorName || "?").slice(0, 1).toUpperCase()}
-          </Avatar>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            noWrap
-            sx={author ? { cursor: "pointer", "&:hover": { textDecoration: "underline" } } : undefined}
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={0.75}
+            sx={{
+              minWidth: 0,
+              color: "#858585",
+              ...(author ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
+            }}
+            onClick={e => {
+              if (!author) return;
+              e.stopPropagation();
+              navigate(`/authors/${author.id}`);
+            }}
           >
-            {authorName || t("models:card.unknownAuthor")}
-          </Typography>
-        </Stack>
-        <Stack direction="row" spacing={1.5} sx={{ mt: 0.75, color: "text.secondary" }}>
-          <Stack direction="row" alignItems="center" spacing={0.4}>
-            <VisibilityIcon sx={{ fontSize: 14 }} />
-            <Typography variant="caption">0</Typography>
+            <Avatar src={author?.avatar_url || undefined} sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}>
+              {(authorName || "?").slice(0, 1).toUpperCase()}
+            </Avatar>
+            <Typography variant="caption" noWrap sx={{ color: "inherit" }}>
+              {authorName || t("models:card.unknownAuthor")}
+            </Typography>
           </Stack>
-          <Stack direction="row" alignItems="center" spacing={0.4}>
-            <PrintIcon sx={{ fontSize: 14 }} />
-            <Typography variant="caption">0</Typography>
+          <Stack direction="row" spacing={1.5} sx={{ color: "#858585", flexShrink: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={0.4}>
+              <VisibilityIcon sx={{ fontSize: 14 }} />
+              <Typography variant="caption">{item.view_count}</Typography>
+            </Stack>
+            <Stack direction="row" alignItems="center" spacing={0.4}>
+              <PrintIcon sx={{ fontSize: 14 }} />
+              <Typography variant="caption">0</Typography>
+            </Stack>
           </Stack>
         </Stack>
       </Box>

@@ -67,6 +67,7 @@ export type Print = {
   prepared_print?: PreparedPrint | null;
   slicer_url?: string | null;
   slicer_filename?: string | null;
+  view_count: number;
 };
 
 export type ListPrintsResult = {
@@ -89,14 +90,16 @@ export const printsApi = {
   list: async (params: {
     q?: string;
     tags?: string[];
-    folder_id?: string;
+    folder_id?: string | string[];
     limit?: number;
     offset?: number;
   } = {}): Promise<ListPrintsResult> => {
     const qs = new URLSearchParams();
     if (params.q) qs.set("q", params.q);
     if (params.tags && params.tags.length) qs.set("tags", params.tags.join(","));
-    if (params.folder_id) qs.set("folder_id", params.folder_id);
+    if (params.folder_id && params.folder_id.length) {
+      qs.set("folder_id", Array.isArray(params.folder_id) ? params.folder_id.join(",") : params.folder_id);
+    }
     if (typeof params.limit === "number") qs.set("limit", String(params.limit));
     if (typeof params.offset === "number") qs.set("offset", String(params.offset));
     const res = await fetch(`${apiBase()}/prints?${qs.toString()}`, {

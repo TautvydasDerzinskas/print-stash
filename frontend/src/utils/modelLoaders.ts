@@ -56,6 +56,16 @@ export function applyThemeToObject(obj: THREE.Object3D, palette: ModelPalette) {
 }
 
 export async function loadObjectFromAsset(ext: string, url: string): Promise<THREE.Object3D | null> {
+  const obj = await loadRawObjectFromAsset(ext, url);
+  if (obj) {
+    // Print files (STL/3MF/OBJ/STEP) are authored Z-up (Z = the model's height off the bed), but
+    // three.js's world/camera "up" is Y. Without this, a tall model ends up lying on its side.
+    obj.rotateX(-Math.PI / 2);
+  }
+  return obj;
+}
+
+async function loadRawObjectFromAsset(ext: string, url: string): Promise<THREE.Object3D | null> {
   if (ext === "stl") {
     const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
     const geometry = await new Promise<THREE.BufferGeometry>((resolve, reject) => {

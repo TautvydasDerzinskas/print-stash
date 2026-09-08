@@ -116,13 +116,18 @@ export default function ModelDetailPage({ theme, onUnauthorized }: Props) {
         direction="row"
         alignItems="center"
         spacing={1}
-        sx={{ mb: 2, width: "fit-content", cursor: print.author ? "pointer" : "default" }}
+        sx={{
+          mb: 2,
+          width: "fit-content",
+          cursor: print.author ? "pointer" : "default",
+          ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
+        }}
         onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
       >
-        <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13 }}>
+        <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
           {(authorName || "?").slice(0, 1).toUpperCase()}
         </Avatar>
-        <Typography variant="body2" sx={print.author ? { "&:hover": { textDecoration: "underline" } } : undefined}>
+        <Typography variant="body2" sx={{ color: "inherit" }}>
           {authorName || t("models:card.unknownAuthor")}
         </Typography>
       </Stack>

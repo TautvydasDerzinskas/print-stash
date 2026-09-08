@@ -23,10 +23,15 @@ router.use(requireAuth);
 function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const tagsParam = typeof req.query.tags === "string" ? req.query.tags : "";
-  const folderId = typeof req.query.folder_id === "string" ? req.query.folder_id : undefined;
+  const folderIdParam = typeof req.query.folder_id === "string" ? req.query.folder_id : "";
+  const folderIds = folderIdParam
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
 
   const where: Prisma.PrintWhereInput = { userId: req.userId };
-  if (folderId) where.folderId = folderId;
+  if (folderIds.length === 1) where.folderId = folderIds[0];
+  else if (folderIds.length > 1) where.folderId = { in: folderIds };
   const tagList = tagsParam
     .split(",")
     .map((t) => t.trim())
@@ -166,6 +171,11 @@ router.get(
 router.get(
   "/print/:id",
   asyncHandler(async (req, res) => {
+    // Opening a model's detail page always counts as a view, even for the print's own owner.
+    await prisma.print.updateMany({
+      where: { id: req.params.id, userId: req.userId },
+      data: { viewCount: { increment: 1 } },
+    });
     res.json(await printOutById(req.userId!, req.params.id));
   }),
 );

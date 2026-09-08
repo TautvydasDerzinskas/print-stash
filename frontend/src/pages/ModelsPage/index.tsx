@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
@@ -39,6 +39,17 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
 
+  // A root category has no models of its own directly in the tree UI, so selecting one should
+  // pull in every model filed under any of its subcategories (plus the root itself, since prints
+  // can technically still be filed directly on it).
+  const folderIdFilter = useMemo(() => {
+    if (!folderId) return undefined;
+    const isRoot = folders.some(f => f.id === folderId && !f.parent_id);
+    if (!isRoot) return folderId;
+    const childIds = folders.filter(f => f.parent_id === folderId).map(f => f.id);
+    return [folderId, ...childIds];
+  }, [folderId, folders]);
+
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
       onUnauthorized?.();
@@ -67,7 +78,7 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     setLoading(true);
     (async () => {
       try {
-        const result = await printsApi.list({ folder_id: folderId || undefined, limit: PAGE_SIZE, offset: 0 });
+        const result = await printsApi.list({ folder_id: folderIdFilter, limit: PAGE_SIZE, offset: 0 });
         setItems(result.items);
         setOffset(result.items.length);
         setHasMore(result.hasMore);
@@ -78,13 +89,13 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folderId, printsVersion]);
+  }, [folderIdFilter, printsVersion]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const result = await printsApi.list({ folder_id: folderId || undefined, limit: PAGE_SIZE, offset });
+      const result = await printsApi.list({ folder_id: folderIdFilter, limit: PAGE_SIZE, offset });
       setItems(prev => [...prev, ...result.items]);
       setOffset(offset + result.items.length);
       setHasMore(result.hasMore);
@@ -142,7 +153,7 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
           </Stack>
         ) : items.length ? (
           <Stack spacing={2}>
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", columnGap: "20px", rowGap: "20px" }}>
               {items.map(item => (
                 <ModelCard key={item.id} item={item} theme={theme} previewMode={previewMode} />
               ))}

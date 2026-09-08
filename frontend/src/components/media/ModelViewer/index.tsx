@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
+import CircularProgress from "@mui/material/CircularProgress";
 import Typography from "@mui/material/Typography";
 import { useTranslation } from "react-i18next";
 import { type ResolvedTheme } from "../../../constants/settingsOptions";
 import { applyThemeToObject, disposeObject3D, loadObjectFromAsset, paletteForTheme } from "../../../utils/modelLoaders";
+import { createOrientationGizmo } from "./orientationGizmo";
+import Wordmark from "../../Wordmark";
 
 type ModelViewerProps = {
   url: string;
@@ -22,6 +26,7 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
   const { t } = useTranslation(["library"]);
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [viewError, setViewError] = useState<ViewErrorKey | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let disposed = false;
@@ -31,9 +36,11 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
     const palette = paletteForTheme(theme);
     if (colorOverride) palette.color = new THREE.Color(colorOverride);
     setViewError(null);
+    setIsLoading(true);
     const reportError = (key: ViewErrorKey) => {
       if (!disposed) {
         setViewError(key);
+        setIsLoading(false);
       }
     };
 
@@ -101,7 +108,10 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
           const center = box.getCenter(new THREE.Vector3());
           const radius = Math.max(size.x, size.y, size.z) || 1;
           if (!loadSavedView()) {
-            camera.position.copy(center).add(new THREE.Vector3(radius * 1.8, radius * 1.2, radius * 1.8));
+            // Mostly-front-on with a slight elevation/side offset for depth, rather than the
+            // equal-XZ diagonal this used to be (which reads as "from a corner", not "from the
+            // front").
+            camera.position.copy(center).add(new THREE.Vector3(radius * 0.9, radius * 0.7, radius * 2.1));
             camera.lookAt(center);
             controls?.target.copy(center);
             controls?.update();
@@ -123,6 +133,7 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
           applyThemeToObject(obj, palette);
           activeObject = obj;
           scene.add(obj);
+          if (!disposed) setIsLoading(false);
           const box = new THREE.Box3().setFromObject(obj);
           if (!box.isEmpty()) {
             centerSceneOn(box);
@@ -135,20 +146,33 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
         console.error("Viewer init failed:", err);
       }
 
+      // A StrictMode double-invoke (or a fast prop change) can dispose this instance before we
+      // get here -- bail rather than wiring up a resize listener/gizmo/render loop for a
+      // renderer that's already been torn down.
+      if (disposed) return;
+
+      let width = mount.clientWidth || 300;
+      let height = mount.clientHeight || 300;
       const onResize = () => {
         if (!mount) return;
-        const w = mount.clientWidth || 300;
-        const h = mount.clientHeight || 300;
-        renderer.setSize(w, h);
-        camera.aspect = w / h;
+        width = mount.clientWidth || 300;
+        height = mount.clientHeight || 300;
+        renderer.setSize(width, height);
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
       };
       window.addEventListener("resize", onResize);
-      teardown = () => window.removeEventListener("resize", onResize);
+      const gizmo = createOrientationGizmo(renderer);
+      teardown = () => {
+        window.removeEventListener("resize", onResize);
+        gizmo.dispose();
+      };
 
       const animate = () => {
         if (disposed) return;
+        controls?.update();
         renderer.render(scene, camera);
+        gizmo.render(camera, controls?.target ?? new THREE.Vector3(), width, height);
         requestAnimationFrame(animate);
       };
       animate();
@@ -186,6 +210,23 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride }:
         position: "relative",
       }}
     >
+      {isLoading && !viewError && (
+        <Box
+          sx={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: "action.hover",
+          }}
+        >
+          <Stack alignItems="center" spacing={1.5}>
+            <Wordmark size="sm" />
+            <CircularProgress size={22} />
+          </Stack>
+        </Box>
+      )}
       {viewError && (
         <Box
           sx={{
