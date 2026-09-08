@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { Author, Folder, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
+import type { Author, Collection, Folder, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
@@ -103,6 +103,7 @@ export type PrintOut = {
   slicer_filename: string | null;
   view_count: number;
   print_count: number;
+  is_favorite: boolean;
 };
 
 export type FolderOut = {
@@ -244,6 +245,61 @@ export function toPrintOut(
     slicer_filename: slicerFilename,
     view_count: print.viewCount,
     print_count: print.printCount,
+    is_favorite: print.favoritedAt !== null,
+  };
+}
+
+export type SystemCollectionKey = "favorites" | "history";
+
+export type CollectionOut = {
+  id: string;
+  name: string;
+  description: string | null;
+  tags: string[];
+  item_count: number;
+  cover_items: PrintOut[];
+  created_at: string;
+  /** Set only for the two built-in "Favourites"/"Browsing History" pseudo-collections (see
+   * collectionService.ts's SYSTEM_COLLECTIONS) -- the frontend uses this to pick a translated
+   * display name instead of `name`, and to hide the edit/delete actions those can't support. */
+  system_key: SystemCollectionKey | null;
+};
+
+/** `coverPrints` should already be the up-to-4 cover PrintOuts (see collections.ts), ordered by
+ * the collection's item position ascending. */
+export function toCollectionOut(collection: Collection, itemCount: number, coverPrints: PrintOut[]): CollectionOut {
+  return {
+    id: collection.id,
+    name: collection.name,
+    description: collection.description,
+    tags: collection.tags,
+    item_count: itemCount,
+    cover_items: coverPrints,
+    created_at: collection.createdAt.toISOString(),
+    system_key: null,
+  };
+}
+
+/** Builds the CollectionOut for a built-in pseudo-collection -- there's no backing Collection
+ * row, so this is assembled directly from the id/key plus the caller's computed item_count and
+ * cover prints rather than going through toCollectionOut. `name` is an untranslated fallback
+ * only; the frontend always prefers a translated label keyed off `system_key`. */
+export function toSystemCollectionOut(
+  id: string,
+  key: SystemCollectionKey,
+  name: string,
+  itemCount: number,
+  coverPrints: PrintOut[],
+): CollectionOut {
+  return {
+    id,
+    name,
+    description: null,
+    tags: [],
+    item_count: itemCount,
+    cover_items: coverPrints,
+    created_at: new Date(0).toISOString(),
+    system_key: key,
   };
 }
 

@@ -75,7 +75,8 @@
       "expandSidebar": "Expand sidebar",
       "collapseSidebar": "Collapse sidebar",
       "foldersHeadingWithCount": "Folders ({{count}})",
-      "models": "Models"
+      "models": "Models",
+      "collections": "Collections"
     },
     "uploadBar": {
       "uploading": "Uploading…",
@@ -485,11 +486,47 @@
       "tags": "Tags",
       "noTags": "No tags yet.",
       "previousImage": "Previous image",
-      "nextImage": "Next image"
+      "nextImage": "Next image",
+      "addToFavorites": "Add to Favourites",
+      "removeFromFavorites": "Remove from Favourites",
+      "favoriteFailed": "Failed to update favourites. Please try again."
     },
     "author": {
       "pageTitle": "Author",
       "comingSoon": "Author pages are coming soon."
+    },
+    "collections": {
+      "pageTitle": "Collections",
+      "newCollection": "New Collection",
+      "empty": "No collections yet.",
+      "system": {
+        "favorites": "Favourites",
+        "history": "Browsing History"
+      },
+      "card": {
+        "empty": "No models yet",
+        "itemCount_one": "{{count}} model",
+        "itemCount_other": "{{count}} models"
+      },
+      "form": {
+        "createTitle": "New Collection",
+        "editTitle": "Edit Collection",
+        "nameLabel": "Name",
+        "descriptionLabel": "Description",
+        "tagsLabel": "Tags",
+        "tagsPlaceholder": "Add tags",
+        "create": "Create",
+        "saveFailed": "Failed to save the collection. Please try again."
+      },
+      "detail": {
+        "empty": "No models in this collection yet.",
+        "confirmDelete": "Delete \"{{name}}\"? Models in it are not deleted.",
+        "deleteFailed": "Failed to delete the collection."
+      },
+      "errors": {
+        "loadFailed": "Unable to load collections.",
+        "notFound": "Collection not found."
+      }
     },
     "errors": {
       "loadFailed": "Unable to load models.",

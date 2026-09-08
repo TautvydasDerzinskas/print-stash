@@ -13,15 +13,16 @@ enum Role {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
+  id           String       @id @default(cuid())
+  email        String       @unique
   passwordHash String
   displayName  String
-  role         Role     @default(MEMBER)
+  role         Role         @default(MEMBER)
   folders      Folder[]
   prints       Print[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  collections  Collection[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Folder {
@@ -71,6 +72,12 @@ model Print {
   tags             String[]       @default([])
   viewCount        Int            @default(0)
   printCount       Int            @default(0)
+  // Backs the two built-in "Favourites"/"Browsing History" pseudo-collections (see
+  // routes/collections.ts's SYSTEM_COLLECTIONS) -- not a real Collection/CollectionItem row.
+  // lastViewedAt is stamped on every GET /print/:id alongside viewCount, so "Browsing History"
+  // falls out of `orderBy: lastViewedAt desc` with no separate event log.
+  favoritedAt      DateTime?
+  lastViewedAt     DateTime?
   folderId         String?
   folder           Folder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
   authorId         String?
@@ -82,6 +89,7 @@ model Print {
   preparedFileId   String?        @unique
   preparedFile     PrintFile?     @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
   preparedMetadata Json?
+  collectionItems  CollectionItem[]
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
@@ -89,6 +97,45 @@ model Print {
   @@index([userId, folderId, name])
   @@index([tags], type: Gin)
   @@index([authorId])
+  @@index([userId, favoritedAt])
+  @@index([userId, lastViewedAt])
+}
+
+/// A user-curated, named group of models -- acts like a "playlist" for prints. Populated
+/// manually (via the create/edit modal) or automatically when importing a MakerWorld
+/// collection by URL (see collectionService.findOrCreateCollectionByName), which matches
+/// on nameNormalized so re-importing the same MakerWorld collection reuses the same row
+/// instead of creating a duplicate.
+model Collection {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  nameNormalized String
+  description    String?
+  tags           String[]         @default([])
+  items          CollectionItem[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([userId, nameNormalized])
+  @@index([tags], type: Gin)
+}
+
+/// Join row between Collection and Print (many-to-many), with a position for cover/display
+/// ordering.
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  printId      String
+  print        Print      @relation(fields: [printId], references: [id], onDelete: Cascade)
+  position     Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  @@unique([collectionId, printId])
+  @@index([collectionId, position])
+  @@index([printId])
 }
 
 /// A creator/designer on some source platform (MakerWorld today; Printables/Thingiverse etc.

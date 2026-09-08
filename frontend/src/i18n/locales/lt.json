@@ -75,7 +75,8 @@
       "expandSidebar": "Išskleisti šoninę juostą",
       "collapseSidebar": "Suskleisti šoninę juostą",
       "foldersHeadingWithCount": "Aplankai ({{count}})",
-      "models": "Modeliai"
+      "models": "Modeliai",
+      "collections": "Kolekcijos"
     },
     "uploadBar": {
       "uploading": "Įkeliama…",
@@ -486,11 +487,47 @@
       "tags": "Žymos",
       "noTags": "Kol kas nėra žymų.",
       "previousImage": "Ankstesnis paveikslėlis",
-      "nextImage": "Kitas paveikslėlis"
+      "nextImage": "Kitas paveikslėlis",
+      "addToFavorites": "Pridėti prie mėgstamų",
+      "removeFromFavorites": "Pašalinti iš mėgstamų",
+      "favoriteFailed": "Nepavyko atnaujinti mėgstamų. Bandykite dar kartą."
     },
     "author": {
       "pageTitle": "Autorius",
       "comingSoon": "Autorių puslapiai netrukus bus pasiekiami."
+    },
+    "collections": {
+      "pageTitle": "Kolekcijos",
+      "newCollection": "Nauja kolekcija",
+      "empty": "Kol kas nėra kolekcijų.",
+      "system": {
+        "favorites": "Mėgstami",
+        "history": "Naršymo istorija"
+      },
+      "card": {
+        "empty": "Kol kas nėra modelių",
+        "itemCount_one": "{{count}} modelis",
+        "itemCount_other": "{{count}} modeliai"
+      },
+      "form": {
+        "createTitle": "Nauja kolekcija",
+        "editTitle": "Redaguoti kolekciją",
+        "nameLabel": "Pavadinimas",
+        "descriptionLabel": "Aprašymas",
+        "tagsLabel": "Žymos",
+        "tagsPlaceholder": "Pridėti žymų",
+        "create": "Sukurti",
+        "saveFailed": "Nepavyko išsaugoti kolekcijos. Bandykite dar kartą."
+      },
+      "detail": {
+        "empty": "Šioje kolekcijoje kol kas nėra modelių.",
+        "confirmDelete": "Ištrinti „{{name}}“? Joje esantys modeliai nebus ištrinti.",
+        "deleteFailed": "Nepavyko ištrinti kolekcijos."
+      },
+      "errors": {
+        "loadFailed": "Nepavyko įkelti kolekcijų.",
+        "notFound": "Kolekcija nerasta."
+      }
     },
     "errors": {
       "loadFailed": "Nepavyko įkelti modelių.",

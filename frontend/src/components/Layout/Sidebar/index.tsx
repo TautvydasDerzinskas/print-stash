@@ -12,6 +12,7 @@ import Collapse from "@mui/material/Collapse";
 import Tooltip from "@mui/material/Tooltip";
 import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
+import CollectionsIcon from "@mui/icons-material/Collections";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
@@ -65,6 +66,7 @@ export default function Sidebar({ isAdmin }: Props) {
 
   const onDashboard = location.pathname === "/";
   const onModels = location.pathname.startsWith("/models") || location.pathname.startsWith("/authors");
+  const onCollections = location.pathname.startsWith("/models/collections");
   const onAdmin = location.pathname.startsWith("/admin-settings");
   const adminOpen = adminExpanded || onAdmin;
 
@@ -140,12 +142,32 @@ export default function Sidebar({ isAdmin }: Props) {
               onClick={() => navigate("/models")}
             />
           ) : (
-            <ListItemButton selected={onModels} onClick={() => navigate("/models")} sx={{ borderRadius: 1, mb: 0.5 }}>
-              <ListItemIcon sx={{ minWidth: 30 }}>
-                <ViewInArIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary={t("sidebar.models")} primaryTypographyProps={{ variant: "body2" }} />
-            </ListItemButton>
+            <>
+              <ListItemButton
+                selected={onModels && !onCollections}
+                onClick={() => navigate("/models")}
+                sx={{ borderRadius: 1, mb: 0.5 }}
+              >
+                <ListItemIcon sx={{ minWidth: 30 }}>
+                  <ViewInArIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText primary={t("sidebar.models")} primaryTypographyProps={{ variant: "body2" }} />
+              </ListItemButton>
+              <Collapse in={onModels}>
+                <List disablePadding>
+                  <ListItemButton
+                    selected={onCollections}
+                    onClick={() => navigate("/models/collections")}
+                    sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                  >
+                    <ListItemIcon sx={{ minWidth: 30 }}>
+                      <CollectionsIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText primary={t("sidebar.collections")} primaryTypographyProps={{ variant: "body2" }} />
+                  </ListItemButton>
+                </List>
+              </Collapse>
+            </>
           )}
 
           {isAdmin && (

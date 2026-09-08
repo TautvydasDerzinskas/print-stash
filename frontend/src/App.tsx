@@ -8,6 +8,8 @@ import AppLayout from "./components/Layout/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
 import ModelsPage from "./pages/ModelsPage";
 import ModelDetailPage from "./pages/ModelDetailPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import CollectionDetailPage from "./pages/CollectionDetailPage";
 import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -102,6 +104,14 @@ function AppShell({
               previewMode={previewMode}
             />
           }
+        />
+        <Route
+          path="/models/collections"
+          element={<CollectionsPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+        />
+        <Route
+          path="/models/collections/:collectionId"
+          element={<CollectionDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
         />
         <Route
           path="/models/:printId"

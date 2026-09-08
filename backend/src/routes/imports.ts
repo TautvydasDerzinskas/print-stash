@@ -16,6 +16,7 @@ import {
   fetchMakerworldCollectionTitle,
   parseMakerworldCollectionUrl,
 } from "../services/makerworldCollections";
+import { addPrintsToCollection, findOrCreateCollectionByName } from "../services/collectionService";
 import { extractZipEntriesToPrints, listZipEntries } from "../services/zipService";
 import { toPrintOut, type PrintOut } from "../dto";
 
@@ -171,6 +172,23 @@ router.post(
       if (result.ok) prints.push(result.print);
       else failed.push(result.designId);
     }
+
+    // Re-derive the source MakerWorld collection's title from the same URL the client sent to
+    // /import/collection/entries, and file every successfully imported print under a Collection
+    // of that name -- reusing (rather than duplicating) it if one already exists for this user.
+    if (prints.length) {
+      const url = await normalizeImportUrl(body.url);
+      const parsed = parseMakerworldCollectionUrl(url);
+      if (parsed) {
+        const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
+        const title = await fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken);
+        if (title) {
+          const collection = await findOrCreateCollectionByName(req.userId!, title);
+          await addPrintsToCollection(collection.id, prints.map((p) => p.id));
+        }
+      }
+    }
+
     res.json({ prints, failed });
   }),
 );

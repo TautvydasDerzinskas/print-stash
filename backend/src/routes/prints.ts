@@ -15,6 +15,7 @@ import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
 import { deleteAllPrintFiles } from "../services/printFileService";
 import { sendPrintsZip } from "../services/downloadZip";
+import { systemCollectionKeyForId } from "../services/collectionService";
 import type { Prisma } from "@prisma/client";
 
 const router = Router();
@@ -28,10 +29,17 @@ function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
+  const collectionId = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
 
   const where: Prisma.PrintWhereInput = { userId: req.userId };
   if (folderIds.length === 1) where.folderId = folderIds[0];
   else if (folderIds.length > 1) where.folderId = { in: folderIds };
+  if (collectionId) {
+    const systemKey = systemCollectionKeyForId(collectionId);
+    if (systemKey === "favorites") where.favoritedAt = { not: null };
+    else if (systemKey === "history") where.lastViewedAt = { not: null };
+    else where.collectionItems = { some: { collectionId } };
+  }
   const tagList = tagsParam
     .split(",")
     .map((t) => t.trim())
@@ -138,7 +146,18 @@ router.get(
       filesByPrint.set(f.printId, list);
     }
 
+    // The "Favourites"/"Browsing History" pseudo-collections are ordered most-recent-first (by
+    // when they were favorited/last viewed) rather than the default alphabetical grid order.
+    const collectionIdParam = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
+    const systemKey = systemCollectionKeyForId(collectionIdParam);
+    const recencyField = systemKey === "favorites" ? "favoritedAt" : systemKey === "history" ? "lastViewedAt" : null;
+
     const sorted = prints.toSorted((a, b) => {
+      if (recencyField) {
+        const at = a[recencyField]?.getTime() ?? 0;
+        const bt = b[recencyField]?.getTime() ?? 0;
+        if (at !== bt) return bt - at;
+      }
       const nameCmp = a.name.localeCompare(b.name);
       if (nameCmp !== 0) return nameCmp;
       const af = a.plates[0]?.filename ?? "";
@@ -171,11 +190,38 @@ router.get(
 router.get(
   "/print/:id",
   asyncHandler(async (req, res) => {
-    // Opening a model's detail page always counts as a view, even for the print's own owner.
+    // Opening a model's detail page always counts as a view, even for the print's own owner --
+    // lastViewedAt is what the "Browsing History" pseudo-collection sorts/filters by.
     await prisma.print.updateMany({
       where: { id: req.params.id, userId: req.userId },
-      data: { viewCount: { increment: 1 } },
+      data: { viewCount: { increment: 1 }, lastViewedAt: new Date() },
     });
+    res.json(await printOutById(req.userId!, req.params.id));
+  }),
+);
+
+// ---- POST/DELETE /print/:id/favorite ---------------------------------------------------------
+
+router.post(
+  "/print/:id/favorite",
+  asyncHandler(async (req, res) => {
+    const result = await prisma.print.updateMany({
+      where: { id: req.params.id, userId: req.userId },
+      data: { favoritedAt: new Date() },
+    });
+    if (result.count === 0) throw new HttpError(404, "Print not found");
+    res.json(await printOutById(req.userId!, req.params.id));
+  }),
+);
+
+router.delete(
+  "/print/:id/favorite",
+  asyncHandler(async (req, res) => {
+    const result = await prisma.print.updateMany({
+      where: { id: req.params.id, userId: req.userId },
+      data: { favoritedAt: null },
+    });
+    if (result.count === 0) throw new HttpError(404, "Print not found");
     res.json(await printOutById(req.userId!, req.params.id));
   }),
 );

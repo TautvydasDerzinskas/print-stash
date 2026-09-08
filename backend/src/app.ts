@@ -11,6 +11,7 @@ import foldersRoutes from "./routes/folders";
 import printFilesRoutes from "./routes/printFiles";
 import settingsRoutes from "./routes/settings";
 import importsRoutes from "./routes/imports";
+import collectionsRoutes from "./routes/collections";
 
 export function createApp(): Express {
   const app = express();
@@ -36,6 +37,7 @@ export function createApp(): Express {
   app.use("/api", foldersRoutes);
   app.use("/api", printFilesRoutes);
   app.use("/api", importsRoutes);
+  app.use("/api", collectionsRoutes);
 
   // 404 fallback for unmatched routes.
   app.use((_req: Request, res: Response) => {

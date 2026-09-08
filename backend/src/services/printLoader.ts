@@ -29,3 +29,41 @@ export async function printOutById(userId: string, printId: string): Promise<Pri
   const full = await loadFullPrint(userId, printId);
   return toPrintOut(full.print, full.plates, full.files, full.preparedFile, full.print.author, full.previewImages);
 }
+
+function groupByPrintId<T extends { printId: string }>(rows: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const row of rows) {
+    const list = map.get(row.printId);
+    if (list) list.push(row);
+    else map.set(row.printId, [row]);
+  }
+  return map;
+}
+
+/** Batch-loads full PrintOuts for a set of print ids (e.g. a collection's cover thumbnails) in a
+ * handful of `IN`-scoped queries rather than one loadFullPrint call per id. Ids that don't belong
+ * to `userId` are silently omitted from the returned map. */
+export async function printOutsByIds(userId: string, printIds: string[]): Promise<Map<string, PrintOut>> {
+  const out = new Map<string, PrintOut>();
+  if (!printIds.length) return out;
+  const [prints, plates, files, previewImages] = await Promise.all([
+    prisma.print.findMany({ where: { id: { in: printIds }, userId }, include: { author: true } }),
+    prisma.plate.findMany({ where: { printId: { in: printIds } }, orderBy: { position: "asc" } }),
+    prisma.printFile.findMany({ where: { printId: { in: printIds } } }),
+    prisma.previewImage.findMany({ where: { printId: { in: printIds } }, orderBy: { position: "asc" } }),
+  ]);
+  const platesByPrint = groupByPrintId(plates);
+  const filesByPrint = groupByPrintId(files);
+  const previewsByPrint = groupByPrintId(previewImages);
+  for (const print of prints) {
+    const printFiles = filesByPrint.get(print.id) || [];
+    const preparedFile = print.preparedFileId
+      ? printFiles.find((f) => f.id === print.preparedFileId) ?? null
+      : null;
+    out.set(
+      print.id,
+      toPrintOut(print, platesByPrint.get(print.id) || [], printFiles, preparedFile, print.author, previewsByPrint.get(print.id) || []),
+    );
+  }
+  return out;
+}

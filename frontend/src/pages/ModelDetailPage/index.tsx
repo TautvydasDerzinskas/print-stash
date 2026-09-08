@@ -24,6 +24,7 @@ import { ModelSnapshot } from "../../components/media/ModelViewer/ModelSnapshot"
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import Model3DPreviewModal from "./Model3DPreviewModal";
 import ModelActionsMenu from "./ModelActionsMenu";
+import FavoriteButton from "./FavoriteButton";
 
 type Props = {
   theme: ResolvedTheme;
@@ -48,7 +49,10 @@ export default function ModelDetailPage({ theme, onUnauthorized }: Props) {
   usePageHeader({
     title: print ? (print.title || print.name) : undefined,
     actions: print ? (
-      <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} />
+      <Stack direction="row" alignItems="center" spacing={0.5}>
+        <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
+        <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} />
+      </Stack>
     ) : undefined,
   });
 

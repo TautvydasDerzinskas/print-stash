@@ -69,6 +69,7 @@ export type Print = {
   slicer_filename?: string | null;
   view_count: number;
   print_count: number;
+  is_favorite: boolean;
 };
 
 export type ListPrintsResult = {
@@ -92,6 +93,7 @@ export const printsApi = {
     q?: string;
     tags?: string[];
     folder_id?: string | string[];
+    collection_id?: string;
     limit?: number;
     offset?: number;
   } = {}): Promise<ListPrintsResult> => {
@@ -101,6 +103,7 @@ export const printsApi = {
     if (params.folder_id && params.folder_id.length) {
       qs.set("folder_id", Array.isArray(params.folder_id) ? params.folder_id.join(",") : params.folder_id);
     }
+    if (params.collection_id) qs.set("collection_id", params.collection_id);
     if (typeof params.limit === "number") qs.set("limit", String(params.limit));
     if (typeof params.offset === "number") qs.set("offset", String(params.offset));
     const res = await fetch(`${apiBase()}/prints?${qs.toString()}`, {
@@ -354,6 +357,22 @@ export const printsApi = {
       headers: authHeaders(),
     });
     assertOk(res, "Failed to record download");
+    return res.json();
+  },
+
+  /** Adds/removes this print from the built-in "Favourites" pseudo-collection -- toggled from
+   *  the model detail page's header. */
+  favorite: async (id: string): Promise<Print> => {
+    const res = await fetch(`${apiBase()}/print/${id}/favorite`, { method: "POST", headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to favorite"));
+    return res.json();
+  },
+
+  unfavorite: async (id: string): Promise<Print> => {
+    const res = await fetch(`${apiBase()}/print/${id}/favorite`, { method: "DELETE", headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to unfavorite"));
     return res.json();
   },
 };

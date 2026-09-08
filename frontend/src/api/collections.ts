@@ -1,0 +1,64 @@
+import { authHeaders } from "../utils/auth";
+import { apiBase, assertOk, readErrorMessage } from "./client";
+import type { Print } from "./prints";
+
+export type SystemCollectionKey = "favorites" | "history";
+
+export type Collection = {
+  id: string;
+  name: string;
+  description: string | null;
+  tags: string[];
+  item_count: number;
+  cover_items: Print[];
+  created_at: string;
+  /** Set only for the built-in "Favourites"/"Browsing History" pseudo-collections -- these can't
+   *  be edited or deleted, and their card/detail title should come from a translated label keyed
+   *  off this instead of `name`. */
+  system_key: SystemCollectionKey | null;
+};
+
+export type CollectionInput = {
+  name: string;
+  description?: string | null;
+  tags?: string[];
+};
+
+export const collectionsApi = {
+  list: async (): Promise<Collection[]> => {
+    const res = await fetch(`${apiBase()}/collections`, { headers: authHeaders() });
+    assertOk(res, "Failed to list collections");
+    return res.json();
+  },
+
+  get: async (id: string): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/collection/${id}`, { headers: authHeaders() });
+    assertOk(res, "Failed to load collection");
+    return res.json();
+  },
+
+  create: async (input: CollectionInput): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/collections`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Create collection failed"));
+    return res.json();
+  },
+
+  update: async (id: string, input: CollectionInput): Promise<Collection> => {
+    const res = await fetch(`${apiBase()}/collection/${id}`, {
+      method: "PATCH",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Update collection failed"));
+    return res.json();
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/collection/${id}`, { method: "DELETE", headers: authHeaders() });
+    assertOk(res, "Delete collection failed");
+  },
+};

@@ -42,6 +42,13 @@ function useRouteChrome() {
   let showBack = false;
   if (path === "/") {
     title = t("sidebar.dashboard");
+  } else if (path === "/models/collections") {
+    title = t("models:collections.pageTitle");
+    showBack = true;
+  } else if (path.startsWith("/models/collections/")) {
+    // Overridden by CollectionDetailPage's usePageHeader once the collection loads.
+    title = t("models:collections.pageTitle");
+    showBack = true;
   } else if (path.startsWith("/models/")) {
     title = t("models:pageTitle");
     showBack = true;
