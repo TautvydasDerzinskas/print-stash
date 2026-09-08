@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
@@ -11,6 +10,7 @@ import { type Folder, type FolderMetaInput, foldersApi } from "../../api/folders
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
+import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import CategoriesPanel from "./CategoriesPanel";
 import ModelCard from "./ModelCard";
 
@@ -116,6 +116,8 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     }
   };
 
+  const loadMoreSentinelRef = useInfiniteScroll(loadMore, hasMore, loading || loadingMore);
+
   const createCategory = async (name: string, parentId: string | null) => {
     try {
       await foldersApi.create(name, [], parentId || undefined);
@@ -190,20 +192,24 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
           <Stack spacing={2}>
             <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
               {items.map(item => (
-                <ModelCard key={item.id} item={item} theme={theme} previewMode={previewMode} />
+                <ModelCard
+                  key={item.id}
+                  item={item}
+                  theme={theme}
+                  previewMode={previewMode}
+                  onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
+                  onUnauthorized={onUnauthorized}
+                />
               ))}
             </Box>
             {hasMore && (
-              <Stack direction="row" justifyContent="center">
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  startIcon={loadingMore ? <CircularProgress size={14} /> : undefined}
-                >
-                  {loadingMore ? t("models:grid.loadingMore") : t("models:grid.loadMore")}
-                </Button>
+              <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+                {loadingMore && (
+                  <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                    <CircularProgress size={14} />
+                    <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
+                  </Stack>
+                )}
               </Stack>
             )}
           </Stack>

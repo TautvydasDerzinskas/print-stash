@@ -71,6 +71,10 @@ export type Print = {
   view_count: number;
   print_count: number;
   is_favorite: boolean;
+  // Null for uploads, zip/folder-scan imports, and anything not resolvable to a known provider.
+  // source_url is the reconstructed original model page, for an "Open in {Provider}" link.
+  source_provider?: string | null;
+  source_url?: string | null;
 };
 
 export type ListPrintsResult = {

@@ -512,7 +512,6 @@
     "pageTitle": "Models",
     "grid": {
       "empty": "No models yet.",
-      "loadMore": "Load more",
       "loadingMore": "Loading…"
     },
     "card": {
@@ -529,6 +528,7 @@
       "downloadFailed": "Download failed. Please try again.",
       "deleteFailed": "Failed to delete the model.",
       "confirmDelete": "Delete \"{{name}}\"? This cannot be undone.",
+      "openInProvider": "Open in {{provider}}",
       "downloadPickerTitle": "Download",
       "downloadAllZip": "Download all {{count}} plates (.zip)",
       "orDownloadOne": "or download one plate",

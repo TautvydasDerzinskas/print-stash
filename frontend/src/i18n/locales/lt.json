@@ -512,7 +512,6 @@
     "pageTitle": "Modeliai",
     "grid": {
       "empty": "Kol kas nėra modelių.",
-      "loadMore": "Įkelti daugiau",
       "loadingMore": "Įkeliama…"
     },
     "card": {
@@ -530,6 +529,7 @@
       "downloadFailed": "Nepavyko atsisiųsti. Bandykite dar kartą.",
       "deleteFailed": "Nepavyko ištrinti modelio.",
       "confirmDelete": "Ištrinti „{{name}}“? Šio veiksmo nebus galima atšaukti.",
+      "openInProvider": "Atverti „{{provider}}“",
       "downloadPickerTitle": "Atsisiųsti",
       "downloadAllZip": "Atsisiųsti visas {{count}} plokštes (.zip)",
       "orDownloadOne": "arba atsisiųsti vieną plokštę",

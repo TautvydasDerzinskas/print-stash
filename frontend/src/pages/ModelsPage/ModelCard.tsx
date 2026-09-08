@@ -11,24 +11,30 @@ import { type Print } from "../../api/prints";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
+import { importProviderInfo } from "../../constants/importProviders";
+import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
 
 type Props = {
   item: Print;
   theme: ResolvedTheme;
   previewMode: PreviewMode;
+  onDeleted?: (id: string) => void;
+  onUnauthorized?: () => void;
 };
 
-export default function ModelCard({ item, theme, previewMode }: Props) {
+export default function ModelCard({ item, theme, previewMode, onDeleted, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
   const author = item.author;
   const authorName = author?.name || author?.handle || item.creator || null;
+  const providerInfo = importProviderInfo(item.source_provider);
 
   return (
     <Paper
       variant="outlined"
       onClick={() => navigate(`/models/${item.id}`)}
       sx={{
+        position: "relative",
         cursor: "pointer",
         overflow: "hidden",
         borderRadius: "12px",
@@ -41,6 +47,7 @@ export default function ModelCard({ item, theme, previewMode }: Props) {
           borderColor: "divider",
           transform: "translateY(-2px)",
         },
+        "&:hover .model-card-actions": { opacity: 1 },
       }}
     >
       <Box
@@ -51,6 +58,47 @@ export default function ModelCard({ item, theme, previewMode }: Props) {
         }}
       >
         {renderPreviewContent(item, "card", theme, t, previewMode)}
+      </Box>
+
+      {providerInfo && (
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            px: 1,
+            py: 0.375,
+            borderRadius: 1,
+            fontSize: 11,
+            fontWeight: 600,
+            lineHeight: 1.4,
+            color: "#fff",
+            bgcolor: providerInfo.color,
+          }}
+        >
+          {providerInfo.label}
+        </Box>
+      )}
+
+      <Box
+        className="model-card-actions"
+        onClick={e => e.stopPropagation()}
+        sx={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          opacity: 0,
+          transition: "opacity .15s ease",
+          bgcolor: "rgba(0, 0, 0, 0.55)",
+          borderRadius: "50%",
+        }}
+      >
+        <ModelActionsMenu
+          print={item}
+          onUnauthorized={onUnauthorized}
+          onDeleted={() => onDeleted?.(item.id)}
+          triggerSx={{ color: "#fff" }}
+        />
       </Box>
       <Box sx={{ p: 1.5 }}>
         <Typography variant="body2" fontWeight={600} noWrap title={item.title || item.name}>

@@ -16,6 +16,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import LogoutIcon from "@mui/icons-material/Logout";
 import type { AuthUser } from "../../api/auth";
 import type { ThemeSelection } from "../../constants/settingsOptions";
+import { IMPORT_PROVIDER_INFO } from "../../constants/importProviders";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 
 const THEME_MODES: ThemeSelection[] = ["light", "dark"];
@@ -57,7 +58,7 @@ export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout,
   };
 
   const services: ServiceChipDef[] = [
-    { key: "makerworld", label: "MakerWorld", color: "#F07745", connected: Boolean(makerworldCookie.trim()) },
+    { key: "makerworld", ...IMPORT_PROVIDER_INFO.makerworld, connected: Boolean(makerworldCookie.trim()) },
   ];
 
   return (

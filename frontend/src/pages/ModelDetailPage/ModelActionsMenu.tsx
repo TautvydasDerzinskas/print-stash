@@ -19,21 +19,29 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Plate, type Print, printsApi } from "../../api/prints";
 import { saveResponseToDisk } from "../../utils/downloadResponse";
 import { useConfirm } from "../../components/ConfirmProvider";
+import { importProviderInfo } from "../../constants/importProviders";
 
 type Props = {
   print: Print;
   onUnauthorized?: () => void;
   onDeleted: () => void;
+  /** Lets callers restyle the trigger button -- e.g. the Models grid's hover overlay, which
+   *  needs to read over an arbitrary thumbnail instead of the detail page header's plain icon. */
+  triggerSx?: SxProps<Theme>;
 };
 
-/** The model detail page's "..." header menu: Download (single file, or a plate picker / zip-all
- *  for multi-plate models), Edit (disabled for now), and Delete (confirm, then delete + navigate
- *  back to wherever the user came from). */
-export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: Props) {
+/** The "..." menu for a model: Download (single file, or a plate picker / zip-all for
+ *  multi-plate models), Edit (disabled for now), Delete (confirm, then delete), and -- only for
+ *  an imported print -- a divider then "Open in {Provider}" linking back to the original model
+ *  page. Shared by the model detail page's header and the Models/Collection grids' per-card
+ *  hover overlay. */
+export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, triggerSx }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -116,6 +124,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: P
   };
 
   const sortedPlates = print.plates.toSorted((a, b) => a.position - b.position);
+  const providerInfo = importProviderInfo(print.source_provider);
 
   return (
     <>
@@ -124,6 +133,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: P
         onClick={e => setAnchorEl(e.currentTarget)}
         aria-label={t("common:more") ?? undefined}
         disabled={deleting}
+        sx={triggerSx}
       >
         {deleting ? <CircularProgress size={18} /> : <MoreVertIcon fontSize="small" />}
       </IconButton>
@@ -140,6 +150,20 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted }: P
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
         </MenuItem>
+        {providerInfo && print.source_url && [
+          <Divider key="open-in-provider-divider" />,
+          <MenuItem
+            key="open-in-provider"
+            component="a"
+            href={print.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={closeMenu}
+          >
+            <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t("models:detail.openInProvider", { provider: providerInfo.label })}</ListItemText>
+          </MenuItem>,
+        ]}
       </Menu>
 
       <Dialog open={pickerOpen} onClose={() => !downloading && setPickerOpen(false)} fullWidth maxWidth="xs">

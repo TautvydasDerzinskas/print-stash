@@ -433,6 +433,18 @@ export function identifySourceModel(url: string): { provider: string; externalId
   return null;
 }
 
+/** The inverse of identifySourceModel above -- rebuilds the original model page URL from the
+ * stable provider + external id a Print was imported with (Print.sourceProvider/
+ * sourceExternalId), for the "Open in {Provider}" link on the model card/detail menus. No raw
+ * URL is stored anywhere; both provider URL shapes are simple and stable enough to reconstruct
+ * (mirrors the exact same string-building already done at import time in importJobRunner.ts). */
+export function buildImportSourceUrl(provider: string | null, externalId: string | null): string | null {
+  if (!provider || !externalId) return null;
+  if (provider === "makerworld") return `https://makerworld.com/en/models/${externalId}`;
+  if (provider === "thingiverse") return `https://www.thingiverse.com/thing:${externalId}`;
+  return null;
+}
+
 async function findExistingImportedPrint(
   userId: string,
   source: { provider: string; externalId: string },

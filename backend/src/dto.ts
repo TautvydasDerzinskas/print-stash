@@ -4,6 +4,7 @@ import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
 import { modelPreviewGlbExists, modelPreviewGlbPath } from "./services/modelPreviewCache";
+import { buildImportSourceUrl } from "./services/importService";
 
 export type UserOut = {
   id: string;
@@ -109,6 +110,11 @@ export type PrintOut = {
   view_count: number;
   print_count: number;
   is_favorite: boolean;
+  // Null for uploads, zip/folder-scan imports, and anything not resolvable to a known provider
+  // -- see importService.ts's identifySourceModel/buildImportSourceUrl. source_url is the
+  // reconstructed original model page, for an "Open in {Provider}" link.
+  source_provider: string | null;
+  source_url: string | null;
 };
 
 export type FolderOut = {
@@ -261,6 +267,8 @@ export function toPrintOut(
     view_count: print.viewCount,
     print_count: print.printCount,
     is_favorite: print.favoritedAt !== null,
+    source_provider: print.sourceProvider,
+    source_url: buildImportSourceUrl(print.sourceProvider, print.sourceExternalId),
   };
 }
 
