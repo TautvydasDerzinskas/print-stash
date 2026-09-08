@@ -164,6 +164,77 @@ export const importsApi = {
     return res.json();
   },
 
+  listThingiverseLikesEntries: async (payload: ImportLinkPayload): Promise<ImportCollectionEntriesResult> => {
+    const res = await fetch(`${apiBase()}/import/thingiverse-likes/entries`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Could not load this user's likes");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  /** Registers a background job for the selected Things and returns immediately -- see
+   *  ImportJobContext.startThingiverseLikesImport, which follows up with the actual polling.
+   *  Every successful import lands in a shared "Thingiverse Likes" collection. */
+  fromThingiverseLikes: async (payload: ImportLinkPayload & { thing_ids: string[] }): Promise<{ job_id: string }> => {
+    const res = await fetch(`${apiBase()}/import/thingiverse-likes`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Thingiverse Likes import failed");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  listThingiverseCollectionEntries: async (payload: ImportLinkPayload): Promise<ImportCollectionEntriesResult> => {
+    const res = await fetch(`${apiBase()}/import/thingiverse-collection/entries`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Could not load this collection");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  /** Registers a background job for the selected Things and returns immediately -- see
+   *  ImportJobContext.startThingiverseCollectionImport, which follows up with the actual
+   *  polling. Every successful import lands in a PrintStash Collection named after the real
+   *  Thingiverse Collection name. */
+  fromThingiverseCollection: async (payload: ImportLinkPayload & { thing_ids: string[] }): Promise<{ job_id: string }> => {
+    const res = await fetch(`${apiBase()}/import/thingiverse-collection`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Thingiverse Collection import failed");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
   getActiveImportJob: async (): Promise<ImportJob | null> => {
     const res = await fetch(`${apiBase()}/import/jobs/active`, { headers: authHeaders() });
     if (res.status === 401) throw new UnauthorizedError();

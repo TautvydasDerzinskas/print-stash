@@ -11,9 +11,22 @@ import { downloadImportToTemp, importPrintFromUrl, inspectImportLink } from "../
 import { resolveMakerworldCookie } from "../services/importResolvers";
 import { extractMakerworldBearerToken } from "../services/makerworldCloudApi";
 import { fetchMakerworldCollectionEntries, fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "../services/makerworldCollections";
+import {
+  fetchThingiverseCollectionThings,
+  fetchThingiverseCollectionTitle,
+  fetchThingiverseUserLikes,
+  parseThingiverseCollectionUrl,
+  parseThingiverseLikesUrl,
+} from "../services/thingiverseApi";
+import { getThingiverseAccessToken } from "../services/settingsService";
 import { listZipEntries } from "../services/zipService";
 import { createJob, getActiveJob, getJob } from "../services/importJobService";
-import { runCollectionImportJob, runZipImportJob } from "../services/importJobRunner";
+import {
+  runCollectionImportJob,
+  runThingiverseCollectionImportJob,
+  runThingiverseLikesImportJob,
+  runZipImportJob,
+} from "../services/importJobRunner";
 import { toImportJobOut, toPrintOut } from "../dto";
 
 const router = Router();
@@ -90,9 +103,66 @@ router.post(
   }),
 );
 
-// ---- Background batch imports (MakerWorld collection / remote zip) ---------------------------
+router.post(
+  "/import/thingiverse-likes/entries",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(importRequestSchema, req.body);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parseThingiverseLikesUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Thingiverse Likes URL");
+    const accessToken = await getThingiverseAccessToken();
+    if (!accessToken) {
+      throw new HttpError(
+        503,
+        "Thingiverse import isn't configured for this instance yet -- ask an admin to add an Access Token in Admin Settings.",
+      );
+    }
+
+    const listing = await fetchThingiverseUserLikes(parsed.username, accessToken);
+    if (!listing.entries.length) throw new HttpError(400, "Could not load this user's likes -- check the username and try again");
+
+    res.json({
+      title: `${parsed.username}'s Thingiverse Likes`,
+      total: listing.entries.length,
+      truncated: listing.truncated,
+      entries: listing.entries.map((e) => ({ design_id: e.thingId, title: e.title, cover: e.cover })),
+    });
+  }),
+);
+
+router.post(
+  "/import/thingiverse-collection/entries",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(importRequestSchema, req.body);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parseThingiverseCollectionUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Thingiverse Collection URL");
+    const accessToken = await getThingiverseAccessToken();
+    if (!accessToken) {
+      throw new HttpError(
+        503,
+        "Thingiverse import isn't configured for this instance yet -- ask an admin to add an Access Token in Admin Settings.",
+      );
+    }
+
+    const [title, listing] = await Promise.all([
+      fetchThingiverseCollectionTitle(parsed.collectionId, accessToken),
+      fetchThingiverseCollectionThings(parsed.collectionId, accessToken),
+    ]);
+    if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
+
+    res.json({
+      title,
+      total: listing.entries.length,
+      truncated: listing.truncated,
+      entries: listing.entries.map((e) => ({ design_id: e.thingId, title: e.title, cover: e.cover })),
+    });
+  }),
+);
+
+// ---- Background batch imports (MakerWorld/Thingiverse collections, Thingiverse Likes, zip) ----
 //
-// Both of these can involve downloading dozens to hundreds of files, which used to happen
+// All three of these can involve downloading dozens to hundreds of files, which used to happen
 // synchronously inside the request -- long enough to run past reverse-proxy read timeouts with
 // no feedback. They now just register an ImportJob and return immediately; the actual work runs
 // in the background (importJobRunner.ts) and is polled via GET /import/jobs/:id. At most one
@@ -118,6 +188,44 @@ router.post(
       total: body.design_ids.length,
     });
     void runCollectionImportJob(job.id, req.userId!, { ...body, url });
+    res.status(202).json({ job_id: job.id });
+  }),
+);
+
+const thingiverseLikesImportRequestSchema = importRequestSchema.extend({ thing_ids: z.array(z.string()).min(1) });
+
+router.post(
+  "/import/thingiverse-likes",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(thingiverseLikesImportRequestSchema, req.body);
+    await assertNoActiveJob(req.userId!);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parseThingiverseLikesUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Thingiverse Likes URL");
+    const job = await createJob(req.userId!, "COLLECTION", {
+      sourceUrl: url,
+      provider: "thingiverse",
+      total: body.thing_ids.length,
+    });
+    void runThingiverseLikesImportJob(job.id, req.userId!, { ...body, url, username: parsed.username });
+    res.status(202).json({ job_id: job.id });
+  }),
+);
+
+router.post(
+  "/import/thingiverse-collection",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(thingiverseLikesImportRequestSchema, req.body);
+    await assertNoActiveJob(req.userId!);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parseThingiverseCollectionUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Thingiverse Collection URL");
+    const job = await createJob(req.userId!, "COLLECTION", {
+      sourceUrl: url,
+      provider: "thingiverse",
+      total: body.thing_ids.length,
+    });
+    void runThingiverseCollectionImportJob(job.id, req.userId!, { ...body, url, collectionId: parsed.collectionId });
     res.status(202).json({ job_id: job.id });
   }),
 );

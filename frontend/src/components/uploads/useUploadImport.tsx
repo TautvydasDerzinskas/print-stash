@@ -38,6 +38,35 @@ function isThingiverseThingUrl(url: string): boolean {
   }
 }
 
+/** A Thingiverse user's own "Likes" page (`thingiverse.com/{username}/likes`) -- the site's own
+ * bookmark/save mechanism many people use to collect prints worth making. Lists many Things
+ * rather than being one Thing page, so route it to the same collection picker MakerWorld
+ * collections use. */
+function isThingiverseLikesUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "thingiverse.com" && host !== "www.thingiverse.com") return false;
+    return /^\/[^/]+\/likes\/?$/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** A user-curated, named Thingiverse Collection (`thingiverse.com/{username}/collections/{id}`,
+ * optionally with a trailing `/things`) -- the site's other bookmark mechanism besides the
+ * automatic Likes list above. Also routed to the collection picker. */
+function isThingiverseCollectionUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "thingiverse.com" && host !== "www.thingiverse.com") return false;
+    return /\/collections\/\d+/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Every dropped/picked entry's relativePath equals its bare filename when the
 // selection has no folder structure. A webkitdirectory folder pick always
 // prefixes relativePath with the folder name, so this only ever fires for a
@@ -64,7 +93,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
   const zipPrompt = useZipImportPrompt();
   const collectionPrompt = useCollectionImportPrompt();
   const importModePrompt = useImportModePrompt();
-  const { startCollectionImport, startZipImport } = useImportJob();
+  const { startCollectionImport, startZipImport, startThingiverseLikesImport, startThingiverseCollectionImport } = useImportJob();
   const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
@@ -200,6 +229,60 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
             // + grid refresh follow once it actually finishes.
             try {
               await startCollectionImport({ ...payload, design_ids: designIds });
+            } catch (err) {
+              if (err instanceof UnauthorizedError) {
+                onUnauthorized?.();
+                return;
+              }
+              throw err;
+            }
+          },
+        });
+        return;
+      }
+
+      if (isThingiverseLikesUrl(url)) {
+        setImporting(false);
+        await collectionPrompt.prompt({
+          label: url,
+          loadEntries: async () => {
+            try {
+              return await importsApi.listThingiverseLikesEntries(payload);
+            } catch (err) {
+              if (err instanceof UnauthorizedError) onUnauthorized?.();
+              throw err;
+            }
+          },
+          onImportSelected: async (thingIds: string[]) => {
+            try {
+              await startThingiverseLikesImport({ ...payload, thing_ids: thingIds });
+            } catch (err) {
+              if (err instanceof UnauthorizedError) {
+                onUnauthorized?.();
+                return;
+              }
+              throw err;
+            }
+          },
+        });
+        return;
+      }
+
+      if (isThingiverseCollectionUrl(url)) {
+        setImporting(false);
+        await collectionPrompt.prompt({
+          label: url,
+          loadEntries: async () => {
+            try {
+              return await importsApi.listThingiverseCollectionEntries(payload);
+            } catch (err) {
+              if (err instanceof UnauthorizedError) onUnauthorized?.();
+              throw err;
+            }
+          },
+          onImportSelected: async (thingIds: string[]) => {
+            try {
+              await startThingiverseCollectionImport({ ...payload, thing_ids: thingIds });
             } catch (err) {
               if (err instanceof UnauthorizedError) {
                 onUnauthorized?.();

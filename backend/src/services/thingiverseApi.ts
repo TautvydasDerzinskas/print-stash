@@ -42,6 +42,22 @@ export function parseThingiverseThingUrl(url: string): { thingId: string } | nul
   return m2 ? { thingId: m2[1] } : null;
 }
 
+/** A user's own "Likes" page (`thingiverse.com/{username}/likes`) is how a lot of people keep a
+ * personal collection of prints worth making -- the site's own bookmark/save mechanism. Distinct
+ * from parseThingiverseThingUrl above: this identifies the *listing* page, not a single Thing. */
+export function parseThingiverseLikesUrl(url: string): { username: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== "thingiverse.com" && host !== "www.thingiverse.com") return null;
+  const m = parsed.pathname.match(/^\/([^/]+)\/likes\/?$/i);
+  return m ? { username: m[1] } : null;
+}
+
 async function fetchThingiverseApiJson(path: string, accessToken: string): Promise<unknown> {
   const url = `${THINGIVERSE_API_BASE}${path}${path.includes("?") ? "&" : "?"}access_token=${encodeURIComponent(accessToken)}`;
   const controller = new AbortController();
@@ -165,4 +181,93 @@ export async function resolveThingiverseThing(thingId: string, accessToken: stri
     : [];
 
   return { meta, plateFiles, galleryImages };
+}
+
+export type ThingiverseThingSummary = { thingId: string; title: string; cover: string | null };
+
+const LISTING_PAGE_SIZE = 30;
+const LISTING_MAX_ENTRIES = 300;
+
+/** Shared pager for any api.thingiverse.com endpoint that returns a plain JSON array of Thing
+ * summaries, page by page (`GET .../likes`, `GET /collections/{id}/things`, ... -- confirmed
+ * identical item shape for both live). Stops on a short/empty page or maxItems, whichever comes
+ * first; maxItems is a safety cap against a pathological/huge list, not a UX limit, mirroring
+ * fetchMakerworldCollectionEntries's same cap for MakerWorld collections. List entries carry no
+ * zip_data/categories/description -- that's fetched per-item at actual import time via
+ * resolveThingiverseThing, same as it already is for a single pasted Thing URL. */
+async function paginateThingiverseThings(
+  pathForPage: (page: number) => string,
+  accessToken: string,
+  maxItems: number,
+): Promise<{ entries: ThingiverseThingSummary[]; truncated: boolean }> {
+  const entries: ThingiverseThingSummary[] = [];
+  let page = 1;
+  for (;;) {
+    const data = await fetchThingiverseApiJson(pathForPage(page), accessToken);
+    if (!Array.isArray(data) || !data.length) break;
+    for (const item of data) {
+      if (!isRecord(item) || item.id == null) continue;
+      const name = typeof item.name === "string" && item.name.trim() ? item.name.trim() : `Thing ${item.id}`;
+      const cover =
+        (typeof item.thumbnail === "string" && item.thumbnail.trim() && item.thumbnail) ||
+        (typeof item.preview_image === "string" && item.preview_image.trim() && item.preview_image) ||
+        null;
+      entries.push({ thingId: String(item.id), title: name, cover });
+      if (entries.length >= maxItems) break;
+    }
+    if (data.length < LISTING_PAGE_SIZE || entries.length >= maxItems) break;
+    page += 1;
+  }
+  return { entries, truncated: entries.length >= maxItems };
+}
+
+export async function fetchThingiverseUserLikes(
+  username: string,
+  accessToken: string,
+  maxItems: number = LISTING_MAX_ENTRIES,
+): Promise<{ entries: ThingiverseThingSummary[]; truncated: boolean }> {
+  return paginateThingiverseThings(
+    (page) => `/users/${encodeURIComponent(username)}/likes?page=${page}&per_page=${LISTING_PAGE_SIZE}`,
+    accessToken,
+    maxItems,
+  );
+}
+
+/** A user-curated, named "Collection" -- the site's other bookmark mechanism besides the
+ * automatic per-account "Likes" list (see fetchThingiverseUserLikes above). Unlike Likes, a
+ * Collection has a real user-given name (fetchThingiverseCollectionTitle below), which is what
+ * lets the import land in a PrintStash Collection named after it instead of a generic bucket. */
+export async function fetchThingiverseCollectionThings(
+  collectionId: string,
+  accessToken: string,
+  maxItems: number = LISTING_MAX_ENTRIES,
+): Promise<{ entries: ThingiverseThingSummary[]; truncated: boolean }> {
+  return paginateThingiverseThings(
+    (page) => `/collections/${encodeURIComponent(collectionId)}/things?page=${page}&per_page=${LISTING_PAGE_SIZE}`,
+    accessToken,
+    maxItems,
+  );
+}
+
+export async function fetchThingiverseCollectionTitle(collectionId: string, accessToken: string): Promise<string | null> {
+  const data = await fetchThingiverseApiJson(`/collections/${encodeURIComponent(collectionId)}`, accessToken);
+  return isRecord(data) && typeof data.name === "string" && data.name.trim() ? data.name.trim() : null;
+}
+
+/** A user's own Collection page (`thingiverse.com/{username}/collections/{id}` or
+ * `.../collections/{id}/things`) -- distinct from parseThingiverseLikesUrl (the automatic Likes
+ * list) and parseThingiverseThingUrl (a single Thing). Only the numeric id is needed for the API
+ * calls above; the username in the URL is cosmetic (Thingiverse doesn't validate it matches the
+ * collection's actual owner when resolving by id). */
+export function parseThingiverseCollectionUrl(url: string): { collectionId: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.toLowerCase();
+  if (host !== "thingiverse.com" && host !== "www.thingiverse.com") return null;
+  const m = parsed.pathname.match(/\/collections\/(\d+)/i);
+  return m ? { collectionId: m[1] } : null;
 }

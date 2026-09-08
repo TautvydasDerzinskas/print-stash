@@ -11,6 +11,8 @@ import { fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "./
 import { downloadImportToTemp, importPrintFromUrl, type ImportRequestBody } from "./importService";
 import { upsertAuthorFromImport } from "./authorService";
 import { extractZipEntriesToPrints } from "./zipService";
+import { fetchThingiverseCollectionTitle } from "./thingiverseApi";
+import { getThingiverseAccessToken } from "./settingsService";
 import { HttpError } from "../utils/fileUtils";
 
 // Deliberately sequential (not a handful in parallel) with a pacing gap between requests --
@@ -24,6 +26,8 @@ const COLLECTION_IMPORT_CONCURRENCY = 1;
 
 type CollectionImportJobBody = ImportRequestBody & { design_ids: string[] };
 type ZipImportJobBody = ImportRequestBody & { entries: string[] };
+type ThingiverseLikesImportJobBody = ImportRequestBody & { thing_ids: string[]; username: string };
+type ThingiverseCollectionImportJobBody = ImportRequestBody & { thing_ids: string[]; collectionId: string };
 
 // Distinguishes *why* a single design failed, so a batch of many failures reads as one clear
 // cause instead of an opaque "N failed":
@@ -149,6 +153,135 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
   } catch (err) {
     await markJobFailed(jobId, err);
   }
+}
+
+/** Shared runner behind both Thingiverse batch import kinds (Likes and named Collections --
+ * see the two exported wrappers below): resolves the Access Token once, imports every Thing id
+ * with the same pacing/concurrency as the MakerWorld collection job above (same reasoning: a
+ * burst of requests reads as automated traffic, worth avoiding even though Thingiverse's
+ * official API hasn't shown the same anti-abuse behavior MakerWorld's has), then files every
+ * successful import into `collectionTitle` (created on first use, reused on every later import
+ * that resolves to the same title -- e.g. every Likes import shares one "Thingiverse Likes"
+ * collection; a named Thingiverse Collection gets/reuses a PrintStash Collection of that same
+ * name). `resolveCollectionTitle` runs after the per-item loop (not before) so a Collection's
+ * real name -- an extra API call -- is only fetched once real work has actually happened. */
+async function runThingiverseThingsImportJob(
+  jobId: string,
+  userId: string,
+  body: ImportRequestBody & { thing_ids: string[] },
+  resolveCollectionTitle: (accessToken: string) => Promise<string>,
+  sourceLabel: (collectionTitle: string) => string,
+): Promise<void> {
+  try {
+    const accessToken = await getThingiverseAccessToken();
+    if (!accessToken) {
+      throw new HttpError(
+        503,
+        "Thingiverse import isn't configured for this instance yet -- ask an admin to add an Access Token in Admin Settings.",
+      );
+    }
+
+    let imported = 0;
+    let alreadyInLibrary = 0;
+    let processed = 0;
+    let unavailable = 0;
+    let authFailed = 0;
+    const failed: string[] = [];
+    const successPrintIds: string[] = [];
+
+    await mapWithConcurrency(body.thing_ids, COLLECTION_IMPORT_CONCURRENCY, async (thingId, index) => {
+      const thingUrl = `https://www.thingiverse.com/thing:${thingId}`;
+      const itemBody: ImportRequestBody = {
+        url: thingUrl,
+        notes: body.notes ?? null,
+        tags: body.tags ?? [],
+        folder_id: body.folder_id ?? null,
+      };
+      try {
+        const { print, alreadyImported } = await importPrintFromUrl(userId, thingUrl, itemBody);
+        successPrintIds.push(print.id);
+        if (alreadyImported) alreadyInLibrary++;
+        else imported++;
+      } catch (err) {
+        failed.push(thingId);
+        const reason = classifyImportFailure(err);
+        if (reason === "unavailable") unavailable++;
+        else if (reason === "auth") authFailed++;
+      } finally {
+        processed++;
+        await updateJob(jobId, { processed, imported, alreadyInLibrary, failedCount: failed.length }).catch(() => undefined);
+      }
+      if (index < body.thing_ids.length - 1) await sleep(IMPORT_COLLECTION_DELAY_MS);
+    });
+
+    let resultCollectionId: string | null = null;
+    const collectionTitle = await resolveCollectionTitle(accessToken);
+    if (successPrintIds.length) {
+      const collection = await findOrCreateCollectionByName(userId, collectionTitle);
+      await addPrintsToCollection(collection.id, successPrintIds);
+      resultCollectionId = collection.id;
+    }
+
+    await updateJob(jobId, {
+      status: "DONE",
+      sourceLabel: collectionTitle,
+      resultCollectionId,
+      processed,
+      imported,
+      alreadyInLibrary,
+      failedCount: failed.length,
+    });
+
+    const bodyParts: string[] = [];
+    if (alreadyInLibrary) bodyParts.push(`${alreadyInLibrary} already in your library`);
+    const otherFailed = failed.length - unavailable - authFailed;
+    if (unavailable) bodyParts.push(`${unavailable} unavailable (private, deleted, or hidden)`);
+    if (authFailed) bodyParts.push(`${authFailed} failed because the configured Access Token was rejected`);
+    if (otherFailed) bodyParts.push(`${otherFailed} failed`);
+    const label = sourceLabel(collectionTitle);
+    await createNotification(userId, {
+      title: `Imported ${imported} of ${body.thing_ids.length} models from Thingiverse`,
+      body: bodyParts.length ? `From ${label} — ${bodyParts.join(", ")}.` : `From ${label}.`,
+      externalUrl: body.url,
+      internalPath: resultCollectionId ? `/models/collections/${resultCollectionId}` : null,
+    });
+  } catch (err) {
+    await markJobFailed(jobId, err);
+  }
+}
+
+/** Runs a Thingiverse user's automatic "Likes" batch import in the background -- see
+ * routes/imports.ts's POST /import/thingiverse-likes. Every successfully imported Thing lands in
+ * a shared "Thingiverse Likes" collection (one bucket for "things liked on Thingiverse", reused
+ * across every user's likes import -- deliberately, matching how the feature was asked for). */
+export async function runThingiverseLikesImportJob(jobId: string, userId: string, body: ThingiverseLikesImportJobBody): Promise<void> {
+  await runThingiverseThingsImportJob(
+    jobId,
+    userId,
+    body,
+    async () => "Thingiverse Likes",
+    () => `@${body.username}'s Likes`,
+  );
+}
+
+/** Runs a named Thingiverse Collection's batch import in the background -- see
+ * routes/imports.ts's POST /import/thingiverse-collection. Unlike Likes, a Collection has a real
+ * user-given name (fetchThingiverseCollectionTitle) -- successful imports land in a PrintStash
+ * Collection of that same name, created on first use and reused if the same Thingiverse
+ * Collection is ever imported again. */
+export async function runThingiverseCollectionImportJob(
+  jobId: string,
+  userId: string,
+  body: ThingiverseCollectionImportJobBody,
+): Promise<void> {
+  await runThingiverseThingsImportJob(
+    jobId,
+    userId,
+    body,
+    async (accessToken) =>
+      (await fetchThingiverseCollectionTitle(body.collectionId, accessToken)) ?? `Thingiverse Collection ${body.collectionId}`,
+    (collectionTitle) => `"${collectionTitle}"`,
+  );
 }
 
 /** Runs a remote zip's selected-entries batch import in the background -- see

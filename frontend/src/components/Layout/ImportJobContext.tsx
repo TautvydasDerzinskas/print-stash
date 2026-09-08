@@ -5,14 +5,19 @@ import { UnauthorizedError } from "../../api/client";
 
 type StartCollectionImportPayload = Parameters<typeof importsApi.fromCollection>[0];
 type StartZipImportPayload = Parameters<typeof importsApi.zipFromLink>[0];
+type StartThingiverseLikesImportPayload = Parameters<typeof importsApi.fromThingiverseLikes>[0];
+type StartThingiverseCollectionImportPayload = Parameters<typeof importsApi.fromThingiverseCollection>[0];
 
 type ImportJobContextValue = {
-  /** Non-null exactly while a batch import (MakerWorld collection or remote-zip) is running --
-   *  drives the global progress bar and disables the Add/Import/Upload menu app-wide. */
+  /** Non-null exactly while a batch import (MakerWorld collection, a Thingiverse Collection or
+   *  Likes list, or remote-zip) is running -- drives the global progress bar and disables the
+   *  Add/Import/Upload menu app-wide. */
   activeJob: ImportJob | null;
   isImporting: boolean;
   startCollectionImport: (payload: StartCollectionImportPayload) => Promise<void>;
   startZipImport: (payload: StartZipImportPayload) => Promise<void>;
+  startThingiverseLikesImport: (payload: StartThingiverseLikesImportPayload) => Promise<void>;
+  startThingiverseCollectionImport: (payload: StartThingiverseCollectionImportPayload) => Promise<void>;
 };
 
 const ImportJobContext = createContext<ImportJobContextValue | null>(null);
@@ -95,9 +100,30 @@ export function ImportJobProvider({
     startPolling(job_id);
   }, [startPolling]);
 
+  const startThingiverseLikesImport = useCallback(async (payload: StartThingiverseLikesImportPayload) => {
+    const { job_id } = await importsApi.fromThingiverseLikes(payload);
+    const job = await importsApi.getImportJob(job_id);
+    setActiveJob(job);
+    startPolling(job_id);
+  }, [startPolling]);
+
+  const startThingiverseCollectionImport = useCallback(async (payload: StartThingiverseCollectionImportPayload) => {
+    const { job_id } = await importsApi.fromThingiverseCollection(payload);
+    const job = await importsApi.getImportJob(job_id);
+    setActiveJob(job);
+    startPolling(job_id);
+  }, [startPolling]);
+
   const value = useMemo(
-    () => ({ activeJob, isImporting: activeJob !== null, startCollectionImport, startZipImport }),
-    [activeJob, startCollectionImport, startZipImport],
+    () => ({
+      activeJob,
+      isImporting: activeJob !== null,
+      startCollectionImport,
+      startZipImport,
+      startThingiverseLikesImport,
+      startThingiverseCollectionImport,
+    }),
+    [activeJob, startCollectionImport, startZipImport, startThingiverseLikesImport, startThingiverseCollectionImport],
   );
 
   return (
