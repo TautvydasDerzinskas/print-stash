@@ -41,9 +41,9 @@ function hasMeta(folder: Folder): boolean {
   return Boolean(
     folder.meta_title ||
       folder.meta_description ||
-      folder.makerworld_cat_id ||
-      folder.thingiverse_cat_id ||
-      folder.printables_cat_id,
+      folder.makerworld_cat_ids ||
+      folder.thingiverse_cat_ids ||
+      folder.printables_cat_ids,
   );
 }
 

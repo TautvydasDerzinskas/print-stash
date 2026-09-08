@@ -44,21 +44,25 @@ model Folder {
   position         Int      @default(0)
   metaTitle        String?
   metaDescription  String?
-  // When set, an import from that site whose own category id matches one of these auto-lands
-  // in this folder (see importService.ts's resolveFolderIdByCategory), unless the caller already
-  // picked a folder explicitly. Each site's category ids are independent integer namespaces.
-  makerworldCatId  Int?
-  thingiverseCatId Int?
-  printablesCatId  Int?
-  prints           Print[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  // When set, an import from that site whose own category id matches ANY of these auto-lands
+  // in this folder (see importService.ts's resolveFolderIdByCategory -- a Prisma `hasSome`
+  // overlap check), unless the caller already picked a folder explicitly. Each site's category
+  // ids are independent integer namespaces. A folder can list several ids (e.g. a parent
+  // category and a couple of its subcategories) since one folder may reasonably want to catch
+  // more than one upstream category -- entered/edited as a "800;71;1001"-style semicolon-
+  // separated string (see routes/folders.ts's parseCatIdsInput), stored as a real int array.
+  makerworldCatIds  Int[] @default([])
+  thingiverseCatIds Int[] @default([])
+  printablesCatIds  Int[] @default([])
+  prints            Print[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@index([userId, parentId, position])
   @@index([tags], type: Gin)
-  @@index([userId, makerworldCatId])
-  @@index([userId, thingiverseCatId])
-  @@index([userId, printablesCatId])
+  @@index([makerworldCatIds], type: Gin)
+  @@index([thingiverseCatIds], type: Gin)
+  @@index([printablesCatIds], type: Gin)
 }
 
 model Print {

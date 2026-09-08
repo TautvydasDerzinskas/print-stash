@@ -120,11 +120,13 @@ describe("importPrintFromUrl -- Thingiverse", () => {
 
   it("imports a Thing's model files as plates, matches category, and attaches metadata + images", async () => {
     await setThingiverseAccessToken(ACCESS_TOKEN);
-    // A folder configured to auto-match this Thing's Thingiverse category (129, "3D Printing
-    // Tests") -- proves category matching, previously believed infeasible against the internal
-    // v2 API, actually works against the official API's separate categories_url.
+    // A folder configured with several category ids, only one of which (129, "3D Printing
+    // Tests") actually matches this Thing -- proves both that category matching works against
+    // the official API's separate categories_url (previously believed infeasible against the
+    // internal v2 API), and that a folder listing multiple ids matches on ANY overlap, not just
+    // an exact single-id equality.
     const folder = await prisma.folder.create({
-      data: { userId, name: "Thingiverse Tests", tags: [], thingiverseCatId: CATEGORY_ID },
+      data: { userId, name: "Thingiverse Tests", tags: [], thingiverseCatIds: [999001, CATEGORY_ID, 999002] },
     });
 
     global.fetch = mockThingiverseFetch();

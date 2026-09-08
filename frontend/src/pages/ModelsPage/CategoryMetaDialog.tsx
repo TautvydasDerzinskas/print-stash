@@ -7,6 +7,7 @@ import DialogActions from "@mui/material/DialogActions";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
+import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
 import type { Folder, FolderMetaInput } from "../../api/folders";
 
@@ -16,41 +17,40 @@ type Props = {
   onSave: (meta: FolderMetaInput) => Promise<void>;
 };
 
-/** Parses a category-id field: blank stays null, anything else must be a positive integer (kept
- *  as free text while typing so "12" isn't clobbered mid-edit; validated only on save). */
-function parseCatId(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  const value = Number(trimmed);
-  return Number.isInteger(value) && value > 0 ? value : null;
-}
-
-/** Meta title/description/site-category-id editor for one category, opened from its "details"
+/** Meta title/description/site-category-ids editor for one category, opened from its "details"
  *  icon in the manager. Saving with all fields blank clears the category's metadata entirely.
- *  The three `*CatId` fields drive auto-categorization on import (see importService.ts's
+ *  The three `*CatIds` fields drive auto-categorization on import (see importService.ts's
  *  resolveFolderIdByCategory on the backend): when an imported model's own site category id
- *  matches one set here, it lands in this category automatically. */
+ *  matches ANY id listed here, it lands in this category automatically -- a folder can list
+ *  several ids per site (e.g. a parent category plus a couple of its subcategories), entered as
+ *  plain numbers separated by ";" (parsed and validated server-side by routes/folders.ts's
+ *  parseCatIdsInput). A validation failure (a typo, say) is shown inline here and keeps the
+ *  dialog open with the edits intact, rather than closing and discarding them. */
 export default function CategoryMetaDialog({ folder, onClose, onSave }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const untitledLabel = t("models:categories.untitled");
   const [title, setTitle] = useState(folder.meta_title ?? "");
   const [description, setDescription] = useState(folder.meta_description ?? "");
-  const [makerworldCatId, setMakerworldCatId] = useState(folder.makerworld_cat_id?.toString() ?? "");
-  const [thingiverseCatId, setThingiverseCatId] = useState(folder.thingiverse_cat_id?.toString() ?? "");
-  const [printablesCatId, setPrintablesCatId] = useState(folder.printables_cat_id?.toString() ?? "");
+  const [makerworldCatIds, setMakerworldCatIds] = useState(folder.makerworld_cat_ids);
+  const [thingiverseCatIds, setThingiverseCatIds] = useState(folder.thingiverse_cat_ids);
+  const [printablesCatIds, setPrintablesCatIds] = useState(folder.printables_cat_ids);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
       await onSave({
         metaTitle: title.trim() || null,
         metaDescription: description.trim() || null,
-        makerworldCatId: parseCatId(makerworldCatId),
-        thingiverseCatId: parseCatId(thingiverseCatId),
-        printablesCatId: parseCatId(printablesCatId),
+        makerworldCatIds,
+        thingiverseCatIds,
+        printablesCatIds,
       });
       onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("models:errors.updateCategoryMetaFailed"));
     } finally {
       setSaving(false);
     }
@@ -85,29 +85,33 @@ export default function CategoryMetaDialog({ folder, onClose, onSave }: Props) {
           <Stack direction="row" spacing={2}>
             <TextField
               label={t("models:categories.manager.makerworldCatIdLabel")}
-              type="number"
+              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
+              helperText={t("models:categories.manager.catIdsHelp")}
               fullWidth
-              value={makerworldCatId}
-              onChange={e => setMakerworldCatId(e.target.value)}
+              value={makerworldCatIds}
+              onChange={e => setMakerworldCatIds(e.target.value)}
               disabled={saving}
             />
             <TextField
               label={t("models:categories.manager.thingiverseCatIdLabel")}
-              type="number"
+              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
+              helperText={t("models:categories.manager.catIdsHelp")}
               fullWidth
-              value={thingiverseCatId}
-              onChange={e => setThingiverseCatId(e.target.value)}
+              value={thingiverseCatIds}
+              onChange={e => setThingiverseCatIds(e.target.value)}
               disabled={saving}
             />
             <TextField
               label={t("models:categories.manager.printablesCatIdLabel")}
-              type="number"
+              placeholder={t("models:categories.manager.catIdsPlaceholder") ?? undefined}
+              helperText={t("models:categories.manager.catIdsHelp")}
               fullWidth
-              value={printablesCatId}
-              onChange={e => setPrintablesCatId(e.target.value)}
+              value={printablesCatIds}
+              onChange={e => setPrintablesCatIds(e.target.value)}
               disabled={saving}
             />
           </Stack>
+          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>

@@ -119,9 +119,12 @@ export type FolderOut = {
   position: number;
   meta_title: string | null;
   meta_description: string | null;
-  makerworld_cat_id: number | null;
-  thingiverse_cat_id: number | null;
-  printables_cat_id: number | null;
+  // Semicolon-separated, e.g. "800;71;1001" -- same format the category manager dialog reads
+  // and writes (see routes/folders.ts's parseCatIdsInput), so the frontend can bind the field
+  // straight to a text input with no extra parsing. Empty string when none are set.
+  makerworld_cat_ids: string;
+  thingiverse_cat_ids: string;
+  printables_cat_ids: string;
 };
 
 function plateThumbUrl(plateId: string): string | null {
@@ -315,6 +318,10 @@ export function toSystemCollectionOut(
   };
 }
 
+function formatCatIds(ids: number[]): string {
+  return ids.join(";");
+}
+
 export function toFolderOut(folder: Folder): FolderOut {
   return {
     id: folder.id,
@@ -324,9 +331,9 @@ export function toFolderOut(folder: Folder): FolderOut {
     position: folder.position,
     meta_title: folder.metaTitle,
     meta_description: folder.metaDescription,
-    makerworld_cat_id: folder.makerworldCatId,
-    thingiverse_cat_id: folder.thingiverseCatId,
-    printables_cat_id: folder.printablesCatId,
+    makerworld_cat_ids: formatCatIds(folder.makerworldCatIds),
+    thingiverse_cat_ids: formatCatIds(folder.thingiverseCatIds),
+    printables_cat_ids: formatCatIds(folder.printablesCatIds),
   };
 }
 

@@ -607,9 +607,11 @@
         "metaDialogTitle": "Details — {{name}}",
         "metaTitleLabel": "Meta title",
         "metaDescriptionLabel": "Meta description",
-        "makerworldCatIdLabel": "MakerWorld category ID",
-        "thingiverseCatIdLabel": "Thingiverse category ID",
-        "printablesCatIdLabel": "Printables category ID"
+        "makerworldCatIdLabel": "MakerWorld category IDs",
+        "thingiverseCatIdLabel": "Thingiverse category IDs",
+        "printablesCatIdLabel": "Printables category IDs",
+        "catIdsPlaceholder": "e.g. 800;71;1001",
+        "catIdsHelp": "Separate multiple IDs with \";\" -- matches if an import's category is any of these"
       }
     }
   }

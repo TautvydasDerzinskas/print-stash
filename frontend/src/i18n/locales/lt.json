@@ -608,9 +608,11 @@
         "metaDialogTitle": "Informacija — {{name}}",
         "metaTitleLabel": "Meta pavadinimas",
         "metaDescriptionLabel": "Meta aprašymas",
-        "makerworldCatIdLabel": "MakerWorld kategorijos ID",
-        "thingiverseCatIdLabel": "Thingiverse kategorijos ID",
-        "printablesCatIdLabel": "Printables kategorijos ID"
+        "makerworldCatIdLabel": "MakerWorld kategorijų ID",
+        "thingiverseCatIdLabel": "Thingiverse kategorijų ID",
+        "printablesCatIdLabel": "Printables kategorijų ID",
+        "catIdsPlaceholder": "pvz. 800;71;1001",
+        "catIdsHelp": "Kelis ID atskirkite „;“ -- atitiks, jei importo kategorija sutampa su bet kuriuo iš jų"
       }
     }
   }

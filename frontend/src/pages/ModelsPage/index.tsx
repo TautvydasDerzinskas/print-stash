@@ -159,7 +159,12 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
       await foldersApi.updateMeta(id, meta);
       onFoldersChanged();
     } catch (err) {
-      handleError(err, t("models:errors.updateCategoryMetaFailed"));
+      // Unlike the other handlers here, this one rethrows anything but the auth-redirect case:
+      // CategoryMetaDialog shows the specific message (e.g. a bad category-id string naming the
+      // exact typo) inline and keeps the dialog open with the user's edits intact, instead of a
+      // generic alert() that closes the dialog and discards what they typed either way.
+      if (handleError(err)) return;
+      throw err;
     }
   };
 

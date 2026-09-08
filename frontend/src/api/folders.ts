@@ -1,5 +1,5 @@
 import { authHeaders } from "../utils/auth";
-import { apiBase, assertOk } from "./client";
+import { apiBase, assertOk, readErrorMessage, UnauthorizedError } from "./client";
 
 export type Folder = {
   id: string;
@@ -9,17 +9,20 @@ export type Folder = {
   position: number;
   meta_title: string | null;
   meta_description: string | null;
-  makerworld_cat_id: number | null;
-  thingiverse_cat_id: number | null;
-  printables_cat_id: number | null;
+  // Semicolon-separated, e.g. "800;71;1001" -- a folder can match more than one upstream
+  // category id per site (see backend's routes/folders.ts parseCatIdsInput). Empty string when
+  // none are set.
+  makerworld_cat_ids: string;
+  thingiverse_cat_ids: string;
+  printables_cat_ids: string;
 };
 
 export type FolderMetaInput = {
   metaTitle: string | null;
   metaDescription: string | null;
-  makerworldCatId: number | null;
-  thingiverseCatId: number | null;
-  printablesCatId: number | null;
+  makerworldCatIds: string;
+  thingiverseCatIds: string;
+  printablesCatIds: string;
 };
 
 export const foldersApi = {
@@ -62,12 +65,17 @@ export const foldersApi = {
       body: JSON.stringify({
         meta_title: meta.metaTitle,
         meta_description: meta.metaDescription,
-        makerworld_cat_id: meta.makerworldCatId,
-        thingiverse_cat_id: meta.thingiverseCatId,
-        printables_cat_id: meta.printablesCatId,
+        makerworld_cat_ids: meta.makerworldCatIds,
+        thingiverse_cat_ids: meta.thingiverseCatIds,
+        printables_cat_ids: meta.printablesCatIds,
       }),
     });
-    assertOk(res, "Update category details failed");
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      // A bad category-id string (e.g. a typo) gets a specific message from the backend --
+      // assertOk's fixed fallback text would swallow that, leaving the user without a reason.
+      throw new Error(await readErrorMessage(res, "Update category details failed"));
+    }
     return res.json();
   },
 

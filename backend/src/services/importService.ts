@@ -393,16 +393,19 @@ export async function attachImportedPreviewImages(
 }
 
 const CATEGORY_SITE_FOLDER_FIELD = {
-  makerworld: "makerworldCatId",
-  thingiverse: "thingiverseCatId",
-  printables: "printablesCatId",
+  makerworld: "makerworldCatIds",
+  thingiverse: "thingiverseCatIds",
+  printables: "printablesCatIds",
 } as const;
 
 /** When the caller didn't pick a folder explicitly, checks whether any of the user's folders
- * declared a `*CatId` for this source site matching one of the model's own category ids -- if
- * so, the import auto-lands there instead of staying uncategorized. Site-scoped (each site's
- * category ids are an independent namespace) and best-effort: a lookup failure just leaves the
- * print uncategorized rather than failing the import. */
+ * declared a `*CatIds` list for this source site overlapping the model's own category ids -- if
+ * so, the import auto-lands there instead of staying uncategorized. A folder can list several
+ * ids per site (e.g. a parent category plus a couple of its subcategories -- see
+ * routes/folders.ts's parseCatIdsInput), so this is a set-overlap ("hasSome") check, not an
+ * equality one. Site-scoped (each site's category ids are an independent namespace) and
+ * best-effort: a lookup failure just leaves the print uncategorized rather than failing the
+ * import. */
 async function resolveFolderIdByCategory(
   userId: string,
   categorySite: ImportedPageMetadata["categorySite"],
@@ -411,7 +414,7 @@ async function resolveFolderIdByCategory(
   if (!categorySite || !siteCategoryIds.length) return null;
   const field = CATEGORY_SITE_FOLDER_FIELD[categorySite];
   const folder = await prisma.folder.findFirst({
-    where: { userId, [field]: { in: siteCategoryIds } },
+    where: { userId, [field]: { hasSome: siteCategoryIds } },
     orderBy: { position: "asc" },
   });
   return folder?.id ?? null;

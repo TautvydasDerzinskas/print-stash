@@ -87,13 +87,48 @@ router.patch(
   }),
 );
 
-const catIdField = z.number().int().positive().nullable().optional();
+const MAX_CAT_IDS = 50;
+
+/** Parses the category manager's "800;71;1001"-style text field into the int array actually
+ * stored on Folder.*CatIds -- a folder can list several ids per site (e.g. a parent category
+ * plus a couple of its subcategories), matched by overlap at import time (see importService.ts's
+ * resolveFolderIdByCategory). Blank/whitespace-only input clears the field. Stray/duplicate
+ * separators are tolerated (e.g. "800;;71;" or "800;800;71") since that's an easy typo to make
+ * in a free-text field and there's nothing genuinely ambiguous about it; anything that isn't a
+ * positive whole number is rejected with a message naming the exact bad token, so a typo doesn't
+ * silently vanish instead of erroring. */
+function parseCatIdsInput(raw: string | null | undefined): number[] {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) return [];
+  const tokens = trimmed.split(";").map((t) => t.trim()).filter(Boolean);
+  const ids: number[] = [];
+  const seen = new Set<number>();
+  for (const token of tokens) {
+    if (!/^\d+$/.test(token) || token.length > 15) {
+      throw new HttpError(400, `Invalid category id "${token}" -- use numbers separated by ";", e.g. 800;71;1001`);
+    }
+    const id = Number(token);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new HttpError(400, `Invalid category id "${token}" -- must be a positive whole number`);
+    }
+    if (!seen.has(id)) {
+      seen.add(id);
+      ids.push(id);
+    }
+  }
+  if (ids.length > MAX_CAT_IDS) {
+    throw new HttpError(400, `Too many category ids -- at most ${MAX_CAT_IDS} allowed`);
+  }
+  return ids;
+}
+
+const catIdsField = z.string().trim().max(1000).nullable().optional();
 const folderMetaSchema = z.object({
   meta_title: z.string().trim().max(200).nullable().optional(),
   meta_description: z.string().trim().max(2000).nullable().optional(),
-  makerworld_cat_id: catIdField,
-  thingiverse_cat_id: catIdField,
-  printables_cat_id: catIdField,
+  makerworld_cat_ids: catIdsField,
+  thingiverse_cat_ids: catIdsField,
+  printables_cat_ids: catIdsField,
 });
 
 router.patch(
@@ -107,9 +142,9 @@ router.patch(
       data: {
         metaTitle: body.meta_title || null,
         metaDescription: body.meta_description || null,
-        makerworldCatId: body.makerworld_cat_id ?? null,
-        thingiverseCatId: body.thingiverse_cat_id ?? null,
-        printablesCatId: body.printables_cat_id ?? null,
+        makerworldCatIds: parseCatIdsInput(body.makerworld_cat_ids),
+        thingiverseCatIds: parseCatIdsInput(body.thingiverse_cat_ids),
+        printablesCatIds: parseCatIdsInput(body.printables_cat_ids),
       },
     });
     res.json(toFolderOut(updated));

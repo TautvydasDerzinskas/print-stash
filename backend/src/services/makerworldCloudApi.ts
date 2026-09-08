@@ -255,7 +255,7 @@ function extractGalleryImages(design: Record<string, unknown>): MakerworldGaller
 
 /** design.categories -- a flat array of `{id, name, ...}` objects, most-specific first (e.g.
  * "Cosplay Weapons" then its parent "Props & Cosplays"). Used to auto-land the import into a
- * Folder whose makerworldCatId matches one of these (see importService.ts's
+ * Folder whose makerworldCatIds overlaps one of these (see importService.ts's
  * resolveFolderIdByCategory); every id is kept, not just the first, so a folder configured for
  * either the specific or the parent category still matches. */
 function extractCategoryIds(design: Record<string, unknown>): number[] {
