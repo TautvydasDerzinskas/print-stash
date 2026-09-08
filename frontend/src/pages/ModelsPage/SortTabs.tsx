@@ -25,7 +25,8 @@ export default function SortTabs({ value, onChange }: Props) {
           onClick={() => onChange(mode)}
           sx={{
             cursor: "pointer",
-            fontWeight: value === mode ? 700 : 400,
+            fontSize: 14,
+            fontWeight: value === mode ? 700 : 500,
             color: value === mode ? "primary.main" : "text.secondary",
             "&:hover": { color: "primary.main" },
           }}

@@ -139,7 +139,9 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
       {collection.description && (
         <Typography variant="body2" color="text.secondary">{collection.description}</Typography>
       )}
-      <SortTabs value={sortMode} onChange={setSortMode} />
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <SortTabs value={sortMode} onChange={setSortMode} />
+      </Box>
       {items.length ? (
         <Stack spacing={2}>
           <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>

@@ -13,6 +13,7 @@ import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
 import CategoriesPanel from "./CategoriesPanel";
+import CategoryBanner from "./CategoryBanner";
 import ModelCard from "./ModelCard";
 import SortTabs from "./SortTabs";
 
@@ -185,58 +186,65 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
   };
 
   return (
-    <Stack direction="row" spacing={2} alignItems="flex-start">
-      <CategoriesPanel
-        folders={folders}
-        loading={foldersLoading}
-        selectedId={folderId}
-        onSelect={onSelectFolder}
-        onCreate={createCategory}
-        onRename={renameCategory}
-        onDelete={deleteCategory}
-        onReorder={reorderCategories}
-        onUpdateMeta={updateCategoryMeta}
-      />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ mb: 2 }}>
-          <SortTabs value={sortMode} onChange={setSortMode} />
-        </Box>
-        {loading ? (
-          <Stack alignItems="center" sx={{ py: 8 }}>
-            <CircularProgress size={22} />
-          </Stack>
-        ) : items.length ? (
-          <Stack spacing={2}>
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
-              {items.map(item => (
-                <ModelCard
-                  key={item.id}
-                  item={item}
-                  theme={theme}
-                  previewMode={previewMode}
-                  onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
-                  onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
-                  onUnauthorized={onUnauthorized}
-                />
-              ))}
-            </Box>
-            {hasMore && (
-              <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
-                {loadingMore && (
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
-                    <CircularProgress size={14} />
-                    <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
-                  </Stack>
-                )}
-              </Stack>
-            )}
-          </Stack>
-        ) : (
-          <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
-            <Typography variant="body2">{t("models:grid.empty")}</Typography>
-          </Stack>
-        )}
+    <Stack spacing={2}>
+      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+        <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
+      <Stack direction="row" spacing={2} alignItems="flex-start">
+        <CategoriesPanel
+          folders={folders}
+          loading={foldersLoading}
+          selectedId={folderId}
+          onSelect={onSelectFolder}
+          onCreate={createCategory}
+          onRename={renameCategory}
+          onDelete={deleteCategory}
+          onReorder={reorderCategories}
+          onUpdateMeta={updateCategoryMeta}
+        />
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          {selectedFolder?.meta_title && (
+            <Box sx={{ mb: 2 }}>
+              <CategoryBanner folder={selectedFolder} />
+            </Box>
+          )}
+          {loading ? (
+            <Stack alignItems="center" sx={{ py: 8 }}>
+              <CircularProgress size={22} />
+            </Stack>
+          ) : items.length ? (
+            <Stack spacing={2}>
+              <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+                {items.map(item => (
+                  <ModelCard
+                    key={item.id}
+                    item={item}
+                    theme={theme}
+                    previewMode={previewMode}
+                    onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
+                    onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
+                    onUnauthorized={onUnauthorized}
+                  />
+                ))}
+              </Box>
+              {hasMore && (
+                <Stack ref={loadMoreSentinelRef} direction="row" justifyContent="center" sx={{ py: 1 }}>
+                  {loadingMore && (
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ color: "text.secondary" }}>
+                      <CircularProgress size={14} />
+                      <Typography variant="caption">{t("models:grid.loadingMore")}</Typography>
+                    </Stack>
+                  )}
+                </Stack>
+              )}
+            </Stack>
+          ) : (
+            <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
+              <Typography variant="body2">{t("models:grid.empty")}</Typography>
+            </Stack>
+          )}
+        </Box>
+      </Stack>
     </Stack>
   );
 }
