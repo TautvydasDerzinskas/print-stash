@@ -238,7 +238,7 @@ router.post(
     );
     res.json({
       title: listing.title,
-      total: listing.entries.length,
+      total: listing.total,
       truncated: listing.truncated,
       entries: listing.entries.map((e) => ({
         design_id: e.modelId,

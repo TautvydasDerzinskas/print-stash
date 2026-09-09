@@ -70,6 +70,7 @@ describe("fetchPrintablesCollectionEntries", () => {
 
     expect(listing.title).toBe(COLLECTION_TITLE);
     expect(listing.truncated).toBe(false);
+    expect(listing.total).toBe(5);
     expect(listing.entries).toEqual([
       { modelId: "1", title: "Collected model 1", cover: "https://media.printables.com/media/prints/1/title.jpg" },
       { modelId: "2", title: "Collected model 2", cover: "https://media.printables.com/media/prints/2/title.jpg" },
@@ -86,6 +87,11 @@ describe("fetchPrintablesCollectionEntries", () => {
 
     expect(listing.title).toBe(COLLECTION_TITLE);
     expect(listing.truncated).toBe(true);
+    // Regression guard: `total` must be the real collection size (34), not entries.length (11)
+    // -- otherwise the "Showing 11 of X" truncation notice reads "Showing 11 of 11" and hides
+    // that there were ever more than 11 models to begin with (exactly what a real 17-model
+    // collection surfaced with no FlareSolverr configured).
+    expect(listing.total).toBe(34);
     expect(listing.entries).toHaveLength(11);
   });
 
@@ -97,6 +103,7 @@ describe("fetchPrintablesCollectionEntries", () => {
     expect(listing.title).toBeNull();
     expect(listing.entries).toEqual([]);
     expect(listing.truncated).toBe(false);
+    expect(listing.total).toBe(0);
   });
 });
 
@@ -133,9 +140,25 @@ describe("POST /import/printables-collection/entries", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.title).toBe(COLLECTION_TITLE);
+    expect(res.body.total).toBe(1);
+    expect(res.body.truncated).toBe(false);
     expect(res.body.entries).toEqual([
       { design_id: "1", title: "Collected model 1", cover: "https://media.printables.com/media/prints/1/title.jpg", already_imported: false },
     ]);
+  });
+
+  it("reports the real collection size as `total`, not the truncated entry count, when over the 11-item cap", async () => {
+    global.fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async () => collectionGraphqlResponse(17, 11)) as unknown as typeof fetch;
+
+    const res = await request(app)
+      .post("/api/import/printables-collection/entries")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ url: `https://www.printables.com/@joshuaargh/collections/${COLLECTION_ID}`, tags: [] });
+
+    expect(res.status).toBe(200);
+    expect(res.body.truncated).toBe(true);
+    expect(res.body.total).toBe(17);
+    expect(res.body.entries).toHaveLength(11);
   });
 
   it("flags an entry already in the user's library instead of letting it be re-selected", async () => {

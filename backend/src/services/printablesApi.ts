@@ -340,26 +340,31 @@ export async function fetchPrintablesCollectionTitle(collectionId: string): Prom
 export async function fetchPrintablesCollectionEntries(
   collectionId: string,
   pageUrl: string,
-): Promise<{ title: string | null; entries: PrintablesCollectionEntry[]; truncated: boolean }> {
+): Promise<{ title: string | null; entries: PrintablesCollectionEntry[]; total: number; truncated: boolean }> {
   const data = (await fetchPrintablesGraphql(COLLECTION_QUERY, { id: collectionId })) as
     | { data?: { collection?: Record<string, unknown> } }
     | null;
   const collection = data?.data?.collection;
-  if (!isRecord(collection)) return { title: null, entries: [], truncated: false };
+  if (!isRecord(collection)) return { title: null, entries: [], total: 0, truncated: false };
 
   const title = typeof collection.name === "string" && collection.name.trim() ? collection.name.trim() : null;
   const printsCount = typeof collection.printsCount === "number" ? collection.printsCount : null;
   const preview = Array.isArray(collection.thumbnails11)
     ? collection.thumbnails11.map(entryFromThumbnail).filter((e): e is PrintablesCollectionEntry => e !== null)
     : [];
+  // The real collection size, independent of how many entries actually came back below --
+  // callers (see routes/imports.ts) must report this as `total`, not entries.length, or the
+  // "Showing 11 of X" truncation notice silently reads "Showing 11 of 11" and hides that there
+  // were ever more than 11 models to begin with.
+  const total = printsCount ?? preview.length;
 
   if (printsCount === null || preview.length >= printsCount) {
-    return { title, entries: preview, truncated: false };
+    return { title, entries: preview, total, truncated: false };
   }
 
   const scraped = await scrapeFullPrintablesCollection(pageUrl);
   if (scraped && scraped.length > preview.length) {
-    return { title, entries: scraped, truncated: scraped.length < printsCount };
+    return { title, entries: scraped, total, truncated: scraped.length < printsCount };
   }
-  return { title, entries: preview, truncated: true };
+  return { title, entries: preview, total, truncated: true };
 }
