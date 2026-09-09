@@ -14,33 +14,23 @@ export type UserWithPrintCount = {
   role: "ADMIN" | "MEMBER";
   printCount: number;
   collectionCount: number;
-  thingiverseCount: number;
+  makerworldConnected: boolean;
   createdAt: Date;
 };
 
 export async function listUsersWithPrintCounts(): Promise<UserWithPrintCount[]> {
-  const [users, thingiverseCounts] = await Promise.all([
-    prisma.user.findMany({
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        email: true,
-        displayName: true,
-        role: true,
-        createdAt: true,
-        _count: { select: { prints: true, collections: true } },
-      },
-    }),
-    // A per-user count of prints sourced from Thingiverse -- the closest analog print-stash has
-    // to youtube-mp3-vault's per-user "Scrobbling" column, since Thingiverse integration here is
-    // an import provider (Print.sourceProvider) rather than a per-user toggle.
-    prisma.print.groupBy({
-      by: ["userId"],
-      where: { sourceProvider: "thingiverse" },
-      _count: true,
-    }),
-  ]);
-  const thingiverseByUser = new Map(thingiverseCounts.map((t) => [t.userId, t._count]));
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      role: true,
+      createdAt: true,
+      makerworldCookie: true,
+      _count: { select: { prints: true, collections: true } },
+    },
+  });
   return users.map((u) => ({
     id: u.id,
     email: u.email,
@@ -49,7 +39,7 @@ export async function listUsersWithPrintCounts(): Promise<UserWithPrintCount[]> 
     createdAt: u.createdAt,
     printCount: u._count.prints,
     collectionCount: u._count.collections,
-    thingiverseCount: thingiverseByUser.get(u.id) ?? 0,
+    makerworldConnected: Boolean(u.makerworldCookie),
   }));
 }
 

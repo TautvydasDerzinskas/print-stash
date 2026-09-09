@@ -130,30 +130,6 @@ export async function setSmtpSettings(patch: Partial<SmtpSettings>): Promise<Smt
   return next;
 }
 
-export type DatabaseInfo = {
-  provider: string;
-  host: string | null;
-  port: number | null;
-  database: string | null;
-  user: string | null;
-};
-
-// Read-only: reflects whatever DATABASE_URL the process was actually started with. Unlike the
-// settings above, there's no DB-backed override -- switching databases means restarting the
-// process against a different env var, not something an admin UI action could safely do (the
-// row it would need to read that override from lives in the database being switched away from).
-export function getDatabaseInfo(): DatabaseInfo {
-  const raw = process.env.DATABASE_URL || "";
-  try {
-    const url = new URL(raw);
-    return {
-      provider: url.protocol.replace(/:$/, "") || "postgresql",
-      host: url.hostname || null,
-      port: url.port ? Number(url.port) : null,
-      database: url.pathname.replace(/^\//, "") || null,
-      user: url.username ? decodeURIComponent(url.username) : null,
-    };
-  } catch {
-    return { provider: "postgresql", host: null, port: null, database: null, user: null };
-  }
-}
+// Database connection info + the live "Test & Save" switch live in databaseSettingsService.ts,
+// not here -- unlike everything else in this file, it isn't just a Setting-table row; it needs
+// db.ts's client-swap primitive and its own Postgres-specific connection testing.

@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
 import { requireAdmin, requireAuth } from "../auth";
+import { HttpError } from "../utils/fileUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import {
   getAllowRegistrations,
-  getDatabaseInfo,
   getPreviewMode,
   getSmtpSettings,
   getThingiverseAccessToken,
@@ -15,6 +15,7 @@ import {
   setThingiverseAccessToken,
   type SmtpSettings,
 } from "../services/settingsService";
+import { getDatabaseInfo, testAndSwitchDatabase } from "../services/databaseSettingsService";
 import {
   DEFAULT_STORAGE_TEMPLATE,
   STORAGE_TEMPLATE_TOKENS,
@@ -24,6 +25,7 @@ import {
   setStorageTemplate,
   validateStorageTemplate,
 } from "../services/printService";
+import { getUserMakerworldCookie, setUserMakerworldCookie } from "../services/makerworldCookieService";
 
 const router = Router();
 router.use(requireAuth);
@@ -128,8 +130,8 @@ router.post(
   }),
 );
 
-// Admin-only "Connections" page: SMTP (editable, used by registration's email-verification
-// flow -- see routes/auth.ts) and Database (read-only, always reflects the live DATABASE_URL).
+// Admin-only "Connections" page: SMTP (editable, used by registration's email-verification flow
+// -- see routes/auth.ts) and Database (editable "Test & Save", see databaseSettingsService.ts).
 
 function smtpSettingsOut(smtp: SmtpSettings) {
   // pass is never echoed back, same write-only convention as the Thingiverse token above.
@@ -176,6 +178,52 @@ router.get(
   requireAdmin,
   asyncHandler(async (_req, res) => {
     res.json(getDatabaseInfo());
+  }),
+);
+
+// "Test & Save": connects with the candidate credentials and runs a sanity query *before*
+// touching anything live -- on failure the app keeps running against whatever database it's
+// currently on, same as before the request. Only on success does it hot-swap every `prisma.*`
+// call in this process over to the new database. See databaseSettingsService.ts for why this
+// does NOT persist across a restart -- host/port can't be changed here either, only
+// database/user/password on the same Postgres server this process was started against.
+const databaseSettingsSchema = z.object({
+  database: z.string().trim().min(1, "Database name is required"),
+  user: z.string().trim().min(1, "User is required"),
+  password: z.string().min(1, "Password is required"),
+});
+router.post(
+  "/settings/database",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(databaseSettingsSchema, req.body);
+    let info;
+    try {
+      info = await testAndSwitchDatabase(body);
+    } catch (err) {
+      throw new HttpError(422, err instanceof Error ? err.message : "Failed to connect to that database.");
+    }
+    res.json(info);
+  }),
+);
+
+// Per-user, not admin-only: each user brings their own MakerWorld login for their own imports
+// (see services/makerworldCookieService.ts), unlike the instance-wide Thingiverse token above.
+// Write-only like the other credentials here -- GET only ever reports whether one is set.
+router.get(
+  "/settings/makerworld",
+  asyncHandler(async (req, res) => {
+    res.json({ configured: Boolean(await getUserMakerworldCookie(req.userId!)) });
+  }),
+);
+
+const makerworldSettingsSchema = z.object({ cookie: z.string().nullable() });
+router.patch(
+  "/settings/makerworld",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(makerworldSettingsSchema, req.body);
+    const configured = await setUserMakerworldCookie(req.userId!, body.cookie);
+    res.json({ configured });
   }),
 );
 

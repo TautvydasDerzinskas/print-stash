@@ -86,7 +86,7 @@ describe("admin user management", () => {
     expect(member).toBeTruthy();
     expect(member.print_count).toBe(2);
     expect(member.collection_count).toBe(0);
-    expect(member.thingiverse_count).toBe(0);
+    expect(member.makerworld_connected).toBe(false);
     expect(typeof member.created_at).toBe("string");
   });
 

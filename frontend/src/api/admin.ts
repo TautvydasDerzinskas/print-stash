@@ -8,7 +8,7 @@ export type AdminUser = {
   role: "ADMIN" | "MEMBER";
   print_count: number;
   collection_count: number;
-  thingiverse_count: number;
+  makerworld_connected: boolean;
   created_at: string;
 };
 

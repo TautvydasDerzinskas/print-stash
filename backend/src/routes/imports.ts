@@ -20,6 +20,7 @@ import {
   parseThingiverseLikesUrl,
 } from "../services/thingiverseApi";
 import { getThingiverseAccessToken } from "../services/settingsService";
+import { getUserMakerworldCookie } from "../services/makerworldCookieService";
 import { listZipEntries } from "../services/zipService";
 import { createJob, getActiveJob, getJob } from "../services/importJobService";
 import {
@@ -44,10 +45,20 @@ const importRequestSchema = z.object({
   makerworld_cookie: z.string().nullable().optional(),
 });
 
+// The frontend normally sends the browser's own locally-stored MakerWorld cookie on every
+// import request (see utils/settings.ts) -- this only kicks in when that's missing (a different
+// browser/device, or the request just didn't include one), falling back to whatever the user
+// last saved via Settings > Imports (see routes/settings.ts's PATCH /settings/makerworld).
+async function withStoredMakerworldCookie<T extends { makerworld_cookie?: string | null }>(userId: string, body: T): Promise<T> {
+  if (body.makerworld_cookie && body.makerworld_cookie.trim()) return body;
+  const stored = await getUserMakerworldCookie(userId);
+  return stored ? { ...body, makerworld_cookie: stored } : body;
+}
+
 router.post(
   "/import",
   asyncHandler(async (req, res) => {
-    const body = parseBody(importRequestSchema, req.body);
+    const body = await withStoredMakerworldCookie(req.userId!, parseBody(importRequestSchema, req.body));
     const url = await normalizeImportUrl(body.url);
     const { print, plates, author, previewImages } = await importPrintFromUrl(req.userId!, url, body);
     res.json(toPrintOut(print, plates, [], null, author, previewImages));
@@ -58,7 +69,7 @@ router.post(
 router.post(
   "/import/inspect",
   asyncHandler(async (req, res) => {
-    const body = parseBody(importRequestSchema, req.body);
+    const body = await withStoredMakerworldCookie(req.userId!, parseBody(importRequestSchema, req.body));
     const url = await normalizeImportUrl(body.url);
     const result = await inspectImportLink(url, body);
     res.json(result);
@@ -68,7 +79,7 @@ router.post(
 router.post(
   "/import/zip/entries",
   asyncHandler(async (req, res) => {
-    const body = parseBody(importRequestSchema, req.body);
+    const body = await withStoredMakerworldCookie(req.userId!, parseBody(importRequestSchema, req.body));
     const url = await normalizeImportUrl(body.url);
     const { tempPath, filename } = await downloadImportToTemp(url, body);
     try {
@@ -85,7 +96,7 @@ router.post(
 router.post(
   "/import/collection/entries",
   asyncHandler(async (req, res) => {
-    const body = parseBody(importRequestSchema, req.body);
+    const body = await withStoredMakerworldCookie(req.userId!, parseBody(importRequestSchema, req.body));
     const url = await normalizeImportUrl(body.url);
     const parsed = parseMakerworldCollectionUrl(url);
     if (!parsed) throw new HttpError(400, "Not a MakerWorld collection URL");
@@ -226,7 +237,7 @@ const collectionImportRequestSchema = importRequestSchema.extend({ design_ids: z
 router.post(
   "/import/collection",
   asyncHandler(async (req, res) => {
-    const body = parseBody(collectionImportRequestSchema, req.body);
+    const body = await withStoredMakerworldCookie(req.userId!, parseBody(collectionImportRequestSchema, req.body));
     await assertNoActiveJob(req.userId!);
     const url = await normalizeImportUrl(body.url);
     const job = await createJob(req.userId!, "COLLECTION", {

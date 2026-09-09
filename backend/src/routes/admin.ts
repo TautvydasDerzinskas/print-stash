@@ -21,7 +21,7 @@ router.get(
         role: u.role,
         print_count: u.printCount,
         collection_count: u.collectionCount,
-        thingiverse_count: u.thingiverseCount,
+        makerworld_connected: u.makerworldConnected,
         created_at: u.createdAt,
       })),
     );

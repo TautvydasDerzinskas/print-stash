@@ -18,10 +18,11 @@ type Props = {
   onUnauthorized?: () => void;
 };
 
-/** Admin-only, read-only roster of every account on the instance -- Models/Thingiverse/
- *  Collections are per-user counts, not toggles, since those are library contents here rather
- *  than account settings. The "delete all models for a user" action lives on the Settings ->
- *  Triggers page, not here. */
+/** Admin-only, read-only roster of every account on the instance. Models/Collections are
+ *  per-user counts; MakerWorld is a connected/not-connected flag (each user's own MakerWorld
+ *  session cookie, saved server-side from Settings -> Imports -- see
+ *  services/makerworldCookieService.ts). The "delete all models for a user" action lives on the
+ *  Settings -> Triggers page, not here. */
 export default function UsersPage({ onUnauthorized }: Props) {
   const { t, i18n } = useTranslation(["app", "common"]);
   const [users, setUsers] = React.useState<AdminUser[]>([]);
@@ -68,7 +69,7 @@ export default function UsersPage({ onUnauthorized }: Props) {
                   <TableCell>{t("adminSettings.users.columnDisplayName")}</TableCell>
                   <TableCell>{t("adminSettings.users.columnRole")}</TableCell>
                   <TableCell align="right">{t("adminSettings.users.columnModels")}</TableCell>
-                  <TableCell align="right">{t("adminSettings.users.columnThingiverse")}</TableCell>
+                  <TableCell>{t("adminSettings.users.columnMakerworld")}</TableCell>
                   <TableCell align="right">{t("adminSettings.users.columnCollections")}</TableCell>
                   <TableCell>{t("adminSettings.users.columnCreated")}</TableCell>
                 </TableRow>
@@ -87,7 +88,14 @@ export default function UsersPage({ onUnauthorized }: Props) {
                       />
                     </TableCell>
                     <TableCell align="right">{u.print_count}</TableCell>
-                    <TableCell align="right">{u.thingiverse_count}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={u.makerworld_connected ? t("adminSettings.users.makerworldConnected") : t("adminSettings.users.makerworldNotConnected")}
+                        size="small"
+                        color={u.makerworld_connected ? "success" : "default"}
+                        variant={u.makerworld_connected ? "filled" : "outlined"}
+                      />
+                    </TableCell>
                     <TableCell align="right">{u.collection_count}</TableCell>
                     <TableCell>{formatDate(u.created_at)}</TableCell>
                   </TableRow>

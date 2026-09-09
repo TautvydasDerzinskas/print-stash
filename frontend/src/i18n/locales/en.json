@@ -213,9 +213,10 @@
         "rootFolderCreateFailed": "Failed to create the top-level folder.",
         "makerworldHeading": "MakerWorld",
         "makerworldDesc": "Optional auth for importing MakerWorld models.",
-        "makerworldHelp": "Paste the Cookie header from a logged-in makerworld.com request to lift download limits. This value is stored only in your browser.",
+        "makerworldHelp": "Paste the Cookie header from a logged-in makerworld.com request to lift download limits. Saved to your account, so it follows you across devices -- not just this browser.",
         "sessionCookieLabel": "Session cookie",
-        "makerworldPlaceholder": "example: mw_session=...; mw_token=...;"
+        "makerworldPlaceholder": "example: mw_session=...; mw_token=...;",
+        "makerworldSyncFailed": "Saved for this browser, but couldn't sync it to your account -- try again shortly."
       },
       "language": {
         "heading": "Interface Language",
@@ -347,14 +348,22 @@
       },
       "database": {
         "tabLabel": "Database",
-        "helpText": "Read-only — always reflects the DATABASE_URL this instance was started with. Switching databases means restarting the backend with a different value, not something changeable here.",
-        "providerLabel": "Provider",
+        "helpText": "Host and port always reflect the DATABASE_URL this instance was started with and can't be changed here. Database, user, and password can be switched live — the new credentials are tested before anything is applied, so a typo can't take the app down, but the switch only affects this running process and won't survive a restart.",
         "hostLabel": "Host",
         "portLabel": "Port",
         "nameLabel": "Database",
         "userLabel": "User",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Required to test and apply a switch",
         "unset": "—",
-        "loadFailed": "Unable to load database info."
+        "loadFailed": "Unable to load database info.",
+        "testAndSave": "Test & Save",
+        "saving": "Testing…",
+        "saved": "Connected and switched.",
+        "failed": "Failed to switch database.",
+        "confirmTitle": "Switch the live database?",
+        "confirmWarning": "This repoints every database call this running instance makes at a different database. If the new credentials are wrong or unreachable, the switch is rejected and nothing changes.",
+        "confirmBody": "Switch to database \"{{database}}\" as user \"{{user}}\"? This does not persist across a restart — update DATABASE_URL if you want it to stick."
       },
       "users": {
         "heading": "Users",
@@ -362,11 +371,13 @@
         "columnDisplayName": "Display name",
         "columnRole": "Role",
         "columnModels": "Models",
-        "columnThingiverse": "Thingiverse",
+        "columnMakerworld": "MakerWorld",
         "columnCollections": "Collections",
         "columnCreated": "Created",
         "roleAdmin": "Admin",
         "roleMember": "Member",
+        "makerworldConnected": "Connected",
+        "makerworldNotConnected": "Not connected",
         "loadFailed": "Unable to load users."
       },
       "logs": {

@@ -213,9 +213,10 @@
         "rootFolderCreateFailed": "Nepavyko sukurti aukščiausio lygio aplanko.",
         "makerworldHeading": "MakerWorld",
         "makerworldDesc": "Neprivaloma autentifikacija MakerWorld modelių importui.",
-        "makerworldHelp": "Įklijuokite Cookie antraštę iš prisijungusio makerworld.com užklausos, kad panaikintumėte atsisiuntimo limitus. Ši reikšmė saugoma tik jūsų naršyklėje.",
+        "makerworldHelp": "Įklijuokite Cookie antraštę iš prisijungusio makerworld.com užklausos, kad panaikintumėte atsisiuntimo limitus. Išsaugoma jūsų paskyroje, todėl seka jus tarp įrenginių -- ne tik šioje naršyklėje.",
         "sessionCookieLabel": "Sesijos slapukas",
-        "makerworldPlaceholder": "pavyzdys: mw_session=...; mw_token=...;"
+        "makerworldPlaceholder": "pavyzdys: mw_session=...; mw_token=...;",
+        "makerworldSyncFailed": "Išsaugota šiai naršyklei, bet nepavyko sinchronizuoti su jūsų paskyra -- pabandykite dar kartą netrukus."
       },
       "language": {
         "heading": "Sąsajos kalba",
@@ -347,14 +348,22 @@
       },
       "database": {
         "tabLabel": "Duomenų bazė",
-        "helpText": "Tik skaitymui — visada rodo DATABASE_URL reikšmę, su kuria paleistas šis serveris. Norint pakeisti duomenų bazę, reikia paleisti serverį iš naujo su kita reikšme — čia to pakeisti negalima.",
-        "providerLabel": "Tiekėjas",
+        "helpText": "Serveris ir prievadas visada rodo DATABASE_URL reikšmę, su kuria paleistas šis serveris, ir čia jų pakeisti negalima. Duomenų bazę, naudotoją ir slaptažodį galima keisti gyvai — nauji duomenys patikrinami prieš juos pritaikant, todėl klaida neišjungs programos, tačiau pakeitimas galioja tik šiam veikiančiam procesui ir neišliks po perkrovimo.",
         "hostLabel": "Serveris",
         "portLabel": "Prievadas",
         "nameLabel": "Duomenų bazė",
         "userLabel": "Naudotojas",
+        "passwordLabel": "Slaptažodis",
+        "passwordPlaceholder": "Reikalingas norint patikrinti ir pritaikyti pakeitimą",
         "unset": "—",
-        "loadFailed": "Nepavyko įkelti duomenų bazės informacijos."
+        "loadFailed": "Nepavyko įkelti duomenų bazės informacijos.",
+        "testAndSave": "Patikrinti ir išsaugoti",
+        "saving": "Tikrinama…",
+        "saved": "Prisijungta ir perjungta.",
+        "failed": "Nepavyko perjungti duomenų bazės.",
+        "confirmTitle": "Perjungti veikiančią duomenų bazę?",
+        "confirmWarning": "Tai nukreipia visus šio veikiančio serverio duomenų bazės užklausas į kitą duomenų bazę. Jei nauji duomenys neteisingi arba nepasiekiami, pakeitimas atmetamas ir niekas nesikeičia.",
+        "confirmBody": "Perjungti į duomenų bazę „{{database}}“ naudotoju „{{user}}“? Tai neišlieka po perkrovimo — jei norite, kad pakeitimas išliktų, atnaujinkite DATABASE_URL."
       },
       "users": {
         "heading": "Naudotojai",
@@ -362,11 +371,13 @@
         "columnDisplayName": "Rodomas vardas",
         "columnRole": "Vaidmuo",
         "columnModels": "Modeliai",
-        "columnThingiverse": "Thingiverse",
+        "columnMakerworld": "MakerWorld",
         "columnCollections": "Kolekcijos",
         "columnCreated": "Sukurta",
         "roleAdmin": "Administratorius",
         "roleMember": "Narys",
+        "makerworldConnected": "Prijungta",
+        "makerworldNotConnected": "Neprijungta",
         "loadFailed": "Nepavyko įkelti naudotojų."
       },
       "logs": {

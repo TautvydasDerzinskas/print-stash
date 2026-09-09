@@ -33,11 +33,16 @@ export type SmtpSettingsInput = {
 };
 
 export type DatabaseInfo = {
-  provider: string;
   host: string | null;
   port: number | null;
   database: string | null;
   user: string | null;
+};
+
+export type DatabaseCredentialsInput = {
+  database: string;
+  user: string;
+  password: string;
 };
 
 export const settingsApi = {
@@ -127,10 +132,51 @@ export const settingsApi = {
     return res.json();
   },
 
-  // Read-only: always reflects the live DATABASE_URL the backend process was started with.
+  // Host/port always reflect the live DATABASE_URL the backend process was started with --
+  // database/user reflect whatever's currently active, which a "Test & Save" switch below may
+  // have changed for this running process.
   getDatabase: async (): Promise<DatabaseInfo> => {
     const res = await fetch(`${apiBase()}/settings/database`, { headers: authHeaders() });
     assertOk(res, "Failed to load database info");
+    return res.json();
+  },
+
+  // Tests the candidate database/user/password against the live Postgres server before applying
+  // anything -- see backend's databaseSettingsService.ts. On success, hot-swaps every database
+  // call in the running backend process over to it; does NOT persist across a restart.
+  testAndSaveDatabase: async (payload: DatabaseCredentialsInput): Promise<DatabaseInfo> => {
+    const res = await fetch(`${apiBase()}/settings/database`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, "Failed to switch database"));
+    }
+    return res.json();
+  },
+
+  // Per-user (not admin-only, unlike Thingiverse above): each user's own MakerWorld session
+  // cookie, saved server-side so it (a) follows them across devices and (b) makes "connected"
+  // a real fact the admin Users table can show -- see services/makerworldCookieService.ts.
+  // Write-only like the other credentials here.
+  getMakerworld: async (): Promise<{ configured: boolean }> => {
+    const res = await fetch(`${apiBase()}/settings/makerworld`, { headers: authHeaders() });
+    assertOk(res, "Failed to load MakerWorld settings");
+    return res.json();
+  },
+
+  updateMakerworld: async (cookie: string | null): Promise<{ configured: boolean }> => {
+    const res = await fetch(`${apiBase()}/settings/makerworld`, {
+      method: "PATCH",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ cookie }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, "Failed to update MakerWorld settings"));
+    }
     return res.json();
   },
 };
