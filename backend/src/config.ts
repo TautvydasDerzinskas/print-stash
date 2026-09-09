@@ -1,4 +1,20 @@
 import path from "node:path";
+import dotenv from "dotenv";
+
+// Every value below reads straight from process.env at module-evaluation time (a one-shot
+// `export const`, not a function called later) -- so .env has to be loaded before any of them,
+// not just before the app "starts" in some general sense. There was no explicit .env loading
+// anywhere in this codebase; local dev only worked at all because requiring @prisma/client has
+// the side effect of loading .env too, and most existing config reads happened to be evaluated
+// after something had already pulled in db.ts/@prisma/client first -- an accident of import
+// order, not a guarantee. A newly added config.ts export (this file is always the first module
+// in the graph to read env vars) can land ahead of that side effect and silently read an empty
+// string forever, which is exactly what happened to FLARESOLVERR_URL. Loading .env explicitly,
+// right here, removes the dependency on that accident entirely. (Docker Compose deployments are
+// unaffected either way -- environment: entries are already real process env vars before the
+// Node process even starts, so there's nothing for dotenv to add there; this only matters for
+// `tsx watch src/server.ts`-style local dev reading a .env file.)
+dotenv.config();
 
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name];

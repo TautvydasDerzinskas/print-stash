@@ -228,7 +228,7 @@ router.post(
     const parsed = parsePrintablesCollectionUrl(url);
     if (!parsed) throw new HttpError(400, "Not a Printables Collection URL");
 
-    const listing = await fetchPrintablesCollectionEntries(parsed.collectionId, url);
+    const listing = await fetchPrintablesCollectionEntries(parsed.collectionId);
     if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
 
     const alreadyImported = await findImportedExternalIds(

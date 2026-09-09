@@ -1,7 +1,6 @@
 import { IMPORT_BROWSER_USER_AGENT, IMPORT_HTML_MAX_BYTES, IMPORT_TIMEOUT_SECONDS } from "../config";
 import { HttpError } from "../utils/fileUtils";
-import { extractNextDataJson, htmlToPlainText, type ImportedAuthorInfo, type ImportedPageMetadata } from "./importResolvers";
-import { fetchViaFlaresolverr, isFlaresolverrEnabled } from "./flaresolverr";
+import { htmlToPlainText, type ImportedAuthorInfo, type ImportedPageMetadata } from "./importResolvers";
 
 // The public api.printables.com GraphQL endpoint -- unlike www.printables.com (Cloudflare-gated,
 // confirmed via a plain fetch returning its "Just a moment..." challenge page), api.printables.com
@@ -254,17 +253,6 @@ export function parsePrintablesCollectionUrl(url: string): { collectionId: strin
 
 export type PrintablesCollectionEntry = { modelId: string; title: string; cover: string | null };
 
-const COLLECTION_QUERY = `
-  query ($id: ID!) {
-    collection(id: $id) {
-      id
-      name
-      printsCount
-      thumbnails11 { id slug image { filePath } }
-    }
-  }
-`;
-
 /** Printables has no human-readable name on a thumbnail-only listing (ThumbnailPrintType has no
  * `name` field, only `slug`) -- turns "prusa-core-one-nozzle-wiper-remix" into "Prusa core one
  * nozzle wiper remix" so the collection picker shows something readable instead of a raw slug. */
@@ -274,54 +262,11 @@ function titleFromSlug(slug: string): string {
   return words[0].charAt(0).toUpperCase() + words[0].slice(1) + (words.length > 1 ? " " + words.slice(1).join(" ") : "");
 }
 
-function entryFromThumbnail(item: unknown): PrintablesCollectionEntry | null {
-  if (!isRecord(item) || item.id == null || typeof item.slug !== "string" || !item.slug.trim()) return null;
-  const cover = isRecord(item.image) ? mediaUrl(item.image.filePath) : null;
-  return { modelId: String(item.id), title: titleFromSlug(item.slug.trim()), cover };
-}
-
-const COLLECTION_SCRAPE_MAX_ENTRIES = 300;
-
-/** Best-effort full listing for a collection bigger than the public API's hard 11-item preview
- * cap (see fetchPrintablesCollectionEntries) -- renders the actual collection page through
- * FlareSolverr (the same Cloudflare-bypass path already used elsewhere in this codebase) and
- * walks its embedded __NEXT_DATA__ payload for print-shaped objects ({id, slug, image} --
- * matching the exact PrintType/ThumbnailPrintType shape confirmed against the live GraphQL
- * schema), rather than relying on any specific, unconfirmed path into that JSON -- Next.js's
- * SSR payload shape isn't part of any public contract and could shift at any time.
- * Returns null (never throws) on anything short of a clean, useful result: FlareSolverr not
- * configured, the fetch failing, no __NEXT_DATA__ found, or nothing print-shaped inside it --
- * every case the caller falls back to the always-available 11-item preview for instead. */
-async function scrapeFullPrintablesCollection(pageUrl: string): Promise<PrintablesCollectionEntry[] | null> {
-  if (!isFlaresolverrEnabled()) return null;
-  const solved = await fetchViaFlaresolverr(pageUrl);
-  if (!solved || !solved.body) return null;
-  const nextData = extractNextDataJson(solved.body);
-  if (!nextData) return null;
-
-  const found = new Map<string, PrintablesCollectionEntry>();
-  const stack: unknown[] = [nextData];
-  let visited = 0;
-  while (stack.length && visited < 50000 && found.size < COLLECTION_SCRAPE_MAX_ENTRIES) {
-    const node = stack.pop();
-    visited++;
-    if (Array.isArray(node)) {
-      stack.push(...node);
-      continue;
-    }
-    if (!isRecord(node)) continue;
-    const entry = entryFromThumbnail(node);
-    if (entry && !found.has(entry.modelId)) found.set(entry.modelId, entry);
-    stack.push(...Object.values(node));
-  }
-  return found.size ? Array.from(found.values()) : null;
-}
-
 const COLLECTION_TITLE_QUERY = `query ($id: ID!) { collection(id: $id) { id name } }`;
 
 /** Cheap, title-only fetch -- used by the job runner once the batch import is done (see
  * importJobRunner.ts's runPrintablesCollectionImportJob), so the PrintStash Collection it files
- * results into doesn't require re-running the (potentially FlareSolverr-backed) full listing. */
+ * results into doesn't require re-running the full listing. */
 export async function fetchPrintablesCollectionTitle(collectionId: string): Promise<string | null> {
   const data = (await fetchPrintablesGraphql(COLLECTION_TITLE_QUERY, { id: collectionId })) as
     | { data?: { collection?: Record<string, unknown> } }
@@ -330,41 +275,78 @@ export async function fetchPrintablesCollectionTitle(collectionId: string): Prom
   return typeof name === "string" && name.trim() ? name.trim() : null;
 }
 
-/** Resolves a Printables Collection's title and model list. The public GraphQL API only ever
- * exposes up to 11 models per collection (`thumbnails11` -- confirmed live: it takes no
- * limit/offset/cursor argument, and there is no separate paginated "list every model in this
- * collection" operation anywhere in Printables' own site traffic either) -- for anything bigger,
- * this falls back to best-effort page-scraping via FlareSolverr (see
- * scrapeFullPrintablesCollection). `truncated` reflects whichever source ultimately won: false
- * only when every model in the collection was actually returned. */
+// The actual query the site itself sends its own collection page's "load more" scroll trigger --
+// a real, properly cursor-paginated listing, unlike `collection(id).thumbnails11` (a hard-capped,
+// unparameterized 11-item preview field used elsewhere on the site, e.g. the "add to collection"
+// picker). Confirmed live end to end against an 89-model collection: 3 pages of `limit: 30`,
+// terminated by an empty-string `cursor` on the last page (NOT null -- a naive `cursor == null`
+// check treats an empty string as "keep going" and the API happily restarts from page 1, an easy
+// infinite-loop trap). No auth needed, same as every other Printables query here.
+const COLLECTION_MODELS_QUERY = `
+  query CollectionModels($collectionId: ID!, $limit: Int, $cursor: String, $ordering: CollectionPrintsOrderingEnum) {
+    moreCollectionModels(limit: $limit, cursor: $cursor, collectionId: $collectionId, ordering: $ordering) {
+      items {
+        id
+        model: print { id name slug image { filePath } }
+      }
+      cursor
+    }
+  }
+`;
+
+const COLLECTION_PAGE_SIZE = 30;
+const COLLECTION_MAX_PAGES = 20;
+const COLLECTION_MAX_ENTRIES = 600;
+
+/** Pages through every model in a Collection via moreCollectionModels, deduplicating and capping
+ * at COLLECTION_MAX_ENTRIES/COLLECTION_MAX_PAGES purely as a safety net against a pathological
+ * collection or an unexpected non-terminating cursor -- not expected to ever actually bite given
+ * the confirmed termination behavior above. An item referencing a deleted/hidden print (no
+ * `model`, only `unavailableModel`) is skipped, same tolerance as everywhere else in this file for
+ * one bad entry not derailing the whole listing. */
+async function fetchAllPrintablesCollectionModels(collectionId: string): Promise<PrintablesCollectionEntry[]> {
+  const found = new Map<string, PrintablesCollectionEntry>();
+  let cursor: string | null = null;
+  for (let page = 0; page < COLLECTION_MAX_PAGES && found.size < COLLECTION_MAX_ENTRIES; page++) {
+    const data = (await fetchPrintablesGraphql(COLLECTION_MODELS_QUERY, {
+      collectionId,
+      limit: COLLECTION_PAGE_SIZE,
+      cursor,
+      ordering: "added_to_collection",
+    })) as { data?: { moreCollectionModels?: { items?: unknown[]; cursor?: string | null } } } | null;
+    const node = data?.data?.moreCollectionModels;
+    const items = Array.isArray(node?.items) ? node.items : [];
+    if (!items.length) break;
+
+    for (const item of items) {
+      if (found.size >= COLLECTION_MAX_ENTRIES) break;
+      if (!isRecord(item) || !isRecord(item.model)) continue;
+      const model = item.model;
+      if (model.id == null || typeof model.slug !== "string" || !model.slug.trim()) continue;
+      const modelId = String(model.id);
+      if (found.has(modelId)) continue;
+      const cover = isRecord(model.image) ? mediaUrl(model.image.filePath) : null;
+      found.set(modelId, { modelId, title: titleFromSlug(model.slug.trim()), cover });
+    }
+
+    const nextCursor = node?.cursor;
+    if (!nextCursor) break; // empty string or null/undefined both mean "no more pages"
+    cursor = nextCursor;
+  }
+  return Array.from(found.values());
+}
+
+/** Resolves a Printables Collection's title and full model list via real cursor pagination (see
+ * fetchAllPrintablesCollectionModels) -- no FlareSolverr, no page-scraping, no arbitrary preview
+ * cap: this reaches every model in the collection in the overwhelming majority of cases.
+ * `truncated` only trips if COLLECTION_MAX_ENTRIES/COLLECTION_MAX_PAGES's safety net was actually
+ * needed (an exceptionally large collection), not as a matter of course. */
 export async function fetchPrintablesCollectionEntries(
   collectionId: string,
-  pageUrl: string,
 ): Promise<{ title: string | null; entries: PrintablesCollectionEntry[]; total: number; truncated: boolean }> {
-  const data = (await fetchPrintablesGraphql(COLLECTION_QUERY, { id: collectionId })) as
-    | { data?: { collection?: Record<string, unknown> } }
-    | null;
-  const collection = data?.data?.collection;
-  if (!isRecord(collection)) return { title: null, entries: [], total: 0, truncated: false };
-
-  const title = typeof collection.name === "string" && collection.name.trim() ? collection.name.trim() : null;
-  const printsCount = typeof collection.printsCount === "number" ? collection.printsCount : null;
-  const preview = Array.isArray(collection.thumbnails11)
-    ? collection.thumbnails11.map(entryFromThumbnail).filter((e): e is PrintablesCollectionEntry => e !== null)
-    : [];
-  // The real collection size, independent of how many entries actually came back below --
-  // callers (see routes/imports.ts) must report this as `total`, not entries.length, or the
-  // "Showing 11 of X" truncation notice silently reads "Showing 11 of 11" and hides that there
-  // were ever more than 11 models to begin with.
-  const total = printsCount ?? preview.length;
-
-  if (printsCount === null || preview.length >= printsCount) {
-    return { title, entries: preview, total, truncated: false };
-  }
-
-  const scraped = await scrapeFullPrintablesCollection(pageUrl);
-  if (scraped && scraped.length > preview.length) {
-    return { title, entries: scraped, total, truncated: scraped.length < printsCount };
-  }
-  return { title, entries: preview, total, truncated: true };
+  const [title, entries] = await Promise.all([
+    fetchPrintablesCollectionTitle(collectionId),
+    fetchAllPrintablesCollectionModels(collectionId),
+  ]);
+  return { title, entries, total: entries.length, truncated: entries.length >= COLLECTION_MAX_ENTRIES };
 }
