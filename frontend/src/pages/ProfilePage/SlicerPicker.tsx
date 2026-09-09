@@ -91,7 +91,7 @@ export default function SlicerPicker({ onUnauthorized }: Props) {
         {value === "bambustudio" && (
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
             {t("profile.slicer.bridgeRequiredPrefix")}{" "}
-            <Link component={RouterLink} to="/download">{t("profile.slicer.bridgeRequiredLink")}</Link>
+            <Link component={RouterLink} to="/downloads">{t("profile.slicer.bridgeRequiredLink")}</Link>
           </Typography>
         )}
         {status && <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>{status}</Typography>}

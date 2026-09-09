@@ -74,9 +74,9 @@ function useRouteChrome() {
   } else if (path === "/profile") {
     title = t("profile.title");
     onBack = () => navigate(-1);
-  } else if (path === "/download") {
+  } else if (path === "/downloads") {
     // Overridden by DownloadPage's usePageHeader once translations resolve.
-    title = t("sidebar.downloadBridge");
+    title = t("sidebar.downloads");
     onBack = () => navigate("/");
   } else if (path.startsWith("/admin-settings")) {
     title = t("adminSettings.pageTitle");

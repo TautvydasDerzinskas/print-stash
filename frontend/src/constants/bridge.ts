@@ -5,8 +5,6 @@
 // release, so they don't need updating when a new Bridge build ships.
 const BRIDGE_RELEASES_BASE = "https://github.com/TautvydasDerzinskas/print-stash/releases/latest/download";
 
-export const BRIDGE_RELEASES_PAGE = "https://github.com/TautvydasDerzinskas/print-stash/releases";
-
 export type BridgeDownload = { os: "windows" | "macos" | "linux"; label: string; asset: string };
 
 export const BRIDGE_DOWNLOADS: BridgeDownload[] = [

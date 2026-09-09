@@ -2,11 +2,14 @@ export type SlicerOption = { id: string; label: string };
 
 // Limited to slicers that register their own URL protocol for opening a remote model directly
 // (e.g. bambustudio://) -- the only ones a future "open in {slicer}" launch could actually use.
-// IDs must match backend's services/slicerPreferenceService.ts SLICER_IDS.
+// IDs must match backend's services/slicerPreferenceService.ts SLICER_IDS, and (id !== "other")
+// must equal the exact scheme the slicer registers -- e.g. Creality Print's is "crealityprintlink"
+// (crealityprintlink://open?file=...), not "creality", per its libslic3r/Utils.hpp.
 export const SLICER_OPTIONS: SlicerOption[] = [
   { id: "bambustudio", label: "Bambu Studio" },
   { id: "orcaslicer", label: "OrcaSlicer" },
   { id: "prusaslicer", label: "PrusaSlicer" },
+  { id: "crealityprintlink", label: "Creality Print" },
   { id: "other", label: "Other / Manual" },
 ];
 

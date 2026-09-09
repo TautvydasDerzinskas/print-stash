@@ -1,41 +1,25 @@
-import { useTranslation, Trans } from "react-i18next";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import Alert from "@mui/material/Alert";
 import Box from "@mui/material/Box";
-import Link from "@mui/material/Link";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 import DownloadIcon from "@mui/icons-material/Download";
 import LaptopWindowsIcon from "@mui/icons-material/LaptopWindows";
 import AppleIcon from "@mui/icons-material/Apple";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import CableIcon from "@mui/icons-material/Cable";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
-import { BRIDGE_DOWNLOADS, BRIDGE_RELEASES_PAGE, bridgeDownloadUrl } from "../../constants/bridge";
+import { BRIDGE_DOWNLOADS, bridgeDownloadUrl, type BridgeDownload } from "../../constants/bridge";
 
 const OS_ICON = { windows: LaptopWindowsIcon, macos: AppleIcon, linux: TerminalIcon };
 
-// launchd doesn't expand `~`, so the plist needs an absolute path -- the user has to swap in
-// their own username either way, since we can't know it here.
-const MACOS_LAUNCH_AGENT_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.printstash.bridge</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/Users/YOUR_USERNAME/Applications/PrintStash Bridge.app/Contents/MacOS/print-stash-bridge</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-</dict>
-</plist>`;
-
-const MACOS_LAUNCH_AGENT_LOAD_CMD = `mkdir -p ~/Library/LaunchAgents
-# save the file above as ~/Library/LaunchAgents/com.printstash.bridge.plist
-launchctl load ~/Library/LaunchAgents/com.printstash.bridge.plist`;
+type InstallStep = { text: string; code?: string };
 
 function CodeBlock({ children }: { children: string }) {
   return (
@@ -56,9 +40,60 @@ function CodeBlock({ children }: { children: string }) {
   );
 }
 
+function InstallSteps({ steps }: { steps: InstallStep[] }) {
+  return (
+    <Stack spacing={2}>
+      {steps.map((step, i) => (
+        <Stack key={i} direction="row" spacing={1.5}>
+          <Box
+            sx={{
+              width: 22,
+              height: 22,
+              borderRadius: "50%",
+              bgcolor: "primary.main",
+              color: "primary.contrastText",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 12,
+              fontWeight: 600,
+              flexShrink: 0,
+              mt: "1px",
+            }}
+          >
+            {i + 1}
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body2">{step.text}</Typography>
+            {step.code && <Box sx={{ mt: 1 }}><CodeBlock>{step.code}</CodeBlock></Box>}
+          </Box>
+        </Stack>
+      ))}
+    </Stack>
+  );
+}
+
 export default function DownloadPage() {
   const { t } = useTranslation(["app", "common"]);
-  usePageHeader({ title: t("sidebar.downloadBridge") });
+  usePageHeader({ title: t("sidebar.downloads") });
+
+  const [installOs, setInstallOs] = useState<BridgeDownload["os"] | null>(null);
+
+  const installSteps: Record<BridgeDownload["os"], InstallStep[]> = {
+    windows: [{ text: t("download.modal.windows.step1") }],
+    linux: [
+      { text: t("download.modal.linux.step1"), code: "chmod +x print-stash-bridge-linux-amd64" },
+      { text: t("download.modal.linux.step2"), code: "./print-stash-bridge-linux-amd64" },
+    ],
+    macos: [
+      { text: t("download.modal.macos.step1"), code: "chmod +x ~/Downloads/print-stash-bridge-macos" },
+      {
+        text: t("download.modal.macos.step2"),
+        code: "xattr -d com.apple.quarantine ~/Downloads/print-stash-bridge-macos",
+      },
+      { text: t("download.modal.macos.step3"), code: "~/Downloads/print-stash-bridge-macos --install" },
+    ],
+  };
 
   return (
     <Stack spacing={3} sx={{ maxWidth: 720 }}>
@@ -70,10 +105,6 @@ export default function DownloadPage() {
         </Box>
       </Stack>
 
-      <Alert severity="info" variant="outlined">
-        <Typography variant="body2">{t("download.why")}</Typography>
-      </Alert>
-
       <Stack spacing={2}>
         <Typography variant="subtitle1" fontWeight={600}>{t("download.downloadHeading")}</Typography>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
@@ -84,15 +115,13 @@ export default function DownloadPage() {
                 <Stack spacing={1.5} alignItems="flex-start">
                   <Icon fontSize="large" />
                   <Typography variant="subtitle2" fontWeight={600}>{label}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {t(`download.install.${os}`)}
-                  </Typography>
                   <Button
                     component="a"
                     href={bridgeDownloadUrl(asset)}
                     variant="outlined"
                     size="small"
                     startIcon={<DownloadIcon fontSize="small" />}
+                    onClick={() => setInstallOs(os)}
                   >
                     {t("common:download")}
                   </Button>
@@ -103,42 +132,27 @@ export default function DownloadPage() {
         </Stack>
       </Stack>
 
-      <Stack spacing={1.5}>
-        <Typography variant="subtitle1" fontWeight={600}>{t("download.autostart.heading")}</Typography>
-        <Typography variant="body2" color="text.secondary">{t("download.autostart.windowsLinuxNote")}</Typography>
-        <Typography variant="body2" color="text.secondary">{t("download.autostart.macosIntro")}</Typography>
-
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-            {t("download.autostart.macosGuiHeading")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">{t("download.autostart.macosGuiSteps")}</Typography>
-        </Paper>
-
-        <Paper variant="outlined" sx={{ p: 2 }}>
-          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-            {t("download.autostart.macosLaunchAgentHeading")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            {t("download.autostart.macosLaunchAgentIntro")}
-          </Typography>
-          <CodeBlock>{MACOS_LAUNCH_AGENT_PLIST}</CodeBlock>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, mb: 1 }}>
-            {t("download.autostart.macosLaunchAgentLoad")}
-          </Typography>
-          <CodeBlock>{MACOS_LAUNCH_AGENT_LOAD_CMD}</CodeBlock>
-        </Paper>
-      </Stack>
-
-      <Typography variant="caption" color="text.secondary">
-        <Trans
-          t={t}
-          i18nKey="download.footerLinks"
-          components={{
-            releases: <Link href={BRIDGE_RELEASES_PAGE} target="_blank" rel="noopener noreferrer" />,
-          }}
-        />
-      </Typography>
+      <Dialog open={installOs !== null} onClose={() => setInstallOs(null)} maxWidth="xs" fullWidth>
+        {installOs && (
+          <>
+            <DialogTitle>{t(`download.modal.${installOs}.heading`)}</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                {t("download.modal.startedNote")}
+              </Typography>
+              <InstallSteps steps={installSteps[installOs]} />
+              {installOs === "macos" && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 2.5 }}>
+                  {t("download.modal.macos.note")}
+                </Typography>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setInstallOs(null)}>{t("common:close")}</Button>
+            </DialogActions>
+          </>
+        )}
+      </Dialog>
     </Stack>
   );
 }

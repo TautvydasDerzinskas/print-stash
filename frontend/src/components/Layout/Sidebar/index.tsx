@@ -58,7 +58,7 @@ type Props = {
   isAdmin: boolean;
 };
 
-/** The persistent app-wide navigation rail: Dashboard, Models, Collections, Download Bridge, and
+/** The persistent app-wide navigation rail: Dashboard, Models, Collections, Downloads, and
  *  (for admins) Administration. Folder browsing lives inside the Models page itself, not here. */
 export default function Sidebar({ isAdmin }: Props) {
   const { t } = useTranslation(["app", "common"]);
@@ -73,7 +73,7 @@ export default function Sidebar({ isAdmin }: Props) {
   const onDashboard = location.pathname === "/";
   const onCollections = location.pathname.startsWith("/models/collections");
   const onModels = (location.pathname.startsWith("/models") && !onCollections) || location.pathname.startsWith("/authors");
-  const onDownload = location.pathname.startsWith("/download");
+  const onDownload = location.pathname.startsWith("/downloads");
   const onAdminSettings = location.pathname.startsWith("/admin-settings");
   const onAdminUsers = location.pathname.startsWith("/admin-users");
   const onAdminLogs = location.pathname.startsWith("/admin-logs");
@@ -189,20 +189,20 @@ export default function Sidebar({ isAdmin }: Props) {
           {collapsed ? (
             <CollapsedNavIcon
               icon={<DownloadIcon fontSize="small" />}
-              label={t("sidebar.downloadBridge")}
+              label={t("sidebar.downloads")}
               selected={onDownload}
-              onClick={() => navigate("/download")}
+              onClick={() => navigate("/downloads")}
             />
           ) : (
             <ListItemButton
               selected={onDownload}
-              onClick={() => navigate("/download")}
+              onClick={() => navigate("/downloads")}
               sx={{ borderRadius: 1, mb: 0.5 }}
             >
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <DownloadIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText primary={t("sidebar.downloadBridge")} primaryTypographyProps={{ variant: "body2" }} />
+              <ListItemText primary={t("sidebar.downloads")} primaryTypographyProps={{ variant: "body2" }} />
             </ListItemButton>
           )}
 

@@ -139,7 +139,7 @@ function AppShell({
           path="/profile/password"
           element={<ChangePasswordPage onUnauthorized={onUnauthorized} />}
         />
-        <Route path="/download" element={<DownloadPage />} />
+        <Route path="/downloads" element={<DownloadPage />} />
         <Route
           path="/admin-settings"
           element={

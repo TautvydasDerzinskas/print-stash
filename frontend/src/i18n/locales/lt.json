@@ -91,7 +91,7 @@
       "foldersHeadingWithCount": "Aplankai ({{count}})",
       "models": "Modeliai",
       "collections": "Kolekcijos",
-      "downloadBridge": "Atsisiųsti Bridge"
+      "downloads": "Atsisiuntimai"
     },
     "uploadBar": {
       "uploading": "Įkeliama…",
@@ -419,23 +419,25 @@
     "download": {
       "pageTitle": "PrintStash Bridge",
       "intro": "Nedidelė pagalbinė programa, veikianti jūsų kompiuteryje, kad „Atverti pjaustyklėje“ galėtų perduoti modelį tiesiai jūsų pjaustyklei.",
-      "why": "Bambu Studio nuosava bambustudio:// nuoroda priima failus tik iš trumpo, Bambu Lab kontroliuojamo domenų sąrašo, o savarankiškai talpinamas PrintStash niekada jame nepasirodys -- todėl „Atverti Bambu Studio“ paprasčiausiai nieko nedarytų. Vietoje to Bridge klausosi savo print-stash:// nuorodos, pats atsisiunčia failą ir perduoda jį Bambu Studio vietoje. OrcaSlicer ir PrusaSlicer nuorodas priima tiesiogiai, todėl jiems Bridge nereikalingas.",
       "downloadHeading": "Atsisiųsti",
-      "install": {
-        "windows": "Vieną kartą paleiskite atsisiųstą .exe failą (užtenka dvigubo paspaudimo) -- jis pats įsidiegs ir užregistruos protokolą.",
-        "macos": "Suteikite leidimą vykdyti (chmod +x), pašalinkite Gatekeeper karantino žymą (xattr -d com.apple.quarantine), tada vieną kartą paleiskite su --install.",
-        "linux": "Pažymėkite kaip vykdomą (chmod +x) ir vieną kartą paleiskite iš terminalo."
-      },
-      "footerLinks": "Reikia tikslių komandų arba norite susikompiliuoti iš išeitinio kodo? Žr. <releases>Bridge leidimų</releases> puslapį.",
-      "autostart": {
-        "heading": "Automatinis paleidimas paleidžiant sistemą (nebūtina)",
-        "windowsLinuxNote": "„Windows“ ar „Linux“ tai nereikalinga -- kiekvieną kartą paspaudus „Atverti Bambu Studio“, operacinė sistema paleidžia Bridge iš naujo, jau su nuorodos URL. Nėra jokio fone veikiančio proceso, kurį reikėtų palaikyti.",
-        "macosIntro": "Tas pats galioja ir „macOS“ -- ji paleidžia programą pagal poreikį net ir po perkrovimo. Pridėjus ją kaip prisijungimo elementą, tiesiog pirmas paspaudimas po sistemos paleidimo įvyks akimirksniu, o ne po maždaug sekundės, kol programa pasileis.",
-        "macosGuiHeading": "Paprasčiausia: sistemos nustatymai",
-        "macosGuiSteps": "System Settings -> General -> Login Items & Extensions -> spauskite + ir pridėkite „PrintStash Bridge“ iš ~/Applications.",
-        "macosLaunchAgentHeading": "Arba LaunchAgent (naudojantiems terminalą)",
-        "macosLaunchAgentIntro": "Išsaugokite tai kaip ~/Library/LaunchAgents/com.printstash.bridge.plist (pakeiskite YOUR_USERNAME savo naudotojo vardu):",
-        "macosLaunchAgentLoad": "Tada įkelkite jį:"
+      "modal": {
+        "startedNote": "Atsisiuntimas turėtų prasidėti automatiškai. Norėdami baigti diegimą, atlikite šiuos veiksmus:",
+        "windows": {
+          "heading": "Diegimas „Windows“",
+          "step1": "Dukart spustelėkite atsisiųstą .exe failą (arba paleiskite jį be argumentų iš terminalo). Jis pats įsidiegs ir automatiškai užregistruos protokolą."
+        },
+        "linux": {
+          "heading": "Diegimas „Linux“",
+          "step1": "Jei failų tvarkyklė neleidžia vykdyti failo, pirmiausia pažymėkite jį kaip vykdomą.",
+          "step2": "Tada vieną kartą jį paleiskite -- dukart spustelėję arba iš terminalo."
+        },
+        "macos": {
+          "heading": "Diegimas „macOS“",
+          "step1": "Suteikite leidimą vykdyti.",
+          "step2": "Pašalinkite Gatekeeper karantino žymą -- atsisiųsti failai automatiškai pažymimi karantinu.",
+          "step3": "Įdiekite jį. Tai nukopijuos programą į ~/Applications ir užregistruos print-stash:// nuorodą.",
+          "note": "Jei „macOS“ vis tiek atsisako jį paleisti, atidarykite System Settings -> Privacy & Security ir leiskite jį ten."
+        }
       }
     }
   },
