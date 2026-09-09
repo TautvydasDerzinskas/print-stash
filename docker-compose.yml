@@ -39,6 +39,13 @@ services:
       - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-}
       - AUTH_SECRET=${AUTH_SECRET:-changeme-secret}
       - AUTH_TOKEN_TTL=${AUTH_TOKEN_TTL:-43200}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-PrintStash <no-reply@localhost>}
       - FLARESOLVERR_URL=${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
     depends_on:
       db:

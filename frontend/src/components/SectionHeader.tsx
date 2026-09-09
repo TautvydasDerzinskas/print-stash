@@ -7,12 +7,14 @@ import Button from "@mui/material/Button";
 type Props = {
   title: string;
   subtitle: string;
-  onBack: () => void;
-  backLabel: string;
+  onBack?: () => void;
+  backLabel?: string;
 };
 
-/** Shared heading row for every Settings (and Admin Settings) section: title/subtitle on the
- *  left, a "Back" button on the right that returns to the root menu grid. */
+/** Shared heading row for a Settings (or Admin Settings) section: title/subtitle on the left,
+ *  and -- only when the section is reached by drilling into a root menu grid -- a "Back" button
+ *  on the right that returns to it. Sections rendered together on one page (nothing to go back
+ *  to) simply omit onBack. */
 export default function SectionHeader({ title, subtitle, onBack, backLabel }: Props) {
   return (
     <Stack direction="row" alignItems="flex-start" justifyContent="space-between" gap={2} flexWrap="wrap">
@@ -20,7 +22,7 @@ export default function SectionHeader({ title, subtitle, onBack, backLabel }: Pr
         <Typography variant="h5" fontWeight={600}>{title}</Typography>
         <Typography variant="body2" color="text.secondary">{subtitle}</Typography>
       </Box>
-      <Button variant="outlined" size="small" onClick={onBack}>{backLabel}</Button>
+      {onBack && <Button variant="outlined" size="small" onClick={onBack}>{backLabel}</Button>}
     </Stack>
   );
 }

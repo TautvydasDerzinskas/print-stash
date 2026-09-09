@@ -71,6 +71,18 @@ function useRouteChrome() {
   } else if (path.startsWith("/admin-settings")) {
     title = t("adminSettings.pageTitle");
     onBack = () => navigate(-1);
+  } else if (path.startsWith("/admin-users")) {
+    title = t("adminSettings.users.heading");
+    onBack = () => navigate(-1);
+  } else if (path.startsWith("/admin-logs")) {
+    title = t("adminSettings.logs.heading");
+    onBack = () => navigate(-1);
+  } else if (path.startsWith("/admin-triggers")) {
+    title = t("adminSettings.triggers.heading");
+    onBack = () => navigate(-1);
+  } else if (path.startsWith("/admin-connections")) {
+    title = t("adminSettings.connections.heading");
+    onBack = () => navigate(-1);
   }
 
   return { title, onBack };

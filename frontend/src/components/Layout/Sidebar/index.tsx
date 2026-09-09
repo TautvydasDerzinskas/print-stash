@@ -16,6 +16,10 @@ import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import CollectionsIcon from "@mui/icons-material/Collections";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SettingsIcon from "@mui/icons-material/Settings";
+import PeopleIcon from "@mui/icons-material/People";
+import HistoryIcon from "@mui/icons-material/History";
+import BoltIcon from "@mui/icons-material/Bolt";
+import CableIcon from "@mui/icons-material/Cable";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
@@ -68,7 +72,12 @@ export default function Sidebar({ isAdmin }: Props) {
   const onDashboard = location.pathname === "/";
   const onCollections = location.pathname.startsWith("/models/collections");
   const onModels = (location.pathname.startsWith("/models") && !onCollections) || location.pathname.startsWith("/authors");
-  const onAdmin = location.pathname.startsWith("/admin-settings");
+  const onAdminSettings = location.pathname.startsWith("/admin-settings");
+  const onAdminUsers = location.pathname.startsWith("/admin-users");
+  const onAdminLogs = location.pathname.startsWith("/admin-logs");
+  const onAdminTriggers = location.pathname.startsWith("/admin-triggers");
+  const onAdminConnections = location.pathname.startsWith("/admin-connections");
+  const onAdmin = onAdminSettings || onAdminUsers || onAdminLogs || onAdminTriggers || onAdminConnections;
   const adminOpen = adminExpanded || onAdmin;
 
   const toggleCollapsed = () => {
@@ -179,12 +188,38 @@ export default function Sidebar({ isAdmin }: Props) {
             <>
               <Divider sx={{ my: 1 }} />
               {collapsed ? (
-                <CollapsedNavIcon
-                  icon={<AdminPanelSettingsIcon fontSize="small" />}
-                  label={t("sidebar.administration")}
-                  selected={onAdmin}
-                  onClick={() => navigate("/admin-settings")}
-                />
+                <>
+                  <CollapsedNavIcon
+                    icon={<SettingsIcon fontSize="small" />}
+                    label={t("common:settings")}
+                    selected={onAdminSettings}
+                    onClick={() => navigate("/admin-settings")}
+                  />
+                  <CollapsedNavIcon
+                    icon={<PeopleIcon fontSize="small" />}
+                    label={t("adminSettings.users.heading")}
+                    selected={onAdminUsers}
+                    onClick={() => navigate("/admin-users")}
+                  />
+                  <CollapsedNavIcon
+                    icon={<HistoryIcon fontSize="small" />}
+                    label={t("adminSettings.logs.heading")}
+                    selected={onAdminLogs}
+                    onClick={() => navigate("/admin-logs")}
+                  />
+                  <CollapsedNavIcon
+                    icon={<BoltIcon fontSize="small" />}
+                    label={t("adminSettings.triggers.heading")}
+                    selected={onAdminTriggers}
+                    onClick={() => navigate("/admin-triggers")}
+                  />
+                  <CollapsedNavIcon
+                    icon={<CableIcon fontSize="small" />}
+                    label={t("adminSettings.connections.heading")}
+                    selected={onAdminConnections}
+                    onClick={() => navigate("/admin-connections")}
+                  />
+                </>
               ) : (
                 <>
                   <ListItemButton
@@ -201,7 +236,7 @@ export default function Sidebar({ isAdmin }: Props) {
                   <Collapse in={adminOpen}>
                     <List disablePadding>
                       <ListItemButton
-                        selected={onAdmin}
+                        selected={onAdminSettings}
                         onClick={() => navigate("/admin-settings")}
                         sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
                       >
@@ -209,6 +244,46 @@ export default function Sidebar({ isAdmin }: Props) {
                           <SettingsIcon fontSize="small" />
                         </ListItemIcon>
                         <ListItemText primary={t("common:settings")} primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <ListItemButton
+                        selected={onAdminUsers}
+                        onClick={() => navigate("/admin-users")}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <PeopleIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={t("adminSettings.users.heading")} primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <ListItemButton
+                        selected={onAdminLogs}
+                        onClick={() => navigate("/admin-logs")}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <HistoryIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={t("adminSettings.logs.heading")} primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <ListItemButton
+                        selected={onAdminTriggers}
+                        onClick={() => navigate("/admin-triggers")}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <BoltIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={t("adminSettings.triggers.heading")} primaryTypographyProps={{ variant: "body2" }} />
+                      </ListItemButton>
+                      <ListItemButton
+                        selected={onAdminConnections}
+                        onClick={() => navigate("/admin-connections")}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 30 }}>
+                          <CableIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText primary={t("adminSettings.connections.heading")} primaryTypographyProps={{ variant: "body2" }} />
                       </ListItemButton>
                     </List>
                   </Collapse>

@@ -29,6 +29,20 @@
         "passwordMismatch": "Slaptažodžiai nesutampa",
         "passwordTooShort": "Slaptažodis turi būti bent 8 simbolių",
         "disabled": "Šiuo metu naujos registracijos yra išjungtos."
+      },
+      "checkEmail": {
+        "heading": "Patikrinkite savo el. paštą",
+        "body": "Išsiuntėme patvirtinimo nuorodą adresu {{email}}. Paspauskite ją, kad baigtumėte kurti paskyrą.",
+        "resendButton": "Siųsti dar kartą",
+        "resending": "Siunčiama…",
+        "resent": "Išsiųsta! Patikrinkite pašto dėžutę.",
+        "resendFailed": "Nepavyko išsiųsti iš naujo — bandykite dar kartą"
+      },
+      "verifyEmail": {
+        "verifying": "Patvirtinamas el. paštas…",
+        "missingToken": "Šioje patvirtinimo nuorodoje trūksta rakto.",
+        "failed": "Ši patvirtinimo nuoroda negalioja arba jos galiojimas baigėsi.",
+        "backToSignIn": "Grįžti į prisijungimą"
       }
     },
     "sidebar": {
@@ -241,21 +255,6 @@
     },
     "adminSettings": {
       "pageTitle": "Administravimo nustatymai",
-      "back": "Atgal",
-      "root": {
-        "storageTitle": "Failai",
-        "storageHeading": "Saugojimo struktūra",
-        "storageDesc": "Tvarkykite failus pagal aplankus, modelių pavadinimus, autorius, žymas ir kolekcijas.",
-        "previewsTitle": "Našumas",
-        "previewsHeading": "Modelių peržiūros",
-        "previewsDesc": "Pasirinkite automatinį, pagal poreikį arba išjungtą peržiūrų generavimą.",
-        "triggersTitle": "Veiksmai",
-        "triggersHeading": "Trigeriai",
-        "triggersDesc": "Vienkartiniai veiksmai, veikiantys kito naudotojo duomenis.",
-        "thingiverseTitle": "Importas",
-        "thingiverseHeading": "Thingiverse prieigos raktas",
-        "thingiverseDesc": "Sukonfigūruokite bendrą prieigos raktą, naudojamą visų naudotojų Thingiverse importui."
-      },
       "storage": {
         "heading": "Saugojimo struktūra",
         "subtitle": "Pasirinkite, kaip valdomi modelių failai tvarkomi diske.",
@@ -277,18 +276,21 @@
       "previews": {
         "heading": "Modelių peržiūros",
         "subtitle": "Valdykite fono peržiūrų generavimą visai sistemai.",
+        "infoTitle": "Ką tai valdo",
+        "infoScope": "Tai veikia tik mažą 3D miniatiūrą, rodomą modelio kortelėje (Modeliai, Kolekcijos) — niekada pilną modelio peržiūros langą. Taip pat tai galioja tik failams, kurie dar neturi miniatiūros: įtaisytoji suskaidyto .3mf failo miniatiūra arba anksčiau jau sugeneruota miniatiūra visada naudojama automatiškai, nepriklausomai nuo šio nustatymo. Šis pasirinkimas nulemia tik likusius atvejus — dažniausiai .stl/.obj failus arba .3mf be įtaisytos miniatiūros:",
+        "infoAutomatic": "Automatinis — lankytojo naršyklė sugeneruoja ir išsaugo trūkstamą miniatiūrą, vos tik kortelė atsiranda ekrane.",
+        "infoOnDemand": "Pagal poreikį — kortelėje rodomas mygtukas „Generuoti peržiūrą“; niekas negeneruojama, kol jo nepaspaudžiama.",
+        "infoDisabled": "Išjungta — kortelėse visada rodomas rezervuotas vaizdas; miniatiūra niekada negeneruojama.",
         "automaticLabel": "Automatinis",
         "automaticDesc": "Trūkstamas peržiūras įkelti tik joms atsiradus ekrane, tada išsaugoti ateičiai.",
         "onDemandLabel": "Pagal poreikį",
         "onDemandDesc": "Iš karto rodyti išsaugotas peržiūras, o trūkstamas generuoti tik paprašius.",
         "disabledLabel": "Išjungta",
         "disabledDesc": "Niekada negeneruoti kortelių peržiūrų. Interaktyvi peržiūra vis tiek pasiekiama atidarius modelį.",
-        "footerNote": "Įtaisytosios 3MF miniatiūros ir anksčiau sugeneruotos serverio miniatiūros visada naudojamos, kai jos yra.",
         "failed": "Nepavyko išsaugoti peržiūrų nustatymų."
       },
       "triggers": {
         "heading": "Trigeriai",
-        "subtitle": "Negrįžtami, vienkartiniai veiksmai, atliekami su kito naudotojo paskyra. Naudokite atsargiai.",
         "deleteAllTitle": "Ištrinti visus naudotojo modelius",
         "deleteAllDesc": "Negrįžtamai ištrina visus naudotojo sukurtus, įkeltus ar importuotus modelius — kartu su failais. Jo kategorijos ir kolekcijos lieka, tik tuščios.",
         "userLabel": "Naudotojas",
@@ -318,6 +320,81 @@
         "saved": "Išsaugota.",
         "cleared": "Prieigos raktas pašalintas.",
         "failed": "Nepavyko išsaugoti Thingiverse nustatymų."
+      },
+      "connections": {
+        "heading": "Ryšiai"
+      },
+      "smtp": {
+        "tabLabel": "SMTP",
+        "helpText": "Naudojama siunčiant el. pašto patvirtinimo laišką registruojantis. Palikite Serverį (Host) tuščią, kad visiškai išjungtumėte el. pašto patvirtinimą — tuomet naujos paskyros iš karto patvirtinamos ir prijungiamos.",
+        "statusConfigured": "SMTP sukonfigūruotas — naujos paskyros privalo patvirtinti el. paštą prieš prisijungdamos.",
+        "statusNotConfigured": "SMTP nesukonfigūruotas — naujos paskyros iš karto patvirtinamos ir prijungiamos.",
+        "hostLabel": "Serveris",
+        "hostPlaceholder": "smtp.example.com",
+        "portLabel": "Prievadas",
+        "secureLabel": "Naudoti numanomą TLS",
+        "secureHint": "Įjunkite 465 prievadui. Palikite išjungtą STARTTLS su 587 prievadu.",
+        "userLabel": "Naudotojo vardas",
+        "passwordLabel": "Slaptažodis",
+        "passwordPlaceholder": "Palikite tuščią, kad išsaugotumėte dabartinį slaptažodį",
+        "fromLabel": "Siuntėjo adresas",
+        "fromPlaceholder": "PrintStash <no-reply@example.com>",
+        "save": "Išsaugoti",
+        "saving": "Saugoma…",
+        "saved": "Išsaugota.",
+        "loadFailed": "Nepavyko įkelti SMTP nustatymų.",
+        "failed": "Nepavyko išsaugoti SMTP nustatymų."
+      },
+      "database": {
+        "tabLabel": "Duomenų bazė",
+        "helpText": "Tik skaitymui — visada rodo DATABASE_URL reikšmę, su kuria paleistas šis serveris. Norint pakeisti duomenų bazę, reikia paleisti serverį iš naujo su kita reikšme — čia to pakeisti negalima.",
+        "providerLabel": "Tiekėjas",
+        "hostLabel": "Serveris",
+        "portLabel": "Prievadas",
+        "nameLabel": "Duomenų bazė",
+        "userLabel": "Naudotojas",
+        "unset": "—",
+        "loadFailed": "Nepavyko įkelti duomenų bazės informacijos."
+      },
+      "users": {
+        "heading": "Naudotojai",
+        "columnEmail": "El. paštas",
+        "columnDisplayName": "Rodomas vardas",
+        "columnRole": "Vaidmuo",
+        "columnModels": "Modeliai",
+        "columnThingiverse": "Thingiverse",
+        "columnCollections": "Kolekcijos",
+        "columnCreated": "Sukurta",
+        "roleAdmin": "Administratorius",
+        "roleMember": "Narys",
+        "loadFailed": "Nepavyko įkelti naudotojų."
+      },
+      "logs": {
+        "heading": "Žurnalai",
+        "userLabel": "Naudotojas",
+        "allUsers": "Visi naudotojai",
+        "fromLabel": "Nuo",
+        "toLabel": "Iki",
+        "columnDate": "Data",
+        "columnUser": "Naudotojas",
+        "columnAction": "Veiksmas",
+        "columnDetails": "Detalės",
+        "loadFailed": "Nepavyko įkelti žurnalų.",
+        "empty": "Pagal šį filtrą įrašų nėra.",
+        "editedField": "Redaguota: {{field}}",
+        "importSummary": "{{label}} — importuota {{imported}}, nepavyko {{failed}}",
+        "action": {
+          "user_logged_in": "Prisijungė",
+          "user_logged_out": "Atsijungė",
+          "model_uploaded": "Modelis įkeltas",
+          "model_imported": "Modelis importuotas",
+          "import_completed": "Importas baigtas",
+          "model_edited": "Modelis redaguotas",
+          "model_deleted": "Modelis ištrintas",
+          "collection_created": "Kolekcija sukurta",
+          "collection_edited": "Kolekcija redaguota",
+          "collection_deleted": "Kolekcija ištrinta"
+        }
       }
     }
   },

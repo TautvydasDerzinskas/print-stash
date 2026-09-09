@@ -13,6 +13,7 @@ import { upsertAuthorFromImport } from "./authorService";
 import { extractZipEntriesToPrints } from "./zipService";
 import { fetchThingiverseCollectionTitle } from "./thingiverseApi";
 import { getThingiverseAccessToken } from "./settingsService";
+import { createLog } from "./auditLog";
 import { HttpError } from "../utils/fileUtils";
 
 // Deliberately sequential (not a handful in parallel) -- firing several designs' worth of
@@ -130,6 +131,12 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
       alreadyInLibrary,
       failedCount: failed.length,
     });
+    void createLog({
+      userId,
+      action: "import_completed",
+      targetId: resultCollectionId,
+      details: { provider: "makerworld", sourceLabel: collectionTitle, imported, alreadyInLibrary, failed: failed.length },
+    });
 
     const label = collectionTitle ? `"${collectionTitle}"` : "a MakerWorld collection";
     const bodyParts: string[] = [];
@@ -235,6 +242,12 @@ async function runThingiverseThingsImportJob(
       alreadyInLibrary,
       failedCount: failed.length,
     });
+    void createLog({
+      userId,
+      action: "import_completed",
+      targetId: resultCollectionId,
+      details: { provider: "thingiverse", sourceLabel: collectionTitle, imported, alreadyInLibrary, failed: failed.length },
+    });
 
     const bodyParts: string[] = [];
     if (alreadyInLibrary) bodyParts.push(`${alreadyInLibrary} already in your library`);
@@ -334,6 +347,11 @@ export async function runZipImportJob(jobId: string, userId: string, body: ZipIm
       processed: body.entries.length,
       imported: prints.length,
       failedCount: failed.length,
+    });
+    void createLog({
+      userId,
+      action: "import_completed",
+      details: { provider: "zip", sourceLabel: filename, imported: prints.length, failed: failed.length },
     });
 
     const bodyParts: string[] = [];

@@ -43,6 +43,22 @@ function auth(token: string) {
   return { Authorization: `Bearer ${token}` };
 }
 
+// Log writes are fire-and-forget (see services/auditLog.ts) so the HTTP response can return
+// before the row lands -- poll briefly instead of asserting immediately after the triggering call.
+async function waitForLog(
+  token: string,
+  predicate: (log: { action: string; target_id: string | null; details: Record<string, unknown> }) => boolean,
+  timeoutMs = 2000,
+): Promise<{ action: string; target_id: string | null; details: Record<string, unknown> } | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const res = await request(app).get("/api/admin/logs").set(auth(token));
+    const found = (res.body as Array<{ action: string; target_id: string | null; details: Record<string, unknown> }>).find(predicate);
+    if (found || Date.now() > deadline) return found;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
 describe("admin user management", () => {
   it("rejects a non-admin from listing users", async () => {
     const res = await request(app).get("/api/admin/users").set(auth(memberToken));
@@ -69,6 +85,9 @@ describe("admin user management", () => {
     const member = res.body.find((u: { id: string }) => u.id === memberUserId);
     expect(member).toBeTruthy();
     expect(member.print_count).toBe(2);
+    expect(member.collection_count).toBe(0);
+    expect(member.thingiverse_count).toBe(0);
+    expect(typeof member.created_at).toBe("string");
   });
 
   it("404s for deleting prints of a nonexistent user", async () => {
@@ -89,5 +108,71 @@ describe("admin user management", () => {
     const usersRes = await request(app).get("/api/admin/users").set(auth(adminToken));
     const member = usersRes.body.find((u: { id: string }) => u.id === memberUserId);
     expect(member.print_count).toBe(0);
+  });
+});
+
+describe("admin audit logs", () => {
+  it("rejects a non-admin from listing logs", async () => {
+    const res = await request(app).get("/api/admin/logs").set(auth(memberToken));
+    expect(res.status).toBe(403);
+  });
+
+  it("logs a login", async () => {
+    const found = await waitForLog(adminToken, (l) => l.action === "user_logged_in" && l.details.email !== undefined);
+    expect(found).toBeTruthy();
+  });
+
+  it("logs a logout", async () => {
+    const res = await request(app).post("/api/logout").set(auth(memberToken));
+    expect(res.status).toBe(200);
+    const found = await waitForLog(adminToken, (l) => l.action === "user_logged_out");
+    expect(found).toBeTruthy();
+  });
+
+  it("logs model upload, edit, and delete", async () => {
+    const uploadRes = await request(app)
+      .post("/api/upload")
+      .set(auth(memberToken))
+      .attach("files", tmpFile("audit-log-test.stl", "solid a endsolid"));
+    const printId = uploadRes.body.prints[0].id;
+
+    const uploaded = await waitForLog(adminToken, (l) => l.action === "model_uploaded" && l.target_id === printId);
+    expect(uploaded).toBeTruthy();
+
+    await request(app).post(`/api/print/${printId}/meta`).set(auth(memberToken)).send({ notes: "updated" });
+    const edited = await waitForLog(adminToken, (l) => l.action === "model_edited" && l.target_id === printId);
+    expect(edited).toBeTruthy();
+
+    await request(app).delete(`/api/print/${printId}`).set(auth(memberToken));
+    const deleted = await waitForLog(adminToken, (l) => l.action === "model_deleted" && l.target_id === printId);
+    expect(deleted).toBeTruthy();
+  });
+
+  it("logs collection create, edit, and delete", async () => {
+    const createRes = await request(app)
+      .post("/api/collections")
+      .set(auth(memberToken))
+      .send({ name: "Audit Log Test Collection", tags: [] });
+    const collectionId = createRes.body.id;
+
+    const created = await waitForLog(adminToken, (l) => l.action === "collection_created" && l.target_id === collectionId);
+    expect(created).toBeTruthy();
+
+    await request(app)
+      .patch(`/api/collection/${collectionId}`)
+      .set(auth(memberToken))
+      .send({ name: "Audit Log Test Collection Renamed", tags: [] });
+    const edited = await waitForLog(adminToken, (l) => l.action === "collection_edited" && l.target_id === collectionId);
+    expect(edited).toBeTruthy();
+
+    await request(app).delete(`/api/collection/${collectionId}`).set(auth(memberToken));
+    const deleted = await waitForLog(adminToken, (l) => l.action === "collection_deleted" && l.target_id === collectionId);
+    expect(deleted).toBeTruthy();
+  });
+
+  it("filters logs by user", async () => {
+    const res = await request(app).get(`/api/admin/logs?user_id=${memberUserId}`).set(auth(adminToken));
+    expect(res.status).toBe(200);
+    expect((res.body as Array<{ user_id: string }>).every((l) => l.user_id === memberUserId)).toBe(true);
   });
 });

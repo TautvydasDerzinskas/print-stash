@@ -15,6 +15,11 @@ export const PREVIEWS = path.join(STORAGE, "previews");
 // generated once per .3mf Plate so the viewer never has to re-parse a huge raw 3MF on every open.
 export const MODEL_PREVIEWS = path.join(STORAGE, "model-previews");
 
+// Base URL this instance is publicly reachable at -- needed to build absolute links in outgoing
+// emails (e.g. the email-verification link), which unlike API responses can't rely on the
+// request's own Origin. Left blank in single-machine/local setups where no email is ever sent.
+export const PUBLIC_URL = (process.env.PUBLIC_URL || "").trim().replace(/\/+$/, "");
+
 export const AUTH_SECRET = process.env.AUTH_SECRET || "changeme-secret";
 export const AUTH_TOKEN_TTL = envInt("AUTH_TOKEN_TTL", 43200);
 export const AUTH_ALGO = "HS256" as const;

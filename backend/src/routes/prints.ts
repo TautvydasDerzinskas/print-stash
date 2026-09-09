@@ -16,6 +16,7 @@ import { loadFullPrint, printOutById } from "../services/printLoader";
 import { deleteAllPrintFiles } from "../services/printFileService";
 import { sendPrintsZip } from "../services/downloadZip";
 import { systemCollectionKeyForId } from "../services/collectionService";
+import { createLog } from "../services/auditLog";
 import type { Prisma } from "@prisma/client";
 
 const router = Router();
@@ -91,6 +92,7 @@ router.post(
             { filename: safeName, mime, tempFilePath: file.path },
           ]);
           printsOut.push(toPrintOut(print, plates, [], null));
+          void createLog({ userId: req.userId!, action: "model_uploaded", targetId: print.id, details: { name: print.name } });
         }
       } else {
         const plateInputs: NewPlateInput[] = files.map((f) => {
@@ -100,6 +102,7 @@ router.post(
         const nameHint = path.parse(plateInputs[0].filename).name;
         const { print, plates } = await createPrint(req.userId!, meta, nameHint, plateInputs);
         printsOut.push(toPrintOut(print, plates, [], null));
+        void createLog({ userId: req.userId!, action: "model_uploaded", targetId: print.id, details: { name: print.name } });
       }
       res.json({ prints: printsOut });
     } finally {
@@ -377,6 +380,7 @@ router.post(
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
     res.json({ print: await printOutById(req.userId!, print.id) });
+    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "tags", name: updated.name } });
   }),
 );
 
@@ -412,6 +416,7 @@ router.post(
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
     res.json({ print: await printOutById(req.userId!, print.id) });
+    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "meta", name: updated.name } });
   }),
 );
 
@@ -437,6 +442,7 @@ router.post(
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
     res.json({ print: await printOutById(req.userId!, print.id) });
+    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "folder", name: updated.name } });
   }),
 );
 
@@ -452,6 +458,7 @@ router.delete(
       await fs.promises.rm(plateThumbPath(plate.id), { force: true }).catch(() => undefined);
     }
     res.json({ ok: true });
+    void createLog({ userId: req.userId!, action: "model_deleted", targetId: req.params.id, details: { name: full.print.name } });
   }),
 );
 

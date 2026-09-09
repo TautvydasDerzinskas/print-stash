@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { deleteAllPrintFiles } from "./printFileService";
 import { deleteAllPreviewImages } from "./previewImageService";
@@ -12,25 +13,84 @@ export type UserWithPrintCount = {
   displayName: string;
   role: "ADMIN" | "MEMBER";
   printCount: number;
+  collectionCount: number;
+  thingiverseCount: number;
+  createdAt: Date;
 };
 
 export async function listUsersWithPrintCounts(): Promise<UserWithPrintCount[]> {
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      email: true,
-      displayName: true,
-      role: true,
-      _count: { select: { prints: true } },
-    },
-  });
+  const [users, thingiverseCounts] = await Promise.all([
+    prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        role: true,
+        createdAt: true,
+        _count: { select: { prints: true, collections: true } },
+      },
+    }),
+    // A per-user count of prints sourced from Thingiverse -- the closest analog print-stash has
+    // to youtube-mp3-vault's per-user "Scrobbling" column, since Thingiverse integration here is
+    // an import provider (Print.sourceProvider) rather than a per-user toggle.
+    prisma.print.groupBy({
+      by: ["userId"],
+      where: { sourceProvider: "thingiverse" },
+      _count: true,
+    }),
+  ]);
+  const thingiverseByUser = new Map(thingiverseCounts.map((t) => [t.userId, t._count]));
   return users.map((u) => ({
     id: u.id,
     email: u.email,
     displayName: u.displayName,
     role: u.role,
+    createdAt: u.createdAt,
     printCount: u._count.prints,
+    collectionCount: u._count.collections,
+    thingiverseCount: thingiverseByUser.get(u.id) ?? 0,
+  }));
+}
+
+export type LogEntry = {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  userEmail: string;
+  action: string;
+  targetId: string | null;
+  details: Record<string, unknown>;
+  createdAt: Date;
+};
+
+const LOG_LIST_LIMIT = 500;
+
+/** Backs GET /admin/logs. `from`/`to` are inclusive date bounds; omitting both returns the most
+ * recent entries up to LOG_LIST_LIMIT. */
+export async function listLogs(filter: { userId?: string; from?: Date; to?: Date }): Promise<LogEntry[]> {
+  const where: Prisma.LogWhereInput = {};
+  if (filter.userId) where.userId = filter.userId;
+  if (filter.from || filter.to) {
+    where.createdAt = {};
+    if (filter.from) where.createdAt.gte = filter.from;
+    if (filter.to) where.createdAt.lte = filter.to;
+  }
+  const logs = await prisma.log.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: LOG_LIST_LIMIT,
+    include: { user: { select: { displayName: true, email: true } } },
+  });
+  return logs.map((l) => ({
+    id: l.id,
+    userId: l.userId,
+    userDisplayName: l.user.displayName,
+    userEmail: l.user.email,
+    action: l.action,
+    targetId: l.targetId,
+    details: l.details as Record<string, unknown>,
+    createdAt: l.createdAt,
   }));
 }
 

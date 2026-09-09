@@ -19,18 +19,16 @@ import DialogActions from "@mui/material/DialogActions";
 import TextField from "@mui/material/TextField";
 import { UnauthorizedError } from "../../api/client";
 import { adminApi, type AdminUser } from "../../api/admin";
-import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   onUnauthorized?: () => void;
-  onBack: () => void;
 };
 
 /** Admin-only "trigger" actions -- one-off, high-blast-radius operations run against another
  *  user's data. Today there's a single trigger (delete all of a user's models); this file
  *  intentionally stays a plain list of Paper sections rather than a generic "trigger registry"
  *  until there's a second one to justify the abstraction. */
-export default function TriggersSection({ onUnauthorized, onBack }: Props) {
+export default function TriggersPage({ onUnauthorized }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const [users, setUsers] = React.useState<AdminUser[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -93,13 +91,6 @@ export default function TriggersSection({ onUnauthorized, onBack }: Props) {
 
   return (
     <Stack spacing={3}>
-      <SectionHeader
-        title={t("adminSettings.triggers.heading")}
-        subtitle={t("adminSettings.triggers.subtitle")}
-        onBack={onBack}
-        backLabel={t("adminSettings.back")}
-      />
-
       <Paper variant="outlined" sx={{ p: 2.5 }}>
         <Stack spacing={2}>
           <Box>

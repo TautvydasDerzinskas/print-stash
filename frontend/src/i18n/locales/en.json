@@ -29,6 +29,20 @@
         "passwordMismatch": "Passwords do not match",
         "passwordTooShort": "Password must be at least 8 characters",
         "disabled": "New registrations are currently disabled."
+      },
+      "checkEmail": {
+        "heading": "Check your email",
+        "body": "We sent a confirmation link to {{email}}. Click it to finish creating your account.",
+        "resendButton": "Resend email",
+        "resending": "Sending…",
+        "resent": "Sent! Check your inbox.",
+        "resendFailed": "Failed to resend — try again"
+      },
+      "verifyEmail": {
+        "verifying": "Confirming your email…",
+        "missingToken": "This verification link is missing its token.",
+        "failed": "This verification link is invalid or has expired.",
+        "backToSignIn": "Back to sign in"
       }
     },
     "sidebar": {
@@ -241,21 +255,6 @@
     },
     "adminSettings": {
       "pageTitle": "Admin Settings",
-      "back": "Back",
-      "root": {
-        "storageTitle": "Files",
-        "storageHeading": "Storage Structure",
-        "storageDesc": "Organize files with folders, model names, creators, tags, and collections.",
-        "previewsTitle": "Performance",
-        "previewsHeading": "Model Previews",
-        "previewsDesc": "Choose automatic, on-demand, or disabled preview generation.",
-        "triggersTitle": "Actions",
-        "triggersHeading": "Triggers",
-        "triggersDesc": "One-off actions that operate on another user's data.",
-        "thingiverseTitle": "Imports",
-        "thingiverseHeading": "Thingiverse Access Token",
-        "thingiverseDesc": "Configure the shared Access Token used for every user's Thingiverse imports."
-      },
       "storage": {
         "heading": "Storage Structure",
         "subtitle": "Choose how managed model files are organized on disk.",
@@ -277,18 +276,21 @@
       "previews": {
         "heading": "Model Previews",
         "subtitle": "Control background preview generation for the whole instance.",
+        "infoTitle": "What this controls",
+        "infoScope": "This only affects the small 3D thumbnail shown on model cards (Models, Collections) — never the full model viewer. It also only applies to files with no thumbnail yet: an embedded thumbnail from a sliced .3mf file, or one already generated before, is always reused automatically regardless of this setting. This choice only decides what happens for the rest — typically .stl/.obj files, or a .3mf with no embedded thumbnail:",
+        "infoAutomatic": "Automatic — a visitor's browser renders and saves the missing thumbnail as soon as its card scrolls into view.",
+        "infoOnDemand": "On demand — a card shows a \"Generate preview\" button instead; nothing renders until someone clicks it.",
+        "infoDisabled": "Disabled — cards always show a placeholder; a thumbnail is never rendered.",
         "automaticLabel": "Automatic",
         "automaticDesc": "Load missing previews only as cards enter view, then save them for future visits.",
         "onDemandLabel": "On demand",
         "onDemandDesc": "Show saved previews immediately and generate missing ones only when requested.",
         "disabledLabel": "Disabled",
         "disabledDesc": "Never generate card previews. Interactive viewing remains available by opening a model.",
-        "footerNote": "Embedded 3MF thumbnails and previously generated server thumbnails are always used when available.",
         "failed": "Failed to save preview settings."
       },
       "triggers": {
         "heading": "Triggers",
-        "subtitle": "Irreversible, one-off actions run against another user's account. Use with care.",
         "deleteAllTitle": "Delete all models for a user",
         "deleteAllDesc": "Permanently deletes every model a user created, uploaded, or imported — files included. Their categories and collections are left in place, just empty.",
         "userLabel": "User",
@@ -318,6 +320,81 @@
         "saved": "Saved.",
         "cleared": "Access Token removed.",
         "failed": "Failed to save Thingiverse settings."
+      },
+      "connections": {
+        "heading": "Connections"
+      },
+      "smtp": {
+        "tabLabel": "SMTP",
+        "helpText": "Used to send the account-verification email on registration. Leave Host blank to turn email verification off entirely — new accounts are then verified and signed in immediately.",
+        "statusConfigured": "SMTP is configured — new accounts must verify their email before signing in.",
+        "statusNotConfigured": "SMTP is not configured — new accounts are verified and signed in immediately.",
+        "hostLabel": "Host",
+        "hostPlaceholder": "smtp.example.com",
+        "portLabel": "Port",
+        "secureLabel": "Use implicit TLS",
+        "secureHint": "Enable for port 465. Leave off for STARTTLS on port 587.",
+        "userLabel": "Username",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Leave blank to keep the current password",
+        "fromLabel": "From address",
+        "fromPlaceholder": "PrintStash <no-reply@example.com>",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved.",
+        "loadFailed": "Unable to load SMTP settings.",
+        "failed": "Failed to save SMTP settings."
+      },
+      "database": {
+        "tabLabel": "Database",
+        "helpText": "Read-only — always reflects the DATABASE_URL this instance was started with. Switching databases means restarting the backend with a different value, not something changeable here.",
+        "providerLabel": "Provider",
+        "hostLabel": "Host",
+        "portLabel": "Port",
+        "nameLabel": "Database",
+        "userLabel": "User",
+        "unset": "—",
+        "loadFailed": "Unable to load database info."
+      },
+      "users": {
+        "heading": "Users",
+        "columnEmail": "Email",
+        "columnDisplayName": "Display name",
+        "columnRole": "Role",
+        "columnModels": "Models",
+        "columnThingiverse": "Thingiverse",
+        "columnCollections": "Collections",
+        "columnCreated": "Created",
+        "roleAdmin": "Admin",
+        "roleMember": "Member",
+        "loadFailed": "Unable to load users."
+      },
+      "logs": {
+        "heading": "Logs",
+        "userLabel": "User",
+        "allUsers": "All users",
+        "fromLabel": "From",
+        "toLabel": "To",
+        "columnDate": "Date",
+        "columnUser": "User",
+        "columnAction": "Action",
+        "columnDetails": "Details",
+        "loadFailed": "Unable to load logs.",
+        "empty": "No log entries for this filter.",
+        "editedField": "Edited {{field}}",
+        "importSummary": "{{label}} — {{imported}} imported, {{failed}} failed",
+        "action": {
+          "user_logged_in": "Logged in",
+          "user_logged_out": "Logged out",
+          "model_uploaded": "Model uploaded",
+          "model_imported": "Model imported",
+          "import_completed": "Import completed",
+          "model_edited": "Model edited",
+          "model_deleted": "Model deleted",
+          "collection_created": "Collection created",
+          "collection_edited": "Collection edited",
+          "collection_deleted": "Collection deleted"
+        }
       }
     }
   },

@@ -14,6 +14,7 @@ import {
   systemCollectionKeyForId,
 } from "../services/collectionService";
 import { printOutsByIds } from "../services/printLoader";
+import { createLog } from "../services/auditLog";
 import { toCollectionOut, type PrintOut } from "../dto";
 
 const router = Router();
@@ -71,6 +72,12 @@ router.post(
       },
     });
     res.json(toCollectionOut(collection, 0, []));
+    void createLog({
+      userId: req.userId!,
+      action: "collection_created",
+      targetId: collection.id,
+      details: { name: collection.name },
+    });
   }),
 );
 
@@ -112,6 +119,12 @@ router.patch(
     });
     const itemCount = await prisma.collectionItem.count({ where: { collectionId: updated.id } });
     res.json(toCollectionOut(updated, itemCount, []));
+    void createLog({
+      userId: req.userId!,
+      action: "collection_edited",
+      targetId: updated.id,
+      details: { name: updated.name },
+    });
   }),
 );
 
@@ -125,6 +138,12 @@ router.delete(
     if (!collection) throw new HttpError(404, "Collection not found");
     await prisma.collection.delete({ where: { id: collection.id } });
     res.json({ ok: true });
+    void createLog({
+      userId: req.userId!,
+      action: "collection_deleted",
+      targetId: collection.id,
+      details: { name: collection.name },
+    });
   }),
 );
 

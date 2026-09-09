@@ -19,9 +19,14 @@ export function parseContentDisposition(cd: string | null | undefined): string |
 
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  // Machine-readable discriminator for the rare case a frontend needs to branch on *why* a
+  // request failed rather than just show `message` -- e.g. EMAIL_NOT_VERIFIED, which needs a
+  // "resend verification email" affordance instead of a plain error toast.
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 

@@ -52,7 +52,7 @@ export function createApp(): Express {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof HttpError) {
-      res.status(err.status).json({ detail: err.message });
+      res.status(err.status).json({ detail: err.message, ...(err.code ? { code: err.code } : {}) });
       return;
     }
     console.error(err);

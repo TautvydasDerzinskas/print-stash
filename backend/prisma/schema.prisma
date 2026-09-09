@@ -18,11 +18,18 @@ model User {
   passwordHash  String
   displayName   String
   role          Role           @default(MEMBER)
+  // Defaults to true so the migration doesn't retroactively lock out every existing account --
+  // new registrations explicitly set this false when SMTP is configured (see routes/auth.ts's
+  // isSmtpConfigured branch), true (no verification needed) otherwise.
+  emailVerified            Boolean   @default(true)
+  emailVerificationToken   String?   @unique
+  emailVerificationExpires DateTime?
   folders       Folder[]
   prints        Print[]
   collections   Collection[]
   importJobs    ImportJob[]
   notifications Notification[]
+  logs          Log[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -287,4 +294,21 @@ model PrintFile {
 model Setting {
   key   String @id
   value Json
+}
+
+/// An admin-facing audit trail entry -- logins/logouts and every mutation an admin should be
+/// able to trace back to a user (uploads, imports, model edits/deletes, collection
+/// creates/edits/deletes). Written fire-and-forget via services/auditLog.ts's createLog() so a
+/// logging failure never breaks the user-facing action it's recording. Read by GET /admin/logs.
+model Log {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  targetId  String?
+  details   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
 }

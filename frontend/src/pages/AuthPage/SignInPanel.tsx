@@ -6,6 +6,8 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import { authApi, type AuthUser } from "../../api/auth";
+import { EmailNotVerifiedError } from "../../api/client";
+import ResendVerificationButton from "./ResendVerificationButton";
 
 type Props = {
   onSuccess: (token: string, expires_in: number, user: AuthUser) => void;
@@ -17,17 +19,24 @@ export default function SignInPanel({ onSuccess }: Props) {
   const [password, setPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [needsVerification, setNeedsVerification] = React.useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setNeedsVerification(false);
     setLoading(true);
     try {
       const res = await authApi.login(email, password);
       onSuccess(res.token, res.expires_in, res.user);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : t("auth.signIn.failed"));
+      if (err instanceof EmailNotVerifiedError) {
+        setNeedsVerification(true);
+        setError(err.message);
+      } else {
+        setError(err instanceof Error ? err.message : t("auth.signIn.failed"));
+      }
     } finally {
       setLoading(false);
     }
@@ -37,6 +46,7 @@ export default function SignInPanel({ onSuccess }: Props) {
     <Box component="form" onSubmit={handleSubmit}>
       <Stack spacing={2}>
         {error && <Alert severity="error">{error}</Alert>}
+        {needsVerification && <ResendVerificationButton email={email} />}
         <TextField
           type="email"
           label={t("auth.signIn.emailLabel")}

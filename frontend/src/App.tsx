@@ -12,8 +12,13 @@ import CollectionsPage from "./pages/CollectionsPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
 import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
+import UsersPage from "./pages/UsersPage";
+import LogsPage from "./pages/LogsPage";
+import TriggersPage from "./pages/TriggersPage";
+import ConnectionsPage from "./pages/ConnectionsPage";
 import { healthApi, type HealthInfo } from "./api/health";
 import { authApi, type AuthUser } from "./api/auth";
 import { settingsApi, type PreviewMode } from "./api/settings";
@@ -138,6 +143,22 @@ function AppShell({
               : <Navigate to="/" replace />
           }
         />
+        <Route
+          path="/admin-users"
+          element={isAdmin ? <UsersPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/admin-logs"
+          element={isAdmin ? <LogsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/admin-triggers"
+          element={isAdmin ? <TriggersPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+        />
+        <Route
+          path="/admin-connections"
+          element={isAdmin ? <ConnectionsPage onUnauthorized={onUnauthorized} /> : <Navigate to="/" replace />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
@@ -192,6 +213,9 @@ export default function App() {
   }, [sessionExpired, t]);
 
   const handleLogout = () => {
+    // Fire-and-forget: the audit-log entry is recorded server-side before the token that
+    // identifies it is gone, but local logout must proceed immediately either way.
+    void authApi.logout();
     clearToken();
     clearUser();
     setToken(null);
@@ -220,6 +244,10 @@ export default function App() {
   }, [token, tokenTtl, handleUnauthorized]);
 
   if (authRequired && !token) {
+    // No BrowserRouter wraps this branch (see AppShell's comment), so /verify-email -- reached
+    // pre-login from the link in the verification email -- is checked directly against
+    // window.location rather than via a route.
+    const isVerifyEmailPath = typeof window !== "undefined" && window.location.pathname === "/verify-email";
     return (
       <ThemeProvider theme={muiTheme}>
         <CssBaseline />
@@ -233,11 +261,15 @@ export default function App() {
             p: 2,
           }}
         >
-          <AuthPage
-            onSuccess={handleLogin}
-            apiUp={apiUp}
-            allowRegistrations={health?.allow_registrations ?? true}
-          />
+          {isVerifyEmailPath ? (
+            <VerifyEmailPage onSuccess={handleLogin} />
+          ) : (
+            <AuthPage
+              onSuccess={handleLogin}
+              apiUp={apiUp}
+              allowRegistrations={health?.allow_registrations ?? true}
+            />
+          )}
         </Box>
       </ThemeProvider>
     );

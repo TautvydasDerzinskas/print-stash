@@ -5,11 +5,15 @@ import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import {
   getAllowRegistrations,
+  getDatabaseInfo,
   getPreviewMode,
+  getSmtpSettings,
   getThingiverseAccessToken,
   setAllowRegistrations,
   setPreviewMode,
+  setSmtpSettings,
   setThingiverseAccessToken,
+  type SmtpSettings,
 } from "../services/settingsService";
 import {
   DEFAULT_STORAGE_TEMPLATE,
@@ -121,6 +125,57 @@ router.post(
     const body = parseBody(thingiverseSettingsSchema, req.body);
     await setThingiverseAccessToken(body.access_token);
     res.json({ configured: Boolean(body.access_token && body.access_token.trim()) });
+  }),
+);
+
+// Admin-only "Connections" page: SMTP (editable, used by registration's email-verification
+// flow -- see routes/auth.ts) and Database (read-only, always reflects the live DATABASE_URL).
+
+function smtpSettingsOut(smtp: SmtpSettings) {
+  // pass is never echoed back, same write-only convention as the Thingiverse token above.
+  return { host: smtp.host, port: smtp.port, secure: smtp.secure, user: smtp.user, from: smtp.from, configured: Boolean(smtp.host) };
+}
+
+router.get(
+  "/settings/smtp",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    res.json(smtpSettingsOut(await getSmtpSettings()));
+  }),
+);
+
+const smtpSettingsSchema = z.object({
+  host: z.string().nullable().optional(),
+  port: z.number().int().min(1).max(65535).optional(),
+  secure: z.boolean().optional(),
+  user: z.string().nullable().optional(),
+  // Omitted entirely (not just empty-string) means "keep the current password" -- the frontend
+  // only ever sends this key when the admin actually typed a new one.
+  pass: z.string().nullable().optional(),
+  from: z.string().optional(),
+});
+router.patch(
+  "/settings/smtp",
+  requireAdmin,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(smtpSettingsSchema, req.body);
+    const patch: Partial<SmtpSettings> = {};
+    if (body.host !== undefined) patch.host = body.host?.trim() || null;
+    if (body.port !== undefined) patch.port = body.port;
+    if (body.secure !== undefined) patch.secure = body.secure;
+    if (body.user !== undefined) patch.user = body.user?.trim() || null;
+    if (body.pass !== undefined) patch.pass = body.pass?.trim() || null;
+    if (body.from?.trim()) patch.from = body.from.trim();
+    const next = await setSmtpSettings(patch);
+    res.json(smtpSettingsOut(next));
+  }),
+);
+
+router.get(
+  "/settings/database",
+  requireAdmin,
+  asyncHandler(async (_req, res) => {
+    res.json(getDatabaseInfo());
   }),
 );
 

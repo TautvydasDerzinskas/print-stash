@@ -28,6 +28,7 @@ import {
   runThingiverseLikesImportJob,
   runZipImportJob,
 } from "../services/importJobRunner";
+import { createLog } from "../services/auditLog";
 import { toImportJobOut, toPrintOut } from "../dto";
 
 const router = Router();
@@ -50,6 +51,7 @@ router.post(
     const url = await normalizeImportUrl(body.url);
     const { print, plates, author, previewImages } = await importPrintFromUrl(req.userId!, url, body);
     res.json(toPrintOut(print, plates, [], null, author, previewImages));
+    void createLog({ userId: req.userId!, action: "model_imported", targetId: print.id, details: { name: print.name, url } });
   }),
 );
 

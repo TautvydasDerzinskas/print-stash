@@ -12,14 +12,13 @@ import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   onUnauthorized?: () => void;
-  onBack: () => void;
 };
 
 /** Instance-wide, not per-user: a Thingiverse Developer API Access Token shared by every user's
  *  Thingiverse imports (see backend's thingiverseApi.ts) -- admin-configured like Storage
  *  Structure and Model Previews. Write-only like any other API secret: the current token is
  *  never sent back from the server, only whether one is configured. */
-export default function ThingiverseSection({ onUnauthorized, onBack }: Props) {
+export default function ThingiverseSection({ onUnauthorized }: Props) {
   const { t } = useTranslation("app");
   const [configured, setConfigured] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -91,8 +90,6 @@ export default function ThingiverseSection({ onUnauthorized, onBack }: Props) {
       <SectionHeader
         title={t("adminSettings.thingiverse.heading")}
         subtitle={t("adminSettings.thingiverse.subtitle")}
-        onBack={onBack}
-        backLabel={t("adminSettings.back")}
       />
 
       <Typography variant="caption" color="text.secondary">

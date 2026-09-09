@@ -14,7 +14,6 @@ import SectionHeader from "../../components/SectionHeader";
 
 type Props = {
   onUnauthorized?: () => void;
-  onBack: () => void;
 };
 
 // Two example plates of the same print, to show that sibling plates
@@ -46,7 +45,7 @@ const PLATE_PREVIEW_VALUES: Record<string, string>[] = [
 
 const DEFAULT_TEMPLATE = "{folder}/{model}/{filename}";
 
-export default function StorageSection({ onUnauthorized, onBack }: Props) {
+export default function StorageSection({ onUnauthorized }: Props) {
   const { t } = useTranslation("app");
   const [storageTemplate, setStorageTemplate] = React.useState(DEFAULT_TEMPLATE);
   const [storageInitial, setStorageInitial] = React.useState(DEFAULT_TEMPLATE);
@@ -128,8 +127,6 @@ export default function StorageSection({ onUnauthorized, onBack }: Props) {
       <SectionHeader
         title={t("adminSettings.storage.heading")}
         subtitle={t("adminSettings.storage.subtitle")}
-        onBack={onBack}
-        backLabel={t("adminSettings.back")}
       />
 
       <Paper variant="outlined" sx={{ p: 2.5 }}>

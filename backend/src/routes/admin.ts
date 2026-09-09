@@ -3,7 +3,7 @@ import { prisma } from "../db";
 import { requireAdmin, requireAuth } from "../auth";
 import { HttpError } from "../utils/fileUtils";
 import { asyncHandler } from "../utils/asyncHandler";
-import { deleteAllPrintsForUser, listUsersWithPrintCounts } from "../services/adminService";
+import { deleteAllPrintsForUser, listLogs, listUsersWithPrintCounts } from "../services/adminService";
 
 const router = Router();
 router.use(requireAuth);
@@ -20,6 +20,38 @@ router.get(
         display_name: u.displayName,
         role: u.role,
         print_count: u.printCount,
+        collection_count: u.collectionCount,
+        thingiverse_count: u.thingiverseCount,
+        created_at: u.createdAt,
+      })),
+    );
+  }),
+);
+
+function parseDateParam(raw: unknown): Date | undefined {
+  if (typeof raw !== "string" || !raw) return undefined;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) throw new HttpError(400, "Invalid date");
+  return parsed;
+}
+
+router.get(
+  "/admin/logs",
+  asyncHandler(async (req, res) => {
+    const userId = typeof req.query.user_id === "string" && req.query.user_id ? req.query.user_id : undefined;
+    const from = parseDateParam(req.query.from);
+    const to = parseDateParam(req.query.to);
+    const logs = await listLogs({ userId, from, to });
+    res.json(
+      logs.map((l) => ({
+        id: l.id,
+        user_id: l.userId,
+        user_display_name: l.userDisplayName,
+        user_email: l.userEmail,
+        action: l.action,
+        target_id: l.targetId,
+        details: l.details,
+        created_at: l.createdAt,
       })),
     );
   }),

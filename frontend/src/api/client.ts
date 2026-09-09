@@ -21,6 +21,15 @@ export class LastPlateError extends Error {
   }
 }
 
+// Thrown for /login's 403 EMAIL_NOT_VERIFIED so SignInPanel can show a "resend verification
+// email" affordance instead of a plain error message.
+export class EmailNotVerifiedError extends Error {
+  constructor(message = "Please verify your email before signing in.") {
+    super(message);
+    this.name = "EmailNotVerifiedError";
+  }
+}
+
 export function assertOk(res: Response, message: string) {
   if (res.status === 401) {
     throw new UnauthorizedError();

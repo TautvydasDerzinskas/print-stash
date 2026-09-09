@@ -7,6 +7,7 @@ import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import Typography from "@mui/material/Typography";
 import { authApi, type AuthUser } from "../../api/auth";
+import CheckEmailPanel from "./CheckEmailPanel";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -23,6 +24,9 @@ export default function RegisterPanel({ onSuccess, allowRegistrations }: Props) 
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Set once the backend confirms this instance requires email verification -- replaces the
+  // form with CheckEmailPanel instead of ever calling onSuccess.
+  const [pendingEmail, setPendingEmail] = React.useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,11 @@ export default function RegisterPanel({ onSuccess, allowRegistrations }: Props) 
     setLoading(true);
     try {
       const res = await authApi.register({ displayName, email, password });
-      onSuccess(res.token, res.expires_in, res.user);
+      if ("email_verification_required" in res) {
+        setPendingEmail(res.email);
+      } else {
+        onSuccess(res.token, res.expires_in, res.user);
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : t("auth.register.failed"));
@@ -46,6 +54,10 @@ export default function RegisterPanel({ onSuccess, allowRegistrations }: Props) 
       setLoading(false);
     }
   };
+
+  if (pendingEmail) {
+    return <CheckEmailPanel email={pendingEmail} />;
+  }
 
   return (
     <Box component="form" onSubmit={handleSubmit}>
