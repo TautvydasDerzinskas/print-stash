@@ -91,6 +91,9 @@ jobs:
       - name: Combine into a universal binary
         working-directory: bridge
         run: lipo -create -output dist/print-stash-bridge-macos dist/print-stash-bridge-darwin-arm64 dist/print-stash-bridge-darwin-amd64
+      - name: Re-sign universal binary
+        working-directory: bridge
+        run: codesign --force -s - dist/print-stash-bridge-macos
       - uses: actions/upload-artifact@v4
         with:
           name: bridge-macos

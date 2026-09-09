@@ -45,6 +45,12 @@ This copies itself into `~/Applications/PrintStash Bridge.app` (a background, Do
 and registers the `print-stash://` scheme with Launch Services. If macOS still refuses to run it,
 open System Settings -> Privacy & Security and allow it there instead of using `xattr`.
 
+If the terminal instead prints `Killed: 9` (or `[1] ... killed`) the moment you run it, that's a
+stale, invalidly-signed binary rather than a Gatekeeper block -- re-sign it yourself and retry:
+```bash
+codesign --force -s - ~/Downloads/print-stash-bridge-macos
+```
+
 ## Build
 
 You need Go installed (1.21+ recommended). macOS builds also need Xcode's command line tools
@@ -69,6 +75,8 @@ cd bridge
 GOARCH=arm64 go build -o dist/print-stash-bridge-arm64 ./cmd/print-stash-bridge
 GOARCH=amd64 go build -o dist/print-stash-bridge-amd64 ./cmd/print-stash-bridge
 lipo -create -output dist/print-stash-bridge-macos dist/print-stash-bridge-arm64 dist/print-stash-bridge-amd64
+codesign --force -s - dist/print-stash-bridge-macos   # lipo invalidates each slice's signature;
+                                                        # without this, arm64 Macs SIGKILL it on launch
 ```
 
 ## Install (manual)
