@@ -7,11 +7,13 @@ import {
   IMPORT_ALLOWED_EXTS,
   IMPORT_HTML_MAX_BYTES,
   IMPORT_MAX_BYTES,
+  IMPORT_PREVIEW_IMAGE_DELAY_MS,
   IMPORT_TIMEOUT_SECONDS,
   IMPORT_USER_AGENT,
 } from "../config";
 import { HttpError, buildImportFilename, guessMimeFromPath, isHtmlContentType, mimeFromContentType, sanitizeFilename } from "../utils/fileUtils";
 import { validateRemoteUrl } from "../utils/urlUtils";
+import { sleep } from "../utils/concurrency";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock, shouldProxyHost } from "./flaresolverr";
 import {
   emptyImportedPageMetadata,
@@ -381,14 +383,17 @@ export async function attachImportedPreviewImages(
   }
 
   let platesThumbSeeded = false;
-  for (const url of orderedUrls.slice(0, PREVIEW_IMAGE_MAX_COUNT)) {
-    const buf = await fetchImageBytes(url);
-    if (!buf) continue;
-    await addPreviewImage(printId, buf);
-    if (!platesThumbSeeded && plateId && !plateThumbExists(plateId)) {
-      await saveThumbFromBytes(plateId, buf);
-      platesThumbSeeded = true;
+  const urls = orderedUrls.slice(0, PREVIEW_IMAGE_MAX_COUNT);
+  for (let i = 0; i < urls.length; i++) {
+    const buf = await fetchImageBytes(urls[i]);
+    if (buf) {
+      await addPreviewImage(printId, buf);
+      if (!platesThumbSeeded && plateId && !plateThumbExists(plateId)) {
+        await saveThumbFromBytes(plateId, buf);
+        platesThumbSeeded = true;
+      }
     }
+    if (i < urls.length - 1) await sleep(IMPORT_PREVIEW_IMAGE_DELAY_MS);
   }
 }
 

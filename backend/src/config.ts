@@ -34,10 +34,21 @@ export const IMPORT_MAX_MB = envInt("IMPORT_MAX_MB", 512);
 export const IMPORT_MAX_BYTES = Math.max(1, IMPORT_MAX_MB) * 1024 * 1024;
 export const IMPORT_HTML_MAX_KB = envInt("IMPORT_HTML_MAX_KB", 4096);
 export const IMPORT_HTML_MAX_BYTES = Math.max(64, IMPORT_HTML_MAX_KB) * 1024;
-// Pacing gap between designs in a MakerWorld collection batch import (see importJobRunner.ts) --
-// exists to avoid the burst request pattern most likely to trip MakerWorld's anti-abuse CAPTCHA.
-// Overridable mainly so tests don't have to actually wait it out.
+// Pacing gap between items in a batch import (see importJobRunner.ts) -- exists to avoid the
+// burst request pattern most likely to trip a source site's anti-abuse defenses. Overridable
+// mainly so tests don't have to actually wait it out. MakerWorld gets its own, much longer,
+// pacing: its anti-abuse CAPTCHA (see makerworldCloudApi.ts's isCaptchaChallenge) has proven far
+// more sensitive in practice than Thingiverse's -- a 146-item collection tripped it after only a
+// handful of requests at the shared 1s pace, while Thingiverse hasn't shown the same behavior.
 export const IMPORT_COLLECTION_DELAY_MS = envInt("IMPORT_COLLECTION_DELAY_MS", 1000);
+export const IMPORT_MAKERWORLD_COLLECTION_DELAY_MS = envInt("IMPORT_MAKERWORLD_COLLECTION_DELAY_MS", 10000);
+// Pacing gap between a single model's own preview-image fetches (attachImportedPreviewImages in
+// importService.ts) -- up to ~20 of these fire back to back for one model (cover + gallery
+// photos), which is its own small burst even when the model-to-model pacing above is generous.
+// Kept far shorter than the inter-model delays: these are plain image/CDN fetches, not confirmed
+// to share the same anti-abuse bucket as MakerWorld's design/download-resolution API -- this is
+// a cheap precaution, not a proven-necessary one.
+export const IMPORT_PREVIEW_IMAGE_DELAY_MS = envInt("IMPORT_PREVIEW_IMAGE_DELAY_MS", 250);
 export const IMPORT_USER_AGENT = "PrintStash/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";

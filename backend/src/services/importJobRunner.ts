@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { mapWithConcurrency, sleep } from "../utils/concurrency";
-import { IMPORT_COLLECTION_DELAY_MS } from "../config";
+import { IMPORT_COLLECTION_DELAY_MS, IMPORT_MAKERWORLD_COLLECTION_DELAY_MS } from "../config";
 import { updateJob } from "./importJobService";
 import { createNotification } from "./notificationService";
 import { addPrintsToCollection, findOrCreateCollectionByName } from "./collectionService";
@@ -100,7 +100,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
         // (successPrintIds) and the ones still to come must not be lost over a single DB blip.
         await updateJob(jobId, { processed, imported, alreadyInLibrary, failedCount: failed.length }).catch(() => undefined);
       }
-      if (index < body.design_ids.length - 1) await sleep(IMPORT_COLLECTION_DELAY_MS);
+      if (index < body.design_ids.length - 1) await sleep(IMPORT_MAKERWORLD_COLLECTION_DELAY_MS);
     });
 
     let resultCollectionId: string | null = null;
