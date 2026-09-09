@@ -13,7 +13,9 @@ import CollectionDetailPage from "./pages/CollectionDetailPage";
 import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
-import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
+import ChangeEmailPage from "./pages/ProfilePage/ChangeEmailPage";
+import ChangePasswordPage from "./pages/ProfilePage/ChangePasswordPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
@@ -40,6 +42,7 @@ type AppShellProps = {
   muiTheme: ReturnType<typeof buildTheme>;
   onUnauthorized: () => void;
   onLogout: () => void;
+  onUserUpdated: (user: AuthUser) => void;
 };
 
 /** Everything that needs router context (route-derived chrome, folder selection that also
@@ -56,6 +59,7 @@ function AppShell({
   muiTheme,
   onUnauthorized,
   onLogout,
+  onUserUpdated,
 }: AppShellProps) {
   const navigate = useNavigate();
   const [folderId, setFolderId] = React.useState<string | null>(null);
@@ -70,13 +74,6 @@ function AppShell({
     setNonce(n => n + 1);
   }, []);
 
-  // Used after a folder-scan import in Settings finishes -- jump to Models filtered to the
-  // folder the import landed in.
-  const handleSelectFolder = React.useCallback((id: string | null) => {
-    setFolderId(id);
-    navigate("/models");
-  }, [navigate]);
-
   return (
     <AppLayout
       muiTheme={muiTheme}
@@ -86,7 +83,7 @@ function AppShell({
       onPrintsChanged={handlePrintsChanged}
       onUnauthorized={onUnauthorized}
       isAdmin={isAdmin}
-      onOpenSettings={() => navigate("/settings")}
+      onOpenProfile={() => navigate("/profile")}
       onLogout={onLogout}
       makerworldCookie={settings.makerworld.cookie}
       user={user}
@@ -123,17 +120,23 @@ function AppShell({
         />
         <Route path="/authors/:authorId" element={<AuthorPage />} />
         <Route
-          path="/settings"
+          path="/profile"
           element={
-            <SettingsPage
-              settings={settings}
-              onChange={setSettings}
-              onAssetsChanged={handlePrintsChanged}
-              onFoldersChanged={handleFoldersChanged}
+            <ProfilePage
+              user={user}
+              makerworldCookie={settings.makerworld.cookie}
+              onUpdateMakerWorld={patch => setSettings(prev => ({ ...prev, makerworld: { ...prev.makerworld, ...patch } }))}
               onUnauthorized={onUnauthorized}
-              onSelectFolder={handleSelectFolder}
             />
           }
+        />
+        <Route
+          path="/profile/email"
+          element={<ChangeEmailPage user={user} onUserUpdated={onUserUpdated} onUnauthorized={onUnauthorized} />}
+        />
+        <Route
+          path="/profile/password"
+          element={<ChangePasswordPage onUnauthorized={onUnauthorized} />}
         />
         <Route
           path="/admin-settings"
@@ -223,6 +226,13 @@ export default function App() {
     setTokenTtl(null);
   };
 
+  // PATCH /profile doesn't reissue a token (unlike login/verify-email), so this just refreshes
+  // the locally-held user object -- e.g. after a display-name-unaffecting email/password change.
+  const handleUserUpdated = (updatedUser: AuthUser) => {
+    storeUser(updatedUser);
+    setUser(updatedUser);
+  };
+
   React.useEffect(() => {
     if (!token) return;
     const ttl = tokenTtl ?? DEFAULT_REFRESH_SECONDS;
@@ -289,6 +299,7 @@ export default function App() {
         muiTheme={muiTheme}
         onUnauthorized={handleUnauthorized}
         onLogout={handleLogout}
+        onUserUpdated={handleUserUpdated}
       />
     </BrowserRouter>
   );

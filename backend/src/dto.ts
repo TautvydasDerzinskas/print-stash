@@ -11,6 +11,8 @@ export type UserOut = {
   email: string;
   display_name: string;
   role: "ADMIN" | "MEMBER";
+  // Set while an email change is awaiting confirmation (see routes/auth.ts's PATCH /profile).
+  pending_email: string | null;
 };
 
 export function toUserOut(user: User): UserOut {
@@ -19,6 +21,7 @@ export function toUserOut(user: User): UserOut {
     email: user.email,
     display_name: user.displayName,
     role: user.role,
+    pending_email: user.pendingEmail,
   };
 }
 

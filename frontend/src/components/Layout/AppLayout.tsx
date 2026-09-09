@@ -24,7 +24,7 @@ type AppLayoutProps = {
   onPrintsChanged: () => void;
   onUnauthorized: () => void;
   isAdmin: boolean;
-  onOpenSettings: () => void;
+  onOpenProfile: () => void;
   onLogout: () => void;
   makerworldCookie: string;
   user: AuthUser | null;
@@ -65,8 +65,14 @@ function useRouteChrome() {
   } else if (path.startsWith("/authors/")) {
     title = t("models:author.pageTitle");
     onBack = () => navigate(-1);
-  } else if (path === "/settings") {
-    title = t("common:settings");
+  } else if (path === "/profile/email") {
+    title = t("profile.changeEmailTitle");
+    onBack = () => navigate("/profile");
+  } else if (path === "/profile/password") {
+    title = t("profile.changePasswordTitle");
+    onBack = () => navigate("/profile");
+  } else if (path === "/profile") {
+    title = t("profile.title");
     onBack = () => navigate(-1);
   } else if (path.startsWith("/admin-settings")) {
     title = t("adminSettings.pageTitle");
@@ -101,7 +107,7 @@ function AppLayoutShell({
   onPrintsChanged,
   onUnauthorized,
   isAdmin,
-  onOpenSettings,
+  onOpenProfile,
   onLogout,
   makerworldCookie,
   user,
@@ -145,7 +151,7 @@ function AppLayoutShell({
             user={user}
             theme={resolvedTheme}
             onThemeChange={onThemeChange}
-            onOpenSettings={onOpenSettings}
+            onOpenProfile={onOpenProfile}
             onLogout={onLogout}
           />
           <PageHeaderContext.Provider value={setPageHeader}>

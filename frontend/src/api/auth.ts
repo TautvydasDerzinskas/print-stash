@@ -1,11 +1,24 @@
 import { authHeaders } from "../utils/auth";
-import { apiBase, assertOk, EmailNotVerifiedError } from "./client";
+import { apiBase, assertOk, readErrorMessage, EmailNotVerifiedError, UnauthorizedError } from "./client";
 
-export type AuthUser = { id: string; email: string; display_name: string; role: "ADMIN" | "MEMBER" };
+export type AuthUser = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: "ADMIN" | "MEMBER";
+  // Set while an email change (Profile > Change email) is awaiting confirmation.
+  pending_email: string | null;
+};
 export type AuthResult = { token: string; expires_in: number; user: AuthUser };
 // /register returns this instead of AuthResult when SMTP is configured -- the account exists but
 // isn't signed in yet, pending the link in the verification email.
 export type RegisterResult = AuthResult | { email_verification_required: true; email: string };
+
+export type UpdateProfileInput = {
+  current_password: string;
+  email?: string;
+  new_password?: string;
+};
 
 async function readAuthError(res: Response): Promise<never> {
   let message = "Request failed";
@@ -40,6 +53,21 @@ export const authApi = {
   verifyEmail: (token: string): Promise<AuthResult> => postAuth("/verify-email", { token }),
 
   resendVerification: (email: string): Promise<{ message: string }> => postAuth("/resend-verification", { email }),
+
+  // Backs Profile's "Change email" and "Change password" pages -- both require current-password
+  // re-confirmation, sent through this one shared endpoint (see backend's PATCH /profile).
+  updateProfile: async (payload: UpdateProfileInput): Promise<{ user: AuthUser }> => {
+    const res = await fetch(`${apiBase()}/profile`, {
+      method: "PATCH",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, "Failed to update profile"));
+    }
+    return res.json();
+  },
 
   refresh: async (): Promise<{ token: string; expires_in: number }> => {
     const res = await fetch(`${apiBase()}/refresh`, {

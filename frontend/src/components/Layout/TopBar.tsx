@@ -26,7 +26,7 @@ type Props = {
   user: AuthUser | null;
   theme: ThemeSelection;
   onThemeChange: (theme: ThemeSelection) => void;
-  onOpenSettings: () => void;
+  onOpenProfile: () => void;
   onLogout: () => void;
 };
 
@@ -43,7 +43,7 @@ export default function TopBar({
   user,
   theme,
   onThemeChange,
-  onOpenSettings,
+  onOpenProfile,
   onLogout,
 }: Props) {
   const { t } = useTranslation("app");
@@ -72,7 +72,7 @@ export default function TopBar({
           user={user}
           theme={theme}
           onThemeChange={onThemeChange}
-          onOpenSettings={onOpenSettings}
+          onOpenProfile={onOpenProfile}
           onLogout={onLogout}
           makerworldCookie={makerworldCookie}
         />

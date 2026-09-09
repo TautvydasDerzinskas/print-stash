@@ -10,7 +10,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
-import SettingsIcon from "@mui/icons-material/Settings";
+import PersonIcon from "@mui/icons-material/Person";
 import PaletteIcon from "@mui/icons-material/Palette";
 import CheckIcon from "@mui/icons-material/Check";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -32,17 +32,17 @@ type Props = {
   user: AuthUser | null;
   theme: ThemeSelection;
   onThemeChange: (theme: ThemeSelection) => void;
-  onOpenSettings: () => void;
+  onOpenProfile: () => void;
   onLogout: () => void;
   makerworldCookie: string;
 };
 
 /** Avatar (Gravatar, from the account email) that opens identity + quick settings, mirroring
- *  the youtube-mp3-vault UserMenu: name/email/logout up top, Settings and a light/dark Theme
+ *  the youtube-mp3-vault UserMenu: name/email/logout up top, Profile and a light/dark Theme
  *  submenu below, then at-a-glance MakerWorld cookie status. Thingiverse import auth is an
  *  admin-configured, instance-wide Access Token now (see AdminSettingsPage/ThingiverseSection),
  *  not a per-user credential, so it has no chip here. */
-export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout, makerworldCookie }: Props) {
+export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout, makerworldCookie }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const avatarUrl = useGravatarUrl(user?.email, 128);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -91,9 +91,9 @@ export function UserMenu({ user, theme, onThemeChange, onOpenSettings, onLogout,
           </Tooltip>
         </Box>
         <Divider />
-        <MenuItem onClick={() => { closeMenu(); onOpenSettings(); }}>
-          <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{t("common:settings")}</ListItemText>
+        <MenuItem onClick={() => { closeMenu(); onOpenProfile(); }}>
+          <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t("profile.title")}</ListItemText>
         </MenuItem>
         <MenuItem onClick={e => setThemeAnchorEl(e.currentTarget)}>
           <ListItemIcon><PaletteIcon fontSize="small" /></ListItemIcon>

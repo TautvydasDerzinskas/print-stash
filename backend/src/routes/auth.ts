@@ -12,7 +12,7 @@ import { getAllowRegistrations, isSmtpConfigured } from "../services/settingsSer
 import { sendVerificationEmail } from "../services/mailer";
 import { createLog } from "../services/auditLog";
 import { toUserOut } from "../dto";
-import type { Role } from "@prisma/client";
+import type { Prisma, Role } from "@prisma/client";
 
 const router = Router();
 
@@ -137,10 +137,32 @@ router.post(
     if (!user || !user.emailVerificationExpires || user.emailVerificationExpires < new Date()) {
       throw new HttpError(400, "This verification link is invalid or has expired.");
     }
-    const verified = await prisma.user.update({
-      where: { id: user.id },
-      data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
-    });
+
+    let verified;
+    if (user.pendingEmail) {
+      // Confirming an email *change* (Profile > Change email), not a fresh signup -- re-check
+      // for a conflict that may have appeared since the change was requested (someone else
+      // registering that same address in the meantime).
+      const conflict = await prisma.user.findUnique({ where: { email: user.pendingEmail } });
+      if (conflict && conflict.id !== user.id) {
+        throw new HttpError(409, "That email is now used by another account. Please request the change again.");
+      }
+      verified = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          email: user.pendingEmail,
+          pendingEmail: null,
+          emailVerified: true,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+        },
+      });
+    } else {
+      verified = await prisma.user.update({
+        where: { id: user.id },
+        data: { emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null },
+      });
+    }
     // Verifying doubles as signing in -- the user just proved control of the mailbox, and
     // making them turn around and log in again with a password they only just typed is friction
     // with no security benefit.
@@ -173,6 +195,79 @@ router.post(
       }
     }
     res.json({ message: "If that account needs verification, we've sent a new email." });
+  }),
+);
+
+const updateProfileSchema = z
+  .object({
+    current_password: z.string().min(1, "Current password is required"),
+    email: z.string().trim().email("Enter a valid email address").optional(),
+    new_password: z.string().min(8, "Password must be at least 8 characters").optional(),
+  })
+  .refine((data) => data.email !== undefined || data.new_password !== undefined, { message: "Nothing to update" });
+
+// Backs Profile's "Change email" and "Change password" pages -- one shared endpoint since both
+// require the same current-password re-confirmation. An email change isn't applied immediately
+// unless SMTP is unconfigured (same skip-verification exception /register uses): otherwise it's
+// stashed in pendingEmail and only takes effect once the emailed link is clicked (POST
+// /verify-email above).
+router.patch(
+  "/profile",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const body = parseBody(updateProfileSchema, req.body);
+    const user = await prisma.user.findUnique({ where: { id: req.userId! } });
+    if (!user) throw new HttpError(401, "Invalid or expired token");
+    if (!(await bcrypt.compare(body.current_password, user.passwordHash))) {
+      // 403, not 401: this is the submitted current-password field being wrong, not the
+      // session's own token -- the frontend's generic API client treats any 401 as "your
+      // session expired" and force-logs-out, which would be exactly wrong here.
+      throw new HttpError(403, "Current password is incorrect");
+    }
+
+    const data: Prisma.UserUpdateInput = {};
+    let emailToVerify: string | null = null;
+    let verification: { token: string; expires: Date } | null = null;
+
+    if (body.email !== undefined) {
+      const normalized = body.email.toLowerCase();
+      if (normalized !== user.email) {
+        const existing = await prisma.user.findUnique({ where: { email: normalized } });
+        if (existing && existing.id !== user.id) {
+          throw new HttpError(409, "An account with this email already exists");
+        }
+        if (await isSmtpConfigured()) {
+          verification = newVerificationToken();
+          data.pendingEmail = normalized;
+          data.emailVerificationToken = verification.token;
+          data.emailVerificationExpires = verification.expires;
+          emailToVerify = normalized;
+        } else {
+          data.email = normalized;
+          data.pendingEmail = null;
+        }
+      }
+    }
+
+    if (body.new_password !== undefined) {
+      data.passwordHash = await bcrypt.hash(body.new_password, PASSWORD_HASH_COST);
+    }
+
+    if (Object.keys(data).length === 0) {
+      res.json({ user: toUserOut(user) });
+      return;
+    }
+
+    if (emailToVerify && verification) {
+      try {
+        await sendVerificationEmail(emailToVerify, user.displayName, verification.token);
+      } catch {
+        throw new HttpError(500, "Failed to send verification email. Please try again.");
+      }
+    }
+
+    const updated = await prisma.user.update({ where: { id: user.id }, data });
+    res.json({ user: toUserOut(updated) });
   }),
 );
 

@@ -19,15 +19,6 @@ type FileSystemDirectoryReader = {
   readEntries: (success: (entries: FileSystemEntry[]) => void, error?: (err: unknown) => void) => void;
 };
 
-// File System Access API handles (window.showDirectoryPicker()) -- a distinct browser API from
-// the drag-and-drop DataTransferItem.webkitGetAsEntry() one modeled above by FileSystemEntry.
-export type FileSystemAccessHandle = { kind: "file" | "directory"; name: string };
-export type FileSystemAccessFileHandle = FileSystemAccessHandle & { getFile: () => Promise<File> };
-export type FileSystemAccessDirectoryHandle = FileSystemAccessHandle & {
-  entries: () => AsyncIterableIterator<[string, FileSystemAccessHandle]>;
-};
-export type DirectoryPicker = () => Promise<FileSystemAccessDirectoryHandle>;
-
 function normalizeRelativePath(path: string) {
   const trimmed = (path || "").replace(/\\/g, "/").replace(/^\/+/, "");
   return trimmed || "";
@@ -91,27 +82,6 @@ export async function entriesFromDataTransfer(dataTransfer: DataTransfer): Promi
   if (!output.length) {
     return entriesFromFileList(dataTransfer.files || []);
   }
-  return output;
-}
-
-/** Recursively walks a File System Access API directory handle (from window.showDirectoryPicker())
- *  into a flat UploadEntry[], with relativePath rooted at the picked directory's own name. */
-export async function entriesFromDirectoryHandle(root: FileSystemAccessDirectoryHandle): Promise<UploadEntry[]> {
-  const output: UploadEntry[] = [];
-  const walk = async (dir: FileSystemAccessDirectoryHandle, basePath: string) => {
-    for await (const [, handle] of dir.entries()) {
-      if (handle.kind === "file") {
-        const file = await (handle as FileSystemAccessFileHandle).getFile();
-        const relativePath = basePath ? `${basePath}/${handle.name}` : handle.name;
-        output.push({ file, relativePath });
-      } else if (handle.kind === "directory") {
-        const nextPath = basePath ? `${basePath}/${handle.name}` : handle.name;
-        await walk(handle as FileSystemAccessDirectoryHandle, nextPath);
-      }
-    }
-  };
-  const rootPath = root.name || "";
-  await walk(root, rootPath);
   return output;
 }
 

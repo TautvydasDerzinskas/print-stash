@@ -1,27 +1,12 @@
 export type SlicerOption = { id: string; label: string };
 
+// Limited to slicers that register their own URL protocol for opening a remote model directly
+// (e.g. bambustudio://) -- the only ones a future "open in {slicer}" launch could actually use.
+// IDs must match backend's services/slicerPreferenceService.ts SLICER_IDS.
 export const SLICER_OPTIONS: SlicerOption[] = [
-  { id: "orca", label: "OrcaSlicer" },
-  { id: "bambu", label: "Bambu Studio" },
-  { id: "prusa", label: "PrusaSlicer" },
-  { id: "superslicer", label: "SuperSlicer" },
-  { id: "cura", label: "UltiMaker Cura" },
-  { id: "ideamaker", label: "ideaMaker" },
-  { id: "simplify3d", label: "Simplify3D" },
-  { id: "kisslicer", label: "KISSlicer" },
-  { id: "repetier", label: "Repetier-Host" },
-  { id: "chitubox", label: "ChiTuBox" },
-  { id: "lychee", label: "Lychee Slicer" },
-  { id: "photon", label: "Anycubic Photon Workshop" },
-  { id: "creality", label: "Creality Print" },
-  { id: "other", label: "Other / Manual" },
-];
-
-export type EngraverOption = { id: string; label: string };
-
-export const ENGRAVER_OPTIONS: EngraverOption[] = [
-  { id: "lightburn", label: "LightBurn" },
-  { id: "ezcad", label: "EZCAD" },
+  { id: "bambustudio", label: "Bambu Studio" },
+  { id: "orcaslicer", label: "OrcaSlicer" },
+  { id: "prusaslicer", label: "PrusaSlicer" },
   { id: "other", label: "Other / Manual" },
 ];
 

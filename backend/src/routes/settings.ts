@@ -26,6 +26,7 @@ import {
   validateStorageTemplate,
 } from "../services/printService";
 import { getUserMakerworldCookie, setUserMakerworldCookie } from "../services/makerworldCookieService";
+import { SLICER_IDS, getUserSlicer, setUserSlicer } from "../services/slicerPreferenceService";
 
 const router = Router();
 router.use(requireAuth);
@@ -224,6 +225,26 @@ router.patch(
     const body = parseBody(makerworldSettingsSchema, req.body);
     const configured = await setUserMakerworldCookie(req.userId!, body.cookie);
     res.json({ configured });
+  }),
+);
+
+// Per-user preferred slicer, for a future "open in {slicer}" launch via that slicer's own URL
+// protocol -- see services/slicerPreferenceService.ts. Not a secret, so unlike the credentials
+// above this echoes the value back plainly.
+router.get(
+  "/settings/slicer",
+  asyncHandler(async (req, res) => {
+    res.json({ slicer: await getUserSlicer(req.userId!) });
+  }),
+);
+
+const slicerSettingsSchema = z.object({ slicer: z.enum(SLICER_IDS).nullable() });
+router.patch(
+  "/settings/slicer",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(slicerSettingsSchema, req.body);
+    const slicer = await setUserSlicer(req.userId!, body.slicer);
+    res.json({ slicer });
   }),
 );
 

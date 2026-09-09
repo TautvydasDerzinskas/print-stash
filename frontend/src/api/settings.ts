@@ -179,4 +179,25 @@ export const settingsApi = {
     }
     return res.json();
   },
+
+  // Per-user preferred slicer, for a future "open in {slicer}" launch via that slicer's own URL
+  // protocol -- not a secret, so unlike the credentials above this echoes the value back plainly.
+  getSlicer: async (): Promise<{ slicer: string | null }> => {
+    const res = await fetch(`${apiBase()}/settings/slicer`, { headers: authHeaders() });
+    assertOk(res, "Failed to load slicer setting");
+    return res.json();
+  },
+
+  updateSlicer: async (slicer: string | null): Promise<{ slicer: string | null }> => {
+    const res = await fetch(`${apiBase()}/settings/slicer`, {
+      method: "PATCH",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ slicer }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) {
+      throw new Error(await readErrorMessage(res, "Failed to update slicer setting"));
+    }
+    return res.json();
+  },
 };

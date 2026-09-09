@@ -24,10 +24,17 @@ model User {
   emailVerified            Boolean   @default(true)
   emailVerificationToken   String?   @unique
   emailVerificationExpires DateTime?
+  // Set while an email change (Profile > Change email) is awaiting confirmation -- swapped into
+  // `email` by POST /verify-email once the link is clicked. Null the rest of the time.
+  pendingEmail             String?
   // Each user's own MakerWorld session cookie, used when *they* import from MakerWorld -- unlike
   // the Thingiverse Access Token (instance-wide, see Setting), MakerWorld imports run as this
   // user's own logged-in session. See services/makerworldCookieService.ts.
   makerworldCookie         String?
+  // The user's preferred slicer, for a future "open this model in {slicer}" launch via that
+  // slicer's own registered URL protocol (e.g. bambustudio://) -- see
+  // services/slicerPreferenceService.ts. Not yet acted on anywhere; just stored for now.
+  slicer                   String?
   folders       Folder[]
   prints        Print[]
   collections   Collection[]
