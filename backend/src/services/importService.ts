@@ -13,7 +13,7 @@ import {
 } from "../config";
 import { HttpError, buildImportFilename, guessMimeFromPath, isHtmlContentType, mimeFromContentType, sanitizeFilename } from "../utils/fileUtils";
 import { validateRemoteUrl } from "../utils/urlUtils";
-import { sleep } from "../utils/concurrency";
+import { maybeSleep, sleep } from "../utils/concurrency";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock, shouldProxyHost } from "./flaresolverr";
 import {
   emptyImportedPageMetadata,
@@ -62,6 +62,13 @@ export type ImportRequestBody = ImportCookies & {
   tags?: string[];
   folder_id?: string | null;
   filename?: string | null;
+  /** Internal only -- never comes from the request body/schema. Set by runCollectionImportJob
+   *  on each per-design body it builds for a MakerWorld collection batch import, and read
+   *  wherever a MakerWorld-bound call happens along this whole chain (tryMakerworldCloudApi,
+   *  openImportResponse's final fetch, attachImportedPreviewImages) so every single outbound
+   *  call in the sequence -- not just the gap between models -- gets the same pacing. Unset
+   *  (no extra delay) for a single-model import. */
+  makerworldPaceMs?: number;
 };
 
 function parseCharset(contentType: string | null): string {
@@ -161,11 +168,14 @@ async function tryMakerworldCloudApi(url: string, body: ImportRequestBody): Prom
   if (!bearerToken) return null;
 
   try {
-    const resolved = await resolveMakerworldViaCloudApi(parsed.designId, parsed.requestedInstanceId, bearerToken);
+    const resolved = await resolveMakerworldViaCloudApi(parsed.designId, parsed.requestedInstanceId, bearerToken, body.makerworldPaceMs);
     return resolved;
   } catch (err) {
     if (err instanceof MakerworldCaptchaError) throw new HttpError(429, err.message);
-    if (err instanceof MakerworldAuthError) throw new HttpError(401, err.message);
+    // 400, not 401: this is MakerWorld's own session rejecting our request, not the caller's
+    // PrintStash session -- the frontend's generic API client treats any 401 as "your
+    // PrintStash session expired" and force-logs-out, which would be exactly wrong here.
+    if (err instanceof MakerworldAuthError) throw new HttpError(400, err.message);
     throw err;
   }
 }
@@ -216,6 +226,11 @@ export async function openImportResponse(
   }
   if (referer) headers.Referer = referer;
 
+  // Paces the actual file/page fetch too -- for a MakerWorld collection batch (the only source
+  // of makerworldPaceMs), this is what follows the design+profile+author calls already paced
+  // inside resolveMakerworldViaCloudApi, keeping the whole per-model sequence evenly spaced
+  // rather than pacing everything except the final (often largest) request.
+  await maybeSleep(body.makerworldPaceMs);
   const res = await fetchWithGuard(validatedUrl, headers);
   const finalUrl = res.url || validatedUrl;
   await validateRemoteUrl(finalUrl);
@@ -368,6 +383,7 @@ export async function attachImportedPreviewImages(
   plateId: string | undefined,
   coverImageUrl: string | null | undefined,
   galleryImages: { url: string; filename: string }[],
+  paceMs?: number,
 ): Promise<void> {
   if (!printId) return;
   const seen = new Set<string>();
@@ -384,7 +400,9 @@ export async function attachImportedPreviewImages(
 
   let platesThumbSeeded = false;
   const urls = orderedUrls.slice(0, PREVIEW_IMAGE_MAX_COUNT);
+  const delayMs = paceMs ?? IMPORT_PREVIEW_IMAGE_DELAY_MS;
   for (let i = 0; i < urls.length; i++) {
+    await sleep(delayMs);
     const buf = await fetchImageBytes(urls[i]);
     if (buf) {
       await addPreviewImage(printId, buf);
@@ -393,7 +411,6 @@ export async function attachImportedPreviewImages(
         platesThumbSeeded = true;
       }
     }
-    if (i < urls.length - 1) await sleep(IMPORT_PREVIEW_IMAGE_DELAY_MS);
   }
 }
 
@@ -537,7 +554,10 @@ async function importThingiverseThing(
     resolved = await resolveThingiverseThing(source.externalId, accessToken);
   } catch (err) {
     if (err instanceof ThingiverseRateLimitError) throw new HttpError(429, err.message);
-    if (err instanceof ThingiverseAuthError) throw new HttpError(401, err.message);
+    // 400, not 401: this is the server's configured Thingiverse Access Token being rejected, not
+    // the caller's PrintStash session -- see the identical reasoning at tryMakerworldCloudApi
+    // above for why 401 specifically would mislead the frontend into logging the user out.
+    if (err instanceof ThingiverseAuthError) throw new HttpError(400, err.message);
     throw err;
   }
   if (!resolved) {
@@ -653,7 +673,13 @@ export async function importPrintFromUrl(
       }
       throw err;
     }
-    await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl, meta.galleryImages);
+    await attachImportedPreviewImages(
+      result.print.id,
+      result.plates[0]?.id,
+      meta.previewImageUrl,
+      meta.galleryImages,
+      body.makerworldPaceMs,
+    );
     const previewImages = await prisma.previewImage.findMany({
       where: { printId: result.print.id },
       orderBy: { position: "asc" },

@@ -1,7 +1,16 @@
 import { IMPORT_BROWSER_USER_AGENT, IMPORT_TIMEOUT_SECONDS } from "../config";
 import { fetchViaFlaresolverr, isFlaresolverrEnabled, looksLikeCloudflareBlock } from "./flaresolverr";
 import { decodeHtmlEntities, htmlToPlainText, type ImportedAuthorInfo, type ImportedPageMetadata } from "./importResolvers";
-import { sleep } from "../utils/concurrency";
+import { maybeSleep, sleep } from "../utils/concurrency";
+import {
+  isCaptchaChallenge,
+  makerworldCaptchaCooloffActive,
+  MakerworldAuthError,
+  MakerworldCaptchaError,
+  noteCaptchaChallenge,
+} from "./makerworldCaptcha";
+
+export { MAKERWORLD_CAPTCHA_MESSAGE, makerworldCaptchaCooloffActive, MakerworldAuthError, MakerworldCaptchaError } from "./makerworldCaptcha";
 
 // MakerWorld's own website (makerworld.com) sits behind Cloudflare bot management and a
 // separate Geetest CAPTCHA on its download-resolution endpoints. api.bambulab.com is the
@@ -101,60 +110,6 @@ export function parseMakerworldModelUrl(url: string): { designId: string; reques
   return { designId: designMatch[1], requestedInstanceId: hashMatch ? hashMatch[1] : null };
 }
 
-// MakerWorld's anti-abuse layer (distinct from the Cloudflare edge) answers a flagged
-// request with a well-formed JSON body naming a captchaId -- sometimes under HTTP 418,
-// sometimes (as observed live) under a 200. It's account/IP-scoped, self-clears after a
-// few hours of quiet traffic, and cannot be solved without a real browser. Detecting it by
-// shape (not exact wording) and reporting it clearly, instead of letting it fall through
-// as "no downloadable file found", mirrors maziggy/bambuddy's handling of the same
-// upstream behavior (they hit and documented this independently, as issue #2790).
-function isCaptchaChallenge(data: unknown): boolean {
-  if (!isRecord(data)) return false;
-  const haystack = Object.entries(data)
-    .map(([key, value]) => `${key} ${typeof value === "string" ? value : ""}`)
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes("captchaid") || haystack.includes("captcha") || haystack.includes("robot");
-}
-
-export const MAKERWORLD_CAPTCHA_MESSAGE =
-  "MakerWorld is challenging this account with a CAPTCHA before it will hand over a download link. " +
-  "This can't be solved automatically. Open the model on makerworld.com and click Download there " +
-  "once -- that usually clears it -- then retry the import.";
-
-// Once we've seen the challenge, stop sending more automated requests for a while instead
-// of retrying into a deepening block (the exact mistake that extends these in practice).
-// The block itself is IP-scoped and typically runs 1-4 hours before clearing on its own --
-// maziggy/bambuddy's independent writeup of the same upstream behavior (#2790) confirms this
-// against live traffic, and their own comment notes that retrying too soon is "exactly the
-// traffic pattern that deepens the block." Two hours undershoots their observed range on
-// purpose: the goal here is just to stop a batch import from hammering a block that's already
-// known to be active, not to guarantee the very first retry after cooloff succeeds.
-const CAPTCHA_COOLOFF_MS = 2 * 60 * 60 * 1000;
-let captchaBlockedUntil = 0;
-
-export function makerworldCaptchaCooloffActive(): boolean {
-  return Date.now() < captchaBlockedUntil;
-}
-
-function noteCaptchaChallenge(): void {
-  captchaBlockedUntil = Date.now() + CAPTCHA_COOLOFF_MS;
-}
-
-export class MakerworldCaptchaError extends Error {
-  constructor() {
-    super(MAKERWORLD_CAPTCHA_MESSAGE);
-    this.name = "MakerworldCaptchaError";
-  }
-}
-
-export class MakerworldAuthError extends Error {
-  constructor() {
-    super("Your MakerWorld session has expired or was rejected. Update the cookie in Settings and try again.");
-    this.name = "MakerworldAuthError";
-  }
-}
-
 export type MakerworldCloudResolution = {
   downloadUrl: string;
   meta: ImportedPageMetadata;
@@ -171,8 +126,11 @@ function pickString(source: Record<string, unknown>, keys: string[]): string | n
 /** Same defensive fallback used for the other makerworld.com /api/v1/* endpoints (collections):
  * not seen behind Cloudflare's challenge in practice, but retry once through FlareSolverr
  * rather than failing outright if that ever changes. No bearer token needed -- author profiles
- * are public. */
-async function fetchAuthorProfileJson(uid: string): Promise<unknown | null> {
+ * are public. `paceMs`, when set (collection batch imports -- see resolveMakerworldViaCloudApi),
+ * is awaited before the request so this call keeps the same pacing as every other one in the
+ * sequence. */
+async function fetchAuthorProfileJson(uid: string, paceMs?: number): Promise<unknown | null> {
+  await maybeSleep(paceMs);
   const url = `${AUTHOR_PROFILE_BASE}/${uid}`;
   const headers: Record<string, string> = {
     "User-Agent": IMPORT_BROWSER_USER_AGENT,
@@ -211,8 +169,8 @@ async function fetchAuthorProfileJson(uid: string): Promise<unknown | null> {
  * the Author table. Best-effort: a failure here shouldn't fail the import, since `creator`
  * (plain string, from the design's own embedded designCreator summary) already covers the
  * simple display case. */
-async function fetchMakerworldAuthorInfo(uid: string): Promise<ImportedAuthorInfo | null> {
-  const data = await fetchAuthorProfileJson(uid);
+async function fetchMakerworldAuthorInfo(uid: string, paceMs?: number): Promise<ImportedAuthorInfo | null> {
+  const data = await fetchAuthorProfileJson(uid, paceMs);
   if (!isRecord(data)) return null;
   const personal = isRecord(data.personal) ? data.personal : {};
   const links = Array.isArray(personal.links)
@@ -277,14 +235,22 @@ function extractCategoryIds(design: Record<string, unknown>): number[] {
  * Returns null for anything that should fall back to the existing page-scraping resolver
  * (missing/malformed data); throws MakerworldCaptchaError/MakerworldAuthError for the two
  * failure shapes worth telling the user about specifically.
+ *
+ * `paceMs`, when set, is awaited before *every* outbound request this makes (design fetch,
+ * profile/download-link fetch, author-profile fetch) -- used by collection batch imports (see
+ * importJobRunner.ts's runCollectionImportJob) to keep every single call in the whole sequence
+ * evenly spaced, not just the gap between one model and the next. Left unset for single-model
+ * imports, which have not been observed to need it.
  */
 export async function resolveMakerworldViaCloudApi(
   designId: string,
   requestedInstanceId: string | null,
   bearerToken: string,
+  paceMs?: number,
 ): Promise<MakerworldCloudResolution | null> {
   if (makerworldCaptchaCooloffActive()) throw new MakerworldCaptchaError();
 
+  await maybeSleep(paceMs);
   const designResult = await fetchCloudJson(`${DESIGN_API_BASE}/design/${designId}`, bearerToken);
   if (!designResult) return null;
   if (isCaptchaChallenge(designResult.data)) {
@@ -316,6 +282,7 @@ export async function resolveMakerworldViaCloudApi(
   const profileId = selected.profileId != null ? String(selected.profileId) : null;
   if (!profileId) return null;
 
+  await maybeSleep(paceMs);
   const downloadResult = await fetchCloudJson(
     `${PROFILE_DOWNLOAD_BASE}/${profileId}?model_id=${encodeURIComponent(modelId)}`,
     bearerToken,
@@ -340,7 +307,7 @@ export async function resolveMakerworldViaCloudApi(
   const previewImageUrl = pickString(design, ["coverUrl", "coverPortrait", "coverLandscape"]);
   const title = pickString(design, ["title"]);
   const galleryImages = extractGalleryImages(design);
-  const author = creatorUid ? await fetchMakerworldAuthorInfo(creatorUid) : null;
+  const author = creatorUid ? await fetchMakerworldAuthorInfo(creatorUid, paceMs) : null;
   const siteCategoryIds = extractCategoryIds(design);
 
   return {

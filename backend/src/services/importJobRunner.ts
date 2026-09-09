@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { mapWithConcurrency, sleep } from "../utils/concurrency";
-import { IMPORT_COLLECTION_DELAY_MS, IMPORT_MAKERWORLD_COLLECTION_DELAY_MS } from "../config";
+import { IMPORT_COLLECTION_DELAY_MS, IMPORT_MAKERWORLD_CALL_DELAY_MS } from "../config";
 import { updateJob } from "./importJobService";
 import { createNotification } from "./notificationService";
 import { addPrintsToCollection, findOrCreateCollectionByName } from "./collectionService";
@@ -15,13 +15,15 @@ import { fetchThingiverseCollectionTitle } from "./thingiverseApi";
 import { getThingiverseAccessToken } from "./settingsService";
 import { HttpError } from "../utils/fileUtils";
 
-// Deliberately sequential (not a handful in parallel) with a pacing gap between requests --
-// firing several designs' worth of api.bambulab.com calls at once, back to back with zero
-// pacing, is a burst pattern that looks nothing like a human browsing the site and is the
-// most likely reason a large collection trips MakerWorld's anti-abuse CAPTCHA (see
-// classifyImportFailure's "rateLimited" case) after only a handful of models. Neither Bambu
-// nor bambuddy's independent writeup (#2790) publish an exact threshold, so this isn't a
-// guarantee -- just removing the most obviously bot-shaped part of the traffic.
+// Deliberately sequential (not a handful in parallel) -- firing several designs' worth of
+// api.bambulab.com calls at once, back to back with zero pacing, is a burst pattern that looks
+// nothing like a human browsing the site and is the most likely reason a large collection trips
+// MakerWorld's anti-abuse CAPTCHA (see classifyImportFailure's "rateLimited" case) after only a
+// handful of models. Neither Bambu nor bambuddy's independent writeup (#2790) publish an exact
+// threshold, so this isn't a guarantee -- just removing the most obviously bot-shaped part of
+// the traffic. The actual pacing between and within each design's own calls now happens
+// per-call, not per-item -- see IMPORT_MAKERWORLD_CALL_DELAY_MS's comment in config.ts and
+// ImportRequestBody.makerworldPaceMs.
 const COLLECTION_IMPORT_CONCURRENCY = 1;
 
 type CollectionImportJobBody = ImportRequestBody & { design_ids: string[] };
@@ -73,7 +75,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
     const failed: string[] = [];
     const successPrintIds: string[] = [];
 
-    await mapWithConcurrency(body.design_ids, COLLECTION_IMPORT_CONCURRENCY, async (designId, index) => {
+    await mapWithConcurrency(body.design_ids, COLLECTION_IMPORT_CONCURRENCY, async (designId) => {
       const modelUrl = `https://makerworld.com/en/models/${designId}`;
       const itemBody: ImportRequestBody = {
         url: modelUrl,
@@ -81,6 +83,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
         tags: body.tags ?? [],
         folder_id: body.folder_id ?? null,
         makerworld_cookie: body.makerworld_cookie,
+        makerworldPaceMs: IMPORT_MAKERWORLD_CALL_DELAY_MS,
       };
       try {
         const { print, alreadyImported } = await importPrintFromUrl(userId, modelUrl, itemBody);
@@ -100,7 +103,6 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
         // (successPrintIds) and the ones still to come must not be lost over a single DB blip.
         await updateJob(jobId, { processed, imported, alreadyInLibrary, failedCount: failed.length }).catch(() => undefined);
       }
-      if (index < body.design_ids.length - 1) await sleep(IMPORT_MAKERWORLD_COLLECTION_DELAY_MS);
     });
 
     let resultCollectionId: string | null = null;
@@ -110,7 +112,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
       const parsed = parseMakerworldCollectionUrl(url);
       if (parsed) {
         const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
-        collectionTitle = await fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken);
+        collectionTitle = await fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken, IMPORT_MAKERWORLD_CALL_DELAY_MS);
         if (collectionTitle) {
           const collection = await findOrCreateCollectionByName(userId, collectionTitle);
           await addPrintsToCollection(collection.id, successPrintIds);

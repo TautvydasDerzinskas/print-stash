@@ -9,8 +9,9 @@ import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import { downloadImportToTemp, findImportedExternalIds, importPrintFromUrl, inspectImportLink } from "../services/importService";
 import { resolveMakerworldCookie } from "../services/importResolvers";
-import { extractMakerworldBearerToken } from "../services/makerworldCloudApi";
+import { extractMakerworldBearerToken, MakerworldAuthError, MakerworldCaptchaError } from "../services/makerworldCloudApi";
 import { fetchMakerworldCollectionEntries, fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "../services/makerworldCollections";
+import { IMPORT_MAKERWORLD_CALL_DELAY_MS } from "../config";
 import {
   fetchThingiverseCollectionThings,
   fetchThingiverseCollectionTitle,
@@ -88,10 +89,24 @@ router.post(
     if (!parsed) throw new HttpError(400, "Not a MakerWorld collection URL");
     const bearerToken = extractMakerworldBearerToken(resolveMakerworldCookie(body));
 
-    const [title, listing] = await Promise.all([
-      fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken),
-      fetchMakerworldCollectionEntries(parsed.collectionId, bearerToken),
-    ]);
+    // Sequential, not Promise.all: firing the title fetch and the (paginated, up to 15-page)
+    // entries listing at once was its own unpaced burst -- see IMPORT_MAKERWORLD_CALL_DELAY_MS's
+    // comment in config.ts. The entries call paces its own pages via that same constant, which
+    // also covers the gap after this title call since it's always the first request in the pair.
+    let title: string | null;
+    let listing: Awaited<ReturnType<typeof fetchMakerworldCollectionEntries>>;
+    try {
+      title = await fetchMakerworldCollectionTitle(parsed.collectionId, bearerToken);
+      listing = await fetchMakerworldCollectionEntries(parsed.collectionId, bearerToken, undefined, IMPORT_MAKERWORLD_CALL_DELAY_MS);
+    } catch (err) {
+      if (err instanceof MakerworldCaptchaError) throw new HttpError(429, err.message);
+      // 400, not 401: this is MakerWorld's own session rejecting our request, not the caller's
+      // PrintStash session -- the frontend's generic API client treats any 401 as "your
+      // PrintStash session expired" and force-logs-out, which would be exactly wrong here. See
+      // the same reasoning at importService.ts's tryMakerworldCloudApi/importThingiverseThing.
+      if (err instanceof MakerworldAuthError) throw new HttpError(400, err.message);
+      throw err;
+    }
     if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
 
     const alreadyImported = await findImportedExternalIds(

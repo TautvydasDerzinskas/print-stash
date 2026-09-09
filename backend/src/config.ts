@@ -36,18 +36,28 @@ export const IMPORT_HTML_MAX_KB = envInt("IMPORT_HTML_MAX_KB", 4096);
 export const IMPORT_HTML_MAX_BYTES = Math.max(64, IMPORT_HTML_MAX_KB) * 1024;
 // Pacing gap between items in a batch import (see importJobRunner.ts) -- exists to avoid the
 // burst request pattern most likely to trip a source site's anti-abuse defenses. Overridable
-// mainly so tests don't have to actually wait it out. MakerWorld gets its own, much longer,
-// pacing: its anti-abuse CAPTCHA (see makerworldCloudApi.ts's isCaptchaChallenge) has proven far
-// more sensitive in practice than Thingiverse's -- a 146-item collection tripped it after only a
-// handful of requests at the shared 1s pace, while Thingiverse hasn't shown the same behavior.
+// mainly so tests don't have to actually wait it out. Thingiverse hasn't shown MakerWorld's
+// sensitivity to request volume, so it keeps this lighter, per-item-only pace.
 export const IMPORT_COLLECTION_DELAY_MS = envInt("IMPORT_COLLECTION_DELAY_MS", 1000);
-export const IMPORT_MAKERWORLD_COLLECTION_DELAY_MS = envInt("IMPORT_MAKERWORLD_COLLECTION_DELAY_MS", 10000);
+// MakerWorld's anti-abuse CAPTCHA (see makerworldCaptcha.ts's isCaptchaChallenge) has proven far
+// more sensitive than a simple gap between models accounted for: a 146-item collection tripped
+// it almost immediately once we traced the actual call sequence -- the collection-listing step
+// alone (title + paginated entries) fires a dozen-plus unpaced requests before a single model
+// import even starts, and each model's own resolution is itself another handful of calls
+// (design, profile/download-link, author, file, up to ~20 preview images) with no gap between
+// them. So this one pace applies to *every single outbound MakerWorld-related request* in a
+// collection batch -- listing pages, each step of each model's resolution, and each preview
+// image -- not just the boundary between models. Deliberately slow (5s * dozens of calls per
+// model adds up) in exchange for actually working instead of tripping on request #1. Left unset
+// (no delay) for single-model imports, which have not needed it.
+export const IMPORT_MAKERWORLD_CALL_DELAY_MS = envInt("IMPORT_MAKERWORLD_CALL_DELAY_MS", 5000);
 // Pacing gap between a single model's own preview-image fetches (attachImportedPreviewImages in
-// importService.ts) -- up to ~20 of these fire back to back for one model (cover + gallery
-// photos), which is its own small burst even when the model-to-model pacing above is generous.
-// Kept far shorter than the inter-model delays: these are plain image/CDN fetches, not confirmed
-// to share the same anti-abuse bucket as MakerWorld's design/download-resolution API -- this is
-// a cheap precaution, not a proven-necessary one.
+// importService.ts) when *not* part of a MakerWorld collection batch (which uses
+// IMPORT_MAKERWORLD_CALL_DELAY_MS instead) -- up to ~20 of these fire back to back for one
+// model (cover + gallery photos), which is its own small burst even for a single-model import.
+// Kept far shorter than the MakerWorld batch pace: these are plain image/CDN fetches, not
+// confirmed to share the same anti-abuse bucket as MakerWorld's design/download-resolution API
+// -- this is a cheap precaution, not a proven-necessary one.
 export const IMPORT_PREVIEW_IMAGE_DELAY_MS = envInt("IMPORT_PREVIEW_IMAGE_DELAY_MS", 250);
 export const IMPORT_USER_AGENT = "PrintStash/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
