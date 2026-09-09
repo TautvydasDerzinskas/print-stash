@@ -1,0 +1,137 @@
+name: Bridge release
+
+# Only runs when bridge/ (the slicer-bridge helper app) or this workflow changes -- everything
+# else in the repo never touches it. PRs get a build-only check (all three OS binaries, no
+# release); a push to main additionally publishes them as a new GitHub Release that the
+# in-app Download page links to via /releases/latest.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "bridge/**"
+      - ".github/workflows/bridge-release.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "bridge/**"
+      - ".github/workflows/bridge-release.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: bridge-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bridge/go.mod
+      - name: Test
+        working-directory: bridge
+        run: go test ./...
+      - name: Build (cross-compiled, no cgo needed)
+        working-directory: bridge
+        env:
+          CGO_ENABLED: 0
+          GOOS: windows
+          GOARCH: amd64
+        run: go build -o dist/print-stash-bridge-windows-amd64.exe ./cmd/print-stash-bridge
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-windows-amd64
+          path: bridge/dist/print-stash-bridge-windows-amd64.exe
+          if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bridge/go.mod
+      - name: Test
+        working-directory: bridge
+        run: go test ./...
+      - name: Build (cross-compiled, no cgo needed)
+        working-directory: bridge
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: go build -o dist/print-stash-bridge-linux-amd64 ./cmd/print-stash-bridge
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-linux-amd64
+          path: bridge/dist/print-stash-bridge-linux-amd64
+          if-no-files-found: error
+
+  build-macos:
+    # Custom-URL-scheme handling on macOS goes through Cocoa (see cmd/print-stash-bridge/
+    # urlhandler_darwin.m), so this binary needs cgo + the Xcode toolchain and can only be
+    # built on an actual Mac runner -- unlike Windows/Linux, it can't be cross-compiled.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bridge/go.mod
+      - name: Test
+        working-directory: bridge
+        run: go test ./...
+      - name: Build arm64 + amd64
+        working-directory: bridge
+        env:
+          CGO_ENABLED: 1
+        run: |
+          GOARCH=arm64 go build -o dist/print-stash-bridge-darwin-arm64 ./cmd/print-stash-bridge
+          GOARCH=amd64 go build -o dist/print-stash-bridge-darwin-amd64 ./cmd/print-stash-bridge
+      - name: Combine into a universal binary
+        working-directory: bridge
+        run: lipo -create -output dist/print-stash-bridge-macos dist/print-stash-bridge-darwin-arm64 dist/print-stash-bridge-darwin-amd64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bridge-macos
+          path: bridge/dist/print-stash-bridge-macos
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+      - name: Flatten downloaded artifacts
+        run: |
+          mkdir -p release
+          mv dist/bridge-windows-amd64/print-stash-bridge-windows-amd64.exe release/
+          mv dist/bridge-linux-amd64/print-stash-bridge-linux-amd64 release/
+          mv dist/bridge-macos/print-stash-bridge-macos release/
+          chmod +x release/print-stash-bridge-linux-amd64 release/print-stash-bridge-macos
+      - name: Compute release tag
+        id: tag
+        run: echo "tag=bridge-$(date +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: PrintStash Bridge ${{ steps.tag.outputs.tag }}
+          body: |
+            Automated build of the PrintStash slicer bridge (see `bridge/README.md`) from
+            ${{ github.sha }}.
+
+            - **Windows**: `print-stash-bridge-windows-amd64.exe` — run it once (double-click is fine) to install.
+            - **Linux**: `print-stash-bridge-linux-amd64` — `chmod +x`, then run it once to install.
+            - **macOS**: `print-stash-bridge-macos` (universal) — `chmod +x`, remove the quarantine flag, then run with `--install`. See the README for the exact commands.
+          make_latest: true
+          files: |
+            release/print-stash-bridge-windows-amd64.exe
+            release/print-stash-bridge-linux-amd64
+            release/print-stash-bridge-macos

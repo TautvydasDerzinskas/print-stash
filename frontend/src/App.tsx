@@ -16,6 +16,7 @@ import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ProfilePage from "./pages/ProfilePage";
 import ChangeEmailPage from "./pages/ProfilePage/ChangeEmailPage";
 import ChangePasswordPage from "./pages/ProfilePage/ChangePasswordPage";
+import DownloadPage from "./pages/DownloadPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import UsersPage from "./pages/UsersPage";
 import LogsPage from "./pages/LogsPage";
@@ -138,6 +139,7 @@ function AppShell({
           path="/profile/password"
           element={<ChangePasswordPage onUnauthorized={onUnauthorized} />}
         />
+        <Route path="/download" element={<DownloadPage />} />
         <Route
           path="/admin-settings"
           element={

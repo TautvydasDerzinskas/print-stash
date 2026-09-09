@@ -90,7 +90,8 @@
       "collapseSidebar": "Collapse sidebar",
       "foldersHeadingWithCount": "Folders ({{count}})",
       "models": "Models",
-      "collections": "Collections"
+      "collections": "Collections",
+      "downloadBridge": "Download Bridge"
     },
     "uploadBar": {
       "uploading": "Uploading…",
@@ -188,7 +189,9 @@
         "heading": "Slicer",
         "description": "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://).",
         "label": "Slicer",
-        "failed": "Failed to save -- try again."
+        "failed": "Failed to save -- try again.",
+        "bridgeRequiredPrefix": "Bambu Studio needs the PrintStash Bridge helper app installed to open files from here --",
+        "bridgeRequiredLink": "get it from the Download page."
       }
     },
     "addMenu": {
@@ -411,6 +414,28 @@
           "collection_edited": "Collection edited",
           "collection_deleted": "Collection deleted"
         }
+      }
+    },
+    "download": {
+      "pageTitle": "PrintStash Bridge",
+      "intro": "A small helper app that runs on your computer so \"Open in Slicer\" can hand a model straight to your slicer.",
+      "why": "Bambu Studio's own bambustudio:// link only accepts files from a short allowlist of domains Bambu Lab controls, and a self-hosted PrintStash never qualifies -- so \"Open in Bambu Studio\" would otherwise do nothing. The Bridge listens on its own print-stash:// link instead, downloads the file itself, and hands it to Bambu Studio locally. OrcaSlicer and PrusaSlicer already accept links directly and don't need it.",
+      "downloadHeading": "Download",
+      "install": {
+        "windows": "Run the downloaded .exe once (double-click is fine) -- it installs itself and registers the protocol.",
+        "macos": "chmod +x it, remove the Gatekeeper quarantine flag (xattr -d com.apple.quarantine), then run it once with --install.",
+        "linux": "Mark it executable (chmod +x) and run it once from a terminal."
+      },
+      "footerLinks": "Need the exact commands, or building from source? See the <releases>Bridge releases</releases> page.",
+      "autostart": {
+        "heading": "Run at startup (optional)",
+        "windowsLinuxNote": "Not needed on Windows or Linux -- the OS launches the Bridge fresh, with the link's URL already attached, every time you click \"Open in Bambu Studio\". There's no background process to keep running.",
+        "macosIntro": "Not required on macOS either, for the same reason -- it launches on demand even after a reboot. Adding it as a login item just means the very first click after starting up responds instantly instead of waiting about a second for the app to launch.",
+        "macosGuiHeading": "Easiest: System Settings",
+        "macosGuiSteps": "System Settings -> General -> Login Items & Extensions -> click + and add \"PrintStash Bridge\" from ~/Applications.",
+        "macosLaunchAgentHeading": "Or, a LaunchAgent (for Terminal users)",
+        "macosLaunchAgentIntro": "Save this as ~/Library/LaunchAgents/com.printstash.bridge.plist (replace YOUR_USERNAME with your actual username):",
+        "macosLaunchAgentLoad": "Then load it:"
       }
     }
   },

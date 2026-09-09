@@ -1,0 +1,13 @@
+{
+  "download_dir": "",
+  "log_file": "",
+  "slicers": {
+    "bambustudio": {
+      "command": "C:\\\\Program Files\\\\Bambu Studio\\\\BambuStudio.exe"
+    },
+    "orcaslicer": {
+      "command": "/usr/bin/orca-slicer",
+      "args": []
+    }
+  }
+}

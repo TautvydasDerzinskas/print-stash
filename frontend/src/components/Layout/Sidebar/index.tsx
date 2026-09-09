@@ -14,6 +14,7 @@ import Tooltip from "@mui/material/Tooltip";
 import SpaceDashboardIcon from "@mui/icons-material/SpaceDashboard";
 import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import CollectionsIcon from "@mui/icons-material/Collections";
+import DownloadIcon from "@mui/icons-material/Download";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import SettingsIcon from "@mui/icons-material/Settings";
 import PeopleIcon from "@mui/icons-material/People";
@@ -57,8 +58,8 @@ type Props = {
   isAdmin: boolean;
 };
 
-/** The persistent app-wide navigation rail: Dashboard, Models, Collections, and (for admins)
- *  Administration. Folder browsing lives inside the Models page itself, not here. */
+/** The persistent app-wide navigation rail: Dashboard, Models, Collections, Download Bridge, and
+ *  (for admins) Administration. Folder browsing lives inside the Models page itself, not here. */
 export default function Sidebar({ isAdmin }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const location = useLocation();
@@ -72,6 +73,7 @@ export default function Sidebar({ isAdmin }: Props) {
   const onDashboard = location.pathname === "/";
   const onCollections = location.pathname.startsWith("/models/collections");
   const onModels = (location.pathname.startsWith("/models") && !onCollections) || location.pathname.startsWith("/authors");
+  const onDownload = location.pathname.startsWith("/download");
   const onAdminSettings = location.pathname.startsWith("/admin-settings");
   const onAdminUsers = location.pathname.startsWith("/admin-users");
   const onAdminLogs = location.pathname.startsWith("/admin-logs");
@@ -181,6 +183,26 @@ export default function Sidebar({ isAdmin }: Props) {
                 <CollectionsIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary={t("sidebar.collections")} primaryTypographyProps={{ variant: "body2" }} />
+            </ListItemButton>
+          )}
+
+          {collapsed ? (
+            <CollapsedNavIcon
+              icon={<DownloadIcon fontSize="small" />}
+              label={t("sidebar.downloadBridge")}
+              selected={onDownload}
+              onClick={() => navigate("/download")}
+            />
+          ) : (
+            <ListItemButton
+              selected={onDownload}
+              onClick={() => navigate("/download")}
+              sx={{ borderRadius: 1, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 30 }}>
+                <DownloadIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={t("sidebar.downloadBridge")} primaryTypographyProps={{ variant: "body2" }} />
             </ListItemButton>
           )}
 

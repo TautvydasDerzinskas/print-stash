@@ -90,7 +90,8 @@
       "collapseSidebar": "Suskleisti šoninę juostą",
       "foldersHeadingWithCount": "Aplankai ({{count}})",
       "models": "Modeliai",
-      "collections": "Kolekcijos"
+      "collections": "Kolekcijos",
+      "downloadBridge": "Atsisiųsti Bridge"
     },
     "uploadBar": {
       "uploading": "Įkeliama…",
@@ -188,7 +189,9 @@
         "heading": "Pjaustyklė",
         "description": "Jūsų pageidaujama pjaustyklė, naudojama modelio veiksmo „Atverti pjaustyklėje“, kad modelis būtų atidarytas tiesiogiai per tos pjaustyklės nuorodą (pvz. bambustudio://).",
         "label": "Pjaustyklė",
-        "failed": "Nepavyko išsaugoti -- bandykite dar kartą."
+        "failed": "Nepavyko išsaugoti -- bandykite dar kartą.",
+        "bridgeRequiredPrefix": "Bambu Studio failams atverti iš čia reikalinga įdiegta PrintStash Bridge pagalbinė programa --",
+        "bridgeRequiredLink": "atsisiųskite ją atsisiuntimo puslapyje."
       }
     },
     "addMenu": {
@@ -411,6 +414,28 @@
           "collection_edited": "Kolekcija redaguota",
           "collection_deleted": "Kolekcija ištrinta"
         }
+      }
+    },
+    "download": {
+      "pageTitle": "PrintStash Bridge",
+      "intro": "Nedidelė pagalbinė programa, veikianti jūsų kompiuteryje, kad „Atverti pjaustyklėje“ galėtų perduoti modelį tiesiai jūsų pjaustyklei.",
+      "why": "Bambu Studio nuosava bambustudio:// nuoroda priima failus tik iš trumpo, Bambu Lab kontroliuojamo domenų sąrašo, o savarankiškai talpinamas PrintStash niekada jame nepasirodys -- todėl „Atverti Bambu Studio“ paprasčiausiai nieko nedarytų. Vietoje to Bridge klausosi savo print-stash:// nuorodos, pats atsisiunčia failą ir perduoda jį Bambu Studio vietoje. OrcaSlicer ir PrusaSlicer nuorodas priima tiesiogiai, todėl jiems Bridge nereikalingas.",
+      "downloadHeading": "Atsisiųsti",
+      "install": {
+        "windows": "Vieną kartą paleiskite atsisiųstą .exe failą (užtenka dvigubo paspaudimo) -- jis pats įsidiegs ir užregistruos protokolą.",
+        "macos": "Suteikite leidimą vykdyti (chmod +x), pašalinkite Gatekeeper karantino žymą (xattr -d com.apple.quarantine), tada vieną kartą paleiskite su --install.",
+        "linux": "Pažymėkite kaip vykdomą (chmod +x) ir vieną kartą paleiskite iš terminalo."
+      },
+      "footerLinks": "Reikia tikslių komandų arba norite susikompiliuoti iš išeitinio kodo? Žr. <releases>Bridge leidimų</releases> puslapį.",
+      "autostart": {
+        "heading": "Automatinis paleidimas paleidžiant sistemą (nebūtina)",
+        "windowsLinuxNote": "„Windows“ ar „Linux“ tai nereikalinga -- kiekvieną kartą paspaudus „Atverti Bambu Studio“, operacinė sistema paleidžia Bridge iš naujo, jau su nuorodos URL. Nėra jokio fone veikiančio proceso, kurį reikėtų palaikyti.",
+        "macosIntro": "Tas pats galioja ir „macOS“ -- ji paleidžia programą pagal poreikį net ir po perkrovimo. Pridėjus ją kaip prisijungimo elementą, tiesiog pirmas paspaudimas po sistemos paleidimo įvyks akimirksniu, o ne po maždaug sekundės, kol programa pasileis.",
+        "macosGuiHeading": "Paprasčiausia: sistemos nustatymai",
+        "macosGuiSteps": "System Settings -> General -> Login Items & Extensions -> spauskite + ir pridėkite „PrintStash Bridge“ iš ~/Applications.",
+        "macosLaunchAgentHeading": "Arba LaunchAgent (naudojantiems terminalą)",
+        "macosLaunchAgentIntro": "Išsaugokite tai kaip ~/Library/LaunchAgents/com.printstash.bridge.plist (pakeiskite YOUR_USERNAME savo naudotojo vardu):",
+        "macosLaunchAgentLoad": "Tada įkelkite jį:"
       }
     }
   },

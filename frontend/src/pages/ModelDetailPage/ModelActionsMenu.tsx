@@ -134,7 +134,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
   // "other" has no registered URL protocol to launch -- treated the same as no preference set.
   const slicerOption = SLICER_OPTIONS.find(opt => opt.id === slicerPreference && opt.id !== "other");
   const openInSlicerHref = slicerOption && print.slicer_url
-    ? slicerLaunchUrl(slicerOption.id, printsApi.fileUrl(print.slicer_url))
+    ? slicerLaunchUrl(slicerOption.id, printsApi.fileUrl(print.slicer_url), print.slicer_filename ?? undefined)
     : undefined;
 
   return (
