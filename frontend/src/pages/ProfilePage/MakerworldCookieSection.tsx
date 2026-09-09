@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import Chip from "@mui/material/Chip";
@@ -95,46 +96,48 @@ export default function MakerworldCookieSection({ cookie, onUpdateMakerWorld, on
         {t("profile.makerworld.description")}
       </Typography>
 
-      {editing ? (
-        <Stack spacing={1.5}>
-          <TextField
-            multiline
-            minRows={3}
-            value={draft}
-            onChange={e => setDraft(e.target.value)}
-            placeholder={t("profile.makerworld.placeholder") ?? undefined}
-            disabled={saving}
-            // Deliberate: focus the cookie field the moment editing starts.
-            // oxlint-disable-next-line jsx-a11y/no-autofocus
-            autoFocus
-          />
-          <Stack direction="row" spacing={1}>
-            <Button size="small" variant="contained" onClick={handleSave} disabled={saving || !draft.trim()}>
-              {saving ? t("profile.saving") : t("common:save")}
-            </Button>
-            <Button size="small" onClick={cancelEdit} disabled={saving}>{t("common:cancel")}</Button>
+      <Paper variant="outlined" sx={{ p: 2.5 }}>
+        {editing ? (
+          <Stack spacing={1.5}>
+            <TextField
+              multiline
+              minRows={3}
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              placeholder={t("profile.makerworld.placeholder") ?? undefined}
+              disabled={saving}
+              // Deliberate: focus the cookie field the moment editing starts.
+              // oxlint-disable-next-line jsx-a11y/no-autofocus
+              autoFocus
+            />
+            <Stack direction="row" spacing={1}>
+              <Button size="small" variant="contained" onClick={handleSave} disabled={saving || !draft.trim()}>
+                {saving ? t("profile.saving") : t("common:save")}
+              </Button>
+              <Button size="small" onClick={cancelEdit} disabled={saving}>{t("common:cancel")}</Button>
+            </Stack>
           </Stack>
-        </Stack>
-      ) : (
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Chip
-            label={configured ? t("profile.makerworld.added") : t("profile.makerworld.notAdded")}
-            size="small"
-            color={configured ? "success" : "default"}
-            variant={configured ? "filled" : "outlined"}
-          />
-          <Button size="small" onClick={startEdit}>
-            {configured ? t("common:edit") : t("profile.makerworld.add")}
-          </Button>
-          {configured && (
-            <Button size="small" color="error" onClick={handleRemove} disabled={saving}>
-              {t("common:remove")}
+        ) : (
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Chip
+              label={configured ? t("profile.makerworld.added") : t("profile.makerworld.notAdded")}
+              size="small"
+              color={configured ? "success" : "default"}
+              variant={configured ? "filled" : "outlined"}
+            />
+            <Button size="small" onClick={startEdit}>
+              {configured ? t("common:edit") : t("profile.makerworld.add")}
             </Button>
-          )}
-        </Stack>
-      )}
+            {configured && (
+              <Button size="small" color="error" onClick={handleRemove} disabled={saving}>
+                {t("common:remove")}
+              </Button>
+            )}
+          </Stack>
+        )}
 
-      {error && <Alert severity="error" sx={{ mt: 1.5 }} onClose={() => setError(null)}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mt: 1.5 }} onClose={() => setError(null)}>{error}</Alert>}
+      </Paper>
     </Box>
   );
 }

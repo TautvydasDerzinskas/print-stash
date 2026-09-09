@@ -20,12 +20,16 @@ import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import LaunchIcon from "@mui/icons-material/Launch";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Plate, type Print, printsApi } from "../../api/prints";
 import { saveResponseToDisk } from "../../utils/downloadResponse";
+import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { useConfirm } from "../../components/ConfirmProvider";
 import { importProviderInfo } from "../../constants/importProviders";
+import { SLICER_OPTIONS } from "../../constants/settingsOptions";
+import { useSlicerPreference } from "../../hooks/useSlicerPreference";
 
 type Props = {
   print: Print;
@@ -36,14 +40,16 @@ type Props = {
   triggerSx?: SxProps<Theme>;
 };
 
-/** The "..." menu for a model: Download (single file, or a plate picker / zip-all for
- *  multi-plate models), Edit (disabled for now), Delete (confirm, then delete), and -- only for
- *  an imported print -- a divider then "Open in {Provider}" linking back to the original model
- *  page. Shared by the model detail page's header and the Models/Collection grids' per-card
- *  hover overlay. */
+/** The "..." menu for a model: "Open in {Slicer}" (launches the user's preferred slicer via its
+ *  own URL protocol -- disabled when no slicer is set, or it's set to "Other"), Download (single
+ *  file, or a plate picker / zip-all for multi-plate models), Edit (disabled for now), Delete
+ *  (confirm, then delete), and -- only for an imported print -- a divider then "Open in
+ *  {Provider}" linking back to the original model page. Shared by the model detail page's header
+ *  and the Models/Collection grids' per-card hover overlay. */
 export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, triggerSx }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
+  const slicerPreference = useSlicerPreference();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -125,6 +131,11 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
 
   const sortedPlates = print.plates.toSorted((a, b) => a.position - b.position);
   const providerInfo = importProviderInfo(print.source_provider);
+  // "other" has no registered URL protocol to launch -- treated the same as no preference set.
+  const slicerOption = SLICER_OPTIONS.find(opt => opt.id === slicerPreference && opt.id !== "other");
+  const openInSlicerHref = slicerOption && print.slicer_url
+    ? slicerLaunchUrl(slicerOption.id, printsApi.fileUrl(print.slicer_url))
+    : undefined;
 
   return (
     <>
@@ -138,6 +149,14 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
         {deleting ? <CircularProgress size={18} /> : <MoreVertIcon fontSize="small" />}
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
+        <MenuItem component="a" href={openInSlicerHref} onClick={closeMenu} disabled={!openInSlicerHref}>
+          <ListItemIcon><LaunchIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>
+            {slicerOption
+              ? t("models:detail.openInSlicer", { slicer: slicerOption.label })
+              : t("models:detail.openInSlicerGeneric")}
+          </ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleDownload} disabled={downloading}>
           <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("common:download")}</ListItemText>

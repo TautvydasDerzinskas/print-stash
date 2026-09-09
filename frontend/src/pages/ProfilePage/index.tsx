@@ -4,7 +4,6 @@ import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
-import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Divider from "@mui/material/Divider";
 import type { AuthUser } from "../../api/auth";
@@ -41,17 +40,6 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
           <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
         </Box>
       </Stack>
-
-      <TextField
-        label={t("profile.displayNameLabel")}
-        value={user?.display_name ?? ""}
-        disabled
-        fullWidth
-        size="small"
-        helperText={t("profile.displayNameHelper")}
-      />
-
-      <Divider />
 
       <Stack spacing={2}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1}>

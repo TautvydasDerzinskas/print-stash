@@ -152,8 +152,6 @@
     },
     "profile": {
       "title": "Profile",
-      "displayNameLabel": "Display Name",
-      "displayNameHelper": "Display name can't be changed",
       "changeEmailLink": "Change email",
       "changePasswordLink": "Change password",
       "pendingEmail": "Pending confirmation for {{email}}",
@@ -188,9 +186,8 @@
       },
       "slicer": {
         "heading": "Slicer",
-        "description": "Your preferred slicer, for opening models directly via that slicer's own link (e.g. bambustudio://) -- coming soon.",
+        "description": "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://).",
         "label": "Slicer",
-        "saved": "Saved.",
         "failed": "Failed to save -- try again."
       }
     },
@@ -633,6 +630,8 @@
       "deleteFailed": "Failed to delete the model.",
       "confirmDelete": "Delete \"{{name}}\"? This cannot be undone.",
       "openInProvider": "Open in {{provider}}",
+      "openInSlicer": "Open in {{slicer}}",
+      "openInSlicerGeneric": "Open in Slicer",
       "downloadPickerTitle": "Download",
       "downloadAllZip": "Download all {{count}} plates (.zip)",
       "orDownloadOne": "or download one plate",

@@ -152,8 +152,6 @@
     },
     "profile": {
       "title": "Profilis",
-      "displayNameLabel": "Rodomas vardas",
-      "displayNameHelper": "Rodomo vardo pakeisti negalima",
       "changeEmailLink": "Keisti el. paštą",
       "changePasswordLink": "Keisti slaptažodį",
       "pendingEmail": "Laukiama patvirtinimo adresu {{email}}",
@@ -188,9 +186,8 @@
       },
       "slicer": {
         "heading": "Pjaustyklė",
-        "description": "Jūsų pageidaujama pjaustyklė, skirta ateityje atidaryti modelius tiesiogiai per tos pjaustyklės nuorodą (pvz. bambustudio://) -- greitai.",
+        "description": "Jūsų pageidaujama pjaustyklė, naudojama modelio veiksmo „Atverti pjaustyklėje“, kad modelis būtų atidarytas tiesiogiai per tos pjaustyklės nuorodą (pvz. bambustudio://).",
         "label": "Pjaustyklė",
-        "saved": "Išsaugota.",
         "failed": "Nepavyko išsaugoti -- bandykite dar kartą."
       }
     },
@@ -634,6 +631,8 @@
       "deleteFailed": "Nepavyko ištrinti modelio.",
       "confirmDelete": "Ištrinti „{{name}}“? Šio veiksmo nebus galima atšaukti.",
       "openInProvider": "Atverti „{{provider}}“",
+      "openInSlicer": "Atverti su {{slicer}}",
+      "openInSlicerGeneric": "Atverti pjaustyklėje",
       "downloadPickerTitle": "Atsisiųsti",
       "downloadAllZip": "Atsisiųsti visas {{count}} plokštes (.zip)",
       "orDownloadOne": "arba atsisiųsti vieną plokštę",
