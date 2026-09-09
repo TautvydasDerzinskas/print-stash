@@ -55,6 +55,8 @@ export default function CollectionEntryList({ entries, selected, busy, noEntries
                 component="img"
                 src={entry.cover ?? undefined}
                 alt=""
+                loading="lazy"
+                decoding="async"
                 sx={{
                   width: 40,
                   height: 40,
