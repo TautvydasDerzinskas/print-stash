@@ -1,26 +1,29 @@
 import { useTranslation } from "react-i18next";
 import Paper from "@mui/material/Paper";
 import Box from "@mui/material/Box";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
-import ListItemIcon from "@mui/material/ListItemIcon";
-import ListItemText from "@mui/material/ListItemText";
+import Chip from "@mui/material/Chip";
 import PublicIcon from "@mui/icons-material/Public";
+import { IMPORT_PROVIDER_INFO } from "../../constants/importProviders";
 import type { DashboardProvider } from "../../api/dashboard";
 
 type Props = {
   providers: DashboardProvider[];
 };
 
-const PROVIDER_LABELS: Record<string, string> = {
-  makerworld: "MakerWorld",
-  thingiverse: "Thingiverse",
-  printstash: "PrintStash",
-};
+const OWN_UPLOAD_LABEL = "PrintStash";
 
-function providerLabel(provider: string): string {
-  return PROVIDER_LABELS[provider] ?? provider;
+// Reuses the exact same brand colors as the provider badge shown on a model's card thumbnail
+// (see constants/importProviders.ts) -- a direct upload/zip import has no import-source badge
+// there (sourceProvider is null), so it falls back to the app's own primary color here instead
+// of a fixed brand hex.
+function chipSx(provider: string): { label: string; sx: object } {
+  const info = IMPORT_PROVIDER_INFO[provider];
+  if (info) return { label: info.label, sx: { bgcolor: info.color, color: "#fff", fontWeight: 600 } };
+  return { label: OWN_UPLOAD_LABEL, sx: { bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 600 } };
 }
 
 /** Top Providers -- how many of this user's models came from each source (MakerWorld,
@@ -41,17 +44,19 @@ export default function ProviderListCard({ providers }: Props) {
         <Typography color="text.secondary" sx={{ py: 2 }}>{t("dashboard.topProviders.empty")}</Typography>
       ) : (
         <List dense disablePadding>
-          {providers.map((p) => (
-            <ListItem key={p.provider} sx={{ px: 1 }}>
-              <ListItemIcon sx={{ minWidth: 32 }}>
-                <PublicIcon fontSize="small" color="disabled" />
-              </ListItemIcon>
-              <ListItemText primary={providerLabel(p.provider)} />
-              <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
-                {t("dashboard.topProviders.modelCount", { count: p.model_count })}
-              </Typography>
-            </ListItem>
-          ))}
+          {providers.map((p) => {
+            const { label, sx } = chipSx(p.provider);
+            return (
+              <ListItem key={p.provider} sx={{ px: 1 }}>
+                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
+                  <Chip label={label} size="small" sx={sx} />
+                  <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
+                    {t("dashboard.topProviders.modelCount", { count: p.model_count })}
+                  </Typography>
+                </Stack>
+              </ListItem>
+            );
+          })}
         </List>
       )}
     </Paper>

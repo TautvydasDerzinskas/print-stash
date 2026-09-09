@@ -108,6 +108,7 @@ export default function DashboardPage({ onUnauthorized }: Props) {
             seeMoreLabel={t("dashboard.seeMore")}
             fetchMore={dashboardApi.getTopPrinted}
           />
+          <RecentlyAddedCard models={summary.recently_added} />
         </Box>
 
         {/* Column 3: top authors / top providers */}
@@ -115,10 +116,6 @@ export default function DashboardPage({ onUnauthorized }: Props) {
           <AuthorListCard authors={summary.top_authors} />
           <ProviderListCard providers={summary.top_providers} />
         </Box>
-      </Box>
-
-      <Box sx={{ mt: 2 }}>
-        <RecentlyAddedCard models={summary.recently_added} />
       </Box>
     </Box>
   );
