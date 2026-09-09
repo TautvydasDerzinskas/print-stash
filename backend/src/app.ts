@@ -14,6 +14,7 @@ import importsRoutes from "./routes/imports";
 import collectionsRoutes from "./routes/collections";
 import notificationsRoutes from "./routes/notifications";
 import adminRoutes from "./routes/admin";
+import dashboardRoutes from "./routes/dashboard";
 
 export function createApp(): Express {
   const app = express();
@@ -42,6 +43,7 @@ export function createApp(): Express {
   app.use("/api", collectionsRoutes);
   app.use("/api", notificationsRoutes);
   app.use("/api", adminRoutes);
+  app.use("/api", dashboardRoutes);
 
   // 404 fallback for unmatched routes.
   app.use((_req: Request, res: Response) => {

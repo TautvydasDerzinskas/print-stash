@@ -252,7 +252,44 @@
       "tooltip": "{{imported}} importuota, {{alreadyInLibrary}} jau bibliotekoje, {{failedCount}} nepavyko"
     },
     "dashboard": {
-      "comingSoon": "Valdymo skydo panelės netrukus atsiras."
+      "loadError": "Nepavyko įkelti valdymo skydo.",
+      "seeMore": "Rodyti daugiau",
+      "viewCount": "{{count}} peržiūrų",
+      "printCount": "{{count}} spausdinimų",
+      "collectionCount": {
+        "label": "Kolekcijos"
+      },
+      "modelCount": {
+        "label": "Modeliai"
+      },
+      "authorCount": {
+        "label": "Unikalūs autoriai"
+      },
+      "categoryCount": {
+        "label": "Kategorijos"
+      },
+      "topViewed": {
+        "title": "Dažniausiai žiūrimi modeliai",
+        "empty": "Dar nieko nežiūrėta — atidaryti modeliai atsiras čia."
+      },
+      "topPrinted": {
+        "title": "Dažniausiai spausdinami modeliai",
+        "empty": "Dar nieko neišspausdinta — pažymėti kaip išspausdinti modeliai atsiras čia."
+      },
+      "topAuthors": {
+        "title": "Populiariausi autoriai",
+        "empty": "Autorių dar nėra — importuokite modelį, kad pamatytumėte populiariausius autorius čia.",
+        "modelCount": "{{count}} modelių"
+      },
+      "topProviders": {
+        "title": "Populiariausi šaltiniai",
+        "empty": "Modelių dar nėra.",
+        "modelCount": "{{count}} modelių"
+      },
+      "recentlyAdded": {
+        "title": "Naujausiai pridėti",
+        "empty": "Dar nieko nepridėta — įkelti ir importuoti modeliai atsiras čia."
+      }
     },
     "adminSettings": {
       "pageTitle": "Administravimo nustatymai",

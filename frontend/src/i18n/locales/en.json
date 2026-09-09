@@ -252,7 +252,44 @@
       "tooltip": "{{imported}} imported, {{alreadyInLibrary}} already in your library, {{failedCount}} failed"
     },
     "dashboard": {
-      "comingSoon": "Dashboard panels are coming soon."
+      "loadError": "Failed to load your dashboard.",
+      "seeMore": "See more",
+      "viewCount": "{{count}} views",
+      "printCount": "{{count}} prints",
+      "collectionCount": {
+        "label": "Collections"
+      },
+      "modelCount": {
+        "label": "Models"
+      },
+      "authorCount": {
+        "label": "Unique authors"
+      },
+      "categoryCount": {
+        "label": "Categories"
+      },
+      "topViewed": {
+        "title": "Top Viewed Models",
+        "empty": "Nothing viewed yet — models you open will show up here."
+      },
+      "topPrinted": {
+        "title": "Top Printed Models",
+        "empty": "Nothing printed yet — models you mark as printed will show up here."
+      },
+      "topAuthors": {
+        "title": "Top Authors",
+        "empty": "No authors yet — import a model to see your top authors here.",
+        "modelCount": "{{count}} models"
+      },
+      "topProviders": {
+        "title": "Top Providers",
+        "empty": "No models yet.",
+        "modelCount": "{{count}} models"
+      },
+      "recentlyAdded": {
+        "title": "Recently Added",
+        "empty": "Nothing added yet — uploaded and imported models will show up here."
+      }
     },
     "adminSettings": {
       "pageTitle": "Admin Settings",

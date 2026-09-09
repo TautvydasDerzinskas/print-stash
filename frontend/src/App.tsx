@@ -93,7 +93,7 @@ function AppShell({
       onThemeChange={selected => setSettings(prev => ({ ...prev, theme: { selected } }))}
     >
       <Routes>
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/" element={<DashboardPage onUnauthorized={onUnauthorized} />} />
         <Route
           path="/models"
           element={
