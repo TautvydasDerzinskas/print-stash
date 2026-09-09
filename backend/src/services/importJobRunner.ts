@@ -13,6 +13,7 @@ import { upsertAuthorFromImport } from "./authorService";
 import { extractZipEntriesToPrints } from "./zipService";
 import { fetchThingiverseCollectionTitle } from "./thingiverseApi";
 import { getThingiverseAccessToken } from "./settingsService";
+import { fetchPrintablesCollectionTitle } from "./printablesApi";
 import { createLog } from "./auditLog";
 import { HttpError } from "../utils/fileUtils";
 
@@ -31,6 +32,7 @@ type CollectionImportJobBody = ImportRequestBody & { design_ids: string[] };
 type ZipImportJobBody = ImportRequestBody & { entries: string[] };
 type ThingiverseLikesImportJobBody = ImportRequestBody & { thing_ids: string[]; username: string };
 type ThingiverseCollectionImportJobBody = ImportRequestBody & { thing_ids: string[]; collectionId: string };
+type PrintablesCollectionImportJobBody = ImportRequestBody & { model_ids: string[]; collectionId: string };
 
 // Distinguishes *why* a single design failed, so a batch of many failures reads as one clear
 // cause instead of an opaque "N failed":
@@ -308,6 +310,88 @@ export async function runThingiverseCollectionImportJob(
       (await fetchThingiverseCollectionTitle(body.collectionId, accessToken)) ?? `Thingiverse Collection ${body.collectionId}`,
     (collectionTitle) => `"${collectionTitle}"`,
   );
+}
+
+/** Runs a named Printables Collection's batch import in the background -- see
+ * routes/imports.ts's POST /import/printables-collection. Mirrors
+ * runThingiverseThingsImportJob's shape (own resolver, same sequential pacing, files successful
+ * imports into a PrintStash Collection named after the real Printables Collection name) but
+ * simpler: Printables needs no access token, so there's no equivalent "isn't configured for this
+ * instance" failure mode to handle up front. */
+export async function runPrintablesCollectionImportJob(jobId: string, userId: string, body: PrintablesCollectionImportJobBody): Promise<void> {
+  try {
+    let imported = 0;
+    let alreadyInLibrary = 0;
+    let processed = 0;
+    let unavailable = 0;
+    let rateLimited = 0;
+    const failed: string[] = [];
+    const successPrintIds: string[] = [];
+
+    await mapWithConcurrency(body.model_ids, COLLECTION_IMPORT_CONCURRENCY, async (modelId, index) => {
+      const modelUrl = `https://www.printables.com/model/${modelId}`;
+      const itemBody: ImportRequestBody = {
+        url: modelUrl,
+        notes: body.notes ?? null,
+        tags: body.tags ?? [],
+        folder_id: body.folder_id ?? null,
+      };
+      try {
+        const { print, alreadyImported } = await importPrintFromUrl(userId, modelUrl, itemBody);
+        successPrintIds.push(print.id);
+        if (alreadyImported) alreadyInLibrary++;
+        else imported++;
+      } catch (err) {
+        failed.push(modelId);
+        const reason = classifyImportFailure(err);
+        if (reason === "unavailable") unavailable++;
+        else if (reason === "rateLimited") rateLimited++;
+      } finally {
+        processed++;
+        await updateJob(jobId, { processed, imported, alreadyInLibrary, failedCount: failed.length }).catch(() => undefined);
+      }
+      if (index < body.model_ids.length - 1) await sleep(IMPORT_COLLECTION_DELAY_MS);
+    });
+
+    let resultCollectionId: string | null = null;
+    const collectionTitle = (await fetchPrintablesCollectionTitle(body.collectionId)) ?? `Printables Collection ${body.collectionId}`;
+    if (successPrintIds.length) {
+      const collection = await findOrCreateCollectionByName(userId, collectionTitle);
+      await addPrintsToCollection(collection.id, successPrintIds);
+      resultCollectionId = collection.id;
+    }
+
+    await updateJob(jobId, {
+      status: "DONE",
+      sourceLabel: collectionTitle,
+      resultCollectionId,
+      processed,
+      imported,
+      alreadyInLibrary,
+      failedCount: failed.length,
+    });
+    void createLog({
+      userId,
+      action: "import_completed",
+      targetId: resultCollectionId,
+      details: { provider: "printables", sourceLabel: collectionTitle, imported, alreadyInLibrary, failed: failed.length },
+    });
+
+    const bodyParts: string[] = [];
+    if (alreadyInLibrary) bodyParts.push(`${alreadyInLibrary} already in your library`);
+    const otherFailed = failed.length - unavailable - rateLimited;
+    if (unavailable) bodyParts.push(`${unavailable} unavailable (private, deleted, or removed)`);
+    if (rateLimited) bodyParts.push(`${rateLimited} rate-limited by Printables — wait a while, then retry`);
+    if (otherFailed) bodyParts.push(`${otherFailed} failed`);
+    await createNotification(userId, {
+      title: `Imported ${imported} of ${body.model_ids.length} models from Printables`,
+      body: bodyParts.length ? `From "${collectionTitle}" — ${bodyParts.join(", ")}.` : `From "${collectionTitle}".`,
+      externalUrl: body.url,
+      internalPath: resultCollectionId ? `/models/collections/${resultCollectionId}` : null,
+    });
+  } catch (err) {
+    await markJobFailed(jobId, err);
+  }
 }
 
 /** Runs a remote zip's selected-entries batch import in the background -- see

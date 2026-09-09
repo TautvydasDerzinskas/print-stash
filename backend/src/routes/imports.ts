@@ -19,12 +19,14 @@ import {
   parseThingiverseCollectionUrl,
   parseThingiverseLikesUrl,
 } from "../services/thingiverseApi";
+import { fetchPrintablesCollectionEntries, parsePrintablesCollectionUrl } from "../services/printablesApi";
 import { getThingiverseAccessToken } from "../services/settingsService";
 import { getUserMakerworldCookie } from "../services/makerworldCookieService";
 import { listZipEntries } from "../services/zipService";
 import { createJob, getActiveJob, getJob } from "../services/importJobService";
 import {
   runCollectionImportJob,
+  runPrintablesCollectionImportJob,
   runThingiverseCollectionImportJob,
   runThingiverseLikesImportJob,
   runZipImportJob,
@@ -218,6 +220,36 @@ router.post(
   }),
 );
 
+router.post(
+  "/import/printables-collection/entries",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(importRequestSchema, req.body);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parsePrintablesCollectionUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Printables Collection URL");
+
+    const listing = await fetchPrintablesCollectionEntries(parsed.collectionId, url);
+    if (!listing.entries.length) throw new HttpError(400, "Could not load this collection's models");
+
+    const alreadyImported = await findImportedExternalIds(
+      req.userId!,
+      "printables",
+      listing.entries.map((e) => e.modelId),
+    );
+    res.json({
+      title: listing.title,
+      total: listing.entries.length,
+      truncated: listing.truncated,
+      entries: listing.entries.map((e) => ({
+        design_id: e.modelId,
+        title: e.title,
+        cover: e.cover,
+        already_imported: alreadyImported.has(e.modelId),
+      })),
+    });
+  }),
+);
+
 // ---- Background batch imports (MakerWorld/Thingiverse collections, Thingiverse Likes, zip) ----
 //
 // All three of these can involve downloading dozens to hundreds of files, which used to happen
@@ -284,6 +316,26 @@ router.post(
       total: body.thing_ids.length,
     });
     void runThingiverseCollectionImportJob(job.id, req.userId!, { ...body, url, collectionId: parsed.collectionId });
+    res.status(202).json({ job_id: job.id });
+  }),
+);
+
+const printablesCollectionImportRequestSchema = importRequestSchema.extend({ model_ids: z.array(z.string()).min(1) });
+
+router.post(
+  "/import/printables-collection",
+  asyncHandler(async (req, res) => {
+    const body = parseBody(printablesCollectionImportRequestSchema, req.body);
+    await assertNoActiveJob(req.userId!);
+    const url = await normalizeImportUrl(body.url);
+    const parsed = parsePrintablesCollectionUrl(url);
+    if (!parsed) throw new HttpError(400, "Not a Printables Collection URL");
+    const job = await createJob(req.userId!, "COLLECTION", {
+      sourceUrl: url,
+      provider: "printables",
+      total: body.model_ids.length,
+    });
+    void runPrintablesCollectionImportJob(job.id, req.userId!, { ...body, url, collectionId: parsed.collectionId });
     res.status(202).json({ job_id: job.id });
   }),
 );

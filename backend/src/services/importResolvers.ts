@@ -9,7 +9,7 @@ import {
   IMPORT_TIMEOUT_SECONDS,
   IMPORT_USER_AGENT,
 } from "../config";
-import { HttpError, isJsonContentType } from "../utils/fileUtils";
+import { isJsonContentType } from "../utils/fileUtils";
 import {
   extractJsonFromBrowserBody,
   fetchViaFlaresolverr,
@@ -81,27 +81,9 @@ function makerworldApiHeaders(referer?: string | null, nonce?: string | null, co
   return headers;
 }
 
-export function isPrintablesPageHost(host: string): boolean {
-  const lowered = (host || "").toLowerCase();
-  return lowered === "printables.com" || lowered === "www.printables.com";
-}
-
-export function printablesHtmlHeaders(referer?: string | null): Record<string, string> {
-  const headers: Record<string, string> = {
-    "User-Agent": IMPORT_BROWSER_USER_AGENT,
-    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.9",
-    "Cache-Control": "no-cache",
-    Pragma: "no-cache",
-    "Upgrade-Insecure-Requests": "1",
-  };
-  if (referer) headers.Referer = referer;
-  return headers;
-}
-
-// Thingiverse import no longer goes through this page-scraping resolver at all -- see
-// thingiverseApi.ts, which talks to the official api.thingiverse.com Developer API instead
-// (a plain unauthenticated www.thingiverse.com fetch turned out to be Cloudflare-gated).
+// Neither Thingiverse nor Printables import goes through this page-scraping resolver at all --
+// see thingiverseApi.ts / printablesApi.ts, which talk to their own official/public JSON APIs
+// instead (a plain unauthenticated fetch of either site's own HTML pages is Cloudflare-gated).
 
 // -- Small bounded fetch helpers (used only for resolver-side HTML/JSON probes; the actual
 // model-file download streams straight to disk in importService.ts, not through here). ------
@@ -179,21 +161,6 @@ async function fetchCappedBuffer(
     if (proxied) return proxied;
   }
   return result;
-}
-
-function parseJsonErrorMessage(raw: Buffer): string | null {
-  try {
-    const data = JSON.parse(raw.toString("utf-8"));
-    if (data && typeof data === "object" && !Array.isArray(data)) {
-      for (const key of ["error", "detail", "message"]) {
-        const value = (data as Record<string, unknown>)[key];
-        if (typeof value === "string" && value.trim()) return value.trim();
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return null;
 }
 
 async function fetchJsonFromUrl(
@@ -382,7 +349,7 @@ function extractDownloadUrlFromResponse(data: unknown, baseUrl: string): string 
 
 // -- MakerWorld --------------------------------------------------------------------------------
 
-function extractNextDataJson(html: string): unknown | null {
+export function extractNextDataJson(html: string): unknown | null {
   const match = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
   if (!match) return null;
   const raw = (match[1] || "").trim();
@@ -647,182 +614,5 @@ export async function resolveMakerworldDownloadUrl(
   return null;
 }
 
-// -- Printables --------------------------------------------------------------------------------
-
-function printablesModelIdFromUrl(url: string): string | null {
-  try {
-    const match = new URL(url).pathname.match(/\/model\/(\d+)/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchPrintablesGraphql(query: string, variables: Record<string, unknown>, referer: string | null): Promise<unknown | null> {
-  const headers: Record<string, string> = {
-    "User-Agent": IMPORT_BROWSER_USER_AGENT,
-    Accept: "application/json",
-    "Content-Type": "application/json",
-    Origin: "https://www.printables.com",
-  };
-  if (referer) headers.Referer = referer;
-  const result = await fetchCappedBuffer("https://api.printables.com/graphql/", headers, {
-    method: "POST",
-    body: JSON.stringify({ query, variables: variables || {} }),
-  });
-  if (!result) return null;
-  if (result.status >= 400) {
-    const message = parseJsonErrorMessage(result.buffer);
-    if ([401, 403, 429].includes(result.status)) {
-      throw new HttpError(result.status, message || "Printables request failed");
-    }
-    return null;
-  }
-  if (result.buffer.length > IMPORT_HTML_MAX_BYTES) return null;
-  try {
-    return JSON.parse(result.buffer.toString("utf-8"));
-  } catch {
-    return null;
-  }
-}
-
-function parsePrintablesErrorMessages(errors: unknown): string | null {
-  if (!Array.isArray(errors)) return null;
-  const messages: string[] = [];
-  for (const err of errors) {
-    if (!err || typeof err !== "object") continue;
-    const values = (err as Record<string, unknown>).messages;
-    if (Array.isArray(values)) {
-      for (const v of values) if (typeof v === "string" && v.trim()) messages.push(v.trim());
-    } else if (typeof values === "string" && values.trim()) {
-      messages.push(values.trim());
-    }
-  }
-  return messages.length ? messages.join(", ") : null;
-}
-
-function selectBestDownloadLink(links: string[]): string | null {
-  const candidates = links.filter((l) => isAllowedDownloadCandidate(l));
-  if (!candidates.length) return null;
-  candidates.sort((a, b) => scoreDownloadUrl(b) - scoreDownloadUrl(a));
-  return candidates[0];
-}
-
-function extractPrintablesIds(items: unknown): string[] {
-  if (!Array.isArray(items)) return [];
-  const ids: string[] = [];
-  for (const item of items) {
-    if (item && typeof item === "object" && (item as Record<string, unknown>).id !== undefined) {
-      ids.push(String((item as Record<string, unknown>).id));
-    }
-  }
-  return ids;
-}
-
-async function fetchPrintablesModelMeta(printId: string, pageUrl: string): Promise<Record<string, unknown> | null> {
-  const query = `
-    query ($id: ID!) {
-      print(id: $id) {
-        id
-        downloadPacks { id fileType }
-        stls { id name }
-      }
-    }
-  `;
-  const data = (await fetchPrintablesGraphql(query, { id: printId }, pageUrl)) as
-    | { data?: { print?: Record<string, unknown> } }
-    | null;
-  return data?.data?.print ?? null;
-}
-
-async function fetchPrintablesDownloadOutput(
-  printId: string,
-  variables: Record<string, unknown>,
-  pageUrl: string,
-): Promise<Record<string, unknown> | null> {
-  const mutation = `
-    mutation ($printId: ID!, $source: DownloadSourceEnum!, $fileType: DownloadFileTypeEnum, $id: ID, $files: [DownloadFileInput!]) {
-      getDownloadLink(printId: $printId, source: $source, fileType: $fileType, id: $id, files: $files) {
-        ok
-        errors { field messages code }
-        output { link files { id link fileType } }
-      }
-    }
-  `;
-  const data = (await fetchPrintablesGraphql(mutation, variables, pageUrl)) as
-    | { data?: { getDownloadLink?: Record<string, unknown> } }
-    | null;
-  const result = data?.data?.getDownloadLink;
-  if (!result) return null;
-  if (result.ok === false) {
-    const message = parsePrintablesErrorMessages(result.errors);
-    if (message) throw new HttpError(400, message);
-    return null;
-  }
-  const output = result.output;
-  return output && typeof output === "object" ? (output as Record<string, unknown>) : null;
-}
-
-function collectPrintablesLinks(output: Record<string, unknown> | null): string[] {
-  if (!output) return [];
-  const links: string[] = [];
-  if (typeof output.link === "string") links.push(output.link);
-  const files = output.files;
-  if (Array.isArray(files)) {
-    for (const entry of files) {
-      if (entry && typeof entry === "object" && typeof (entry as Record<string, unknown>).link === "string") {
-        links.push((entry as Record<string, unknown>).link as string);
-      }
-    }
-  }
-  return links;
-}
-
-export async function resolvePrintablesDownloadUrl(pageUrl: string): Promise<string | null> {
-  const printId = printablesModelIdFromUrl(pageUrl);
-  if (!printId) return null;
-  const meta = await fetchPrintablesModelMeta(printId, pageUrl);
-  if (!meta) return null;
-
-  const packs = meta.downloadPacks;
-  let packId: string | null = null;
-  if (Array.isArray(packs)) {
-    for (const pack of packs) {
-      if (pack && typeof pack === "object" && (pack as Record<string, unknown>).fileType === "MODEL_FILES" && (pack as Record<string, unknown>).id) {
-        packId = String((pack as Record<string, unknown>).id);
-        break;
-      }
-    }
-    if (!packId && packs.length) {
-      for (const pack of packs) {
-        if (pack && typeof pack === "object" && (pack as Record<string, unknown>).id) {
-          packId = String((pack as Record<string, unknown>).id);
-          break;
-        }
-      }
-    }
-  }
-
-  if (packId) {
-    const output = await fetchPrintablesDownloadOutput(
-      printId,
-      { printId, source: "model_detail", fileType: "pack", id: packId },
-      pageUrl,
-    );
-    const best = selectBestDownloadLink(collectPrintablesLinks(output));
-    if (best) return best;
-  }
-
-  const stlIds = extractPrintablesIds(meta.stls);
-  if (stlIds.length) {
-    const output = await fetchPrintablesDownloadOutput(
-      printId,
-      { printId, source: "model_detail", files: [{ fileType: "stl", ids: stlIds }] },
-      pageUrl,
-    );
-    const best = selectBestDownloadLink(collectPrintablesLinks(output));
-    if (best) return best;
-  }
-
-  return null;
-}
+// Printables import also no longer goes through this generic resolver -- see printablesApi.ts,
+// which talks to the public api.printables.com GraphQL endpoint directly.

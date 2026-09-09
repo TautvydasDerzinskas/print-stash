@@ -19,12 +19,9 @@ import {
   emptyImportedPageMetadata,
   extractPageMetadata,
   findDownloadUrl,
-  isPrintablesPageHost,
   makerworldHtmlHeaders,
-  printablesHtmlHeaders,
   resolveMakerworldCookie,
   resolveMakerworldDownloadUrl,
-  resolvePrintablesDownloadUrl,
   type ImportCookies,
   type ImportedPageMetadata,
 } from "./importResolvers";
@@ -42,6 +39,12 @@ import {
   ThingiverseRateLimitError,
   type ThingiversePlateFile,
 } from "./thingiverseApi";
+import {
+  parsePrintablesModelUrl,
+  resolvePrintablesDownloadLinks,
+  resolvePrintablesModel,
+  type PrintablesPlateFile,
+} from "./printablesApi";
 import { getThingiverseAccessToken } from "./settingsService";
 import { upsertAuthorFromImport } from "./authorService";
 import { createPrint, type NewPlateInput, type PrintMetaInput } from "./printCreation";
@@ -221,8 +224,6 @@ export async function openImportResponse(
   if (host.endsWith("makerworld.com")) {
     makerworldCookie = resolveMakerworldCookie(body);
     Object.assign(headers, makerworldHtmlHeaders(referer || validatedUrl, makerworldCookie));
-  } else if (isPrintablesPageHost(host)) {
-    Object.assign(headers, printablesHtmlHeaders(referer || validatedUrl));
   }
   if (referer) headers.Referer = referer;
 
@@ -263,9 +264,6 @@ export async function openImportResponse(
     if (pageHost.endsWith("makerworld.com")) {
       if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
       downloadUrl = await resolveMakerworldDownloadUrl(html, finalUrl, makerworldCookie);
-    }
-    if (!downloadUrl && isPrintablesPageHost(pageHost)) {
-      downloadUrl = await resolvePrintablesDownloadUrl(finalUrl);
     }
     if (!downloadUrl) {
       downloadUrl = findDownloadUrl(html, finalUrl);
@@ -452,6 +450,8 @@ export function identifySourceModel(url: string): { provider: string; externalId
   if (makerworld) return { provider: "makerworld", externalId: makerworld.designId };
   const thingiverse = parseThingiverseThingUrl(url);
   if (thingiverse) return { provider: "thingiverse", externalId: thingiverse.thingId };
+  const printables = parsePrintablesModelUrl(url);
+  if (printables) return { provider: "printables", externalId: printables.modelId };
   return null;
 }
 
@@ -464,6 +464,7 @@ export function buildImportSourceUrl(provider: string | null, externalId: string
   if (!provider || !externalId) return null;
   if (provider === "makerworld") return `https://makerworld.com/en/models/${externalId}`;
   if (provider === "thingiverse") return `https://www.thingiverse.com/thing:${externalId}`;
+  if (provider === "printables") return `https://www.printables.com/model/${externalId}`;
   return null;
 }
 
@@ -497,12 +498,15 @@ export async function findImportedExternalIds(userId: string, provider: string, 
   return new Set(prints.map((p) => p.sourceExternalId).filter((id): id is string => id !== null));
 }
 
-const THINGIVERSE_PLATE_EXTS = new Set([...IMPORT_ALLOWED_EXTS].filter((ext) => ext !== ".zip"));
+// Shared by both multi-plate providers (Thingiverse's zip_data.files, Printables' resolved
+// download links) to filter their bundled file list down to actual model files.
+const MULTI_FILE_PLATE_EXTS = new Set([...IMPORT_ALLOWED_EXTS].filter((ext) => ext !== ".zip"));
 
 type PlainDownloadResult = { input: NewPlateInput } | { rateLimited: true } | null;
 
-/** Downloads one plain, unauthenticated file URL (a Thingiverse CDN asset -- see
- * thingiverseApi.ts's zip_data.files) to a temp file. Best-effort: returns null instead of
+/** Downloads one plain, unauthenticated file URL (a Thingiverse CDN asset, or a Printables
+ * resolved download link -- see thingiverseApi.ts's zip_data.files / printablesApi.ts's
+ * resolvePrintablesDownloadLinks) to a temp file. Best-effort: returns null instead of
  * throwing, so one unreachable file among several doesn't fail the whole Thing import -- except
  * a 429 (Cloudflare rate-limit challenge, same as api.thingiverse.com can return -- see
  * ThingiverseRateLimitError), which is reported back distinctly since the caller needs to know
@@ -579,7 +583,7 @@ async function importThingiverseThing(
     sourceExternalId: source.externalId,
   };
 
-  const modelFiles = plateFiles.filter((f: ThingiversePlateFile) => THINGIVERSE_PLATE_EXTS.has(path.extname(f.name).toLowerCase()));
+  const modelFiles = plateFiles.filter((f: ThingiversePlateFile) => MULTI_FILE_PLATE_EXTS.has(path.extname(f.name).toLowerCase()));
   const downloadResults = await Promise.all(modelFiles.map((f: ThingiversePlateFile) => downloadPlainFileToTemp(f.url, f.name)));
   const downloaded = downloadResults
     .filter((result): result is { input: NewPlateInput } => result !== null && "input" in result)
@@ -624,6 +628,82 @@ async function importThingiverseThing(
   }
 }
 
+/** Printables import path: mirrors importThingiverseThing (own resolver, own multi-plate
+ * handling, bypasses openImportResponse's generic HTML-scraping chain entirely -- see
+ * printablesApi.ts for why: www.printables.com is Cloudflare-gated, the public
+ * api.printables.com GraphQL endpoint resolves everything needed directly, no auth required). */
+async function importPrintablesModel(
+  userId: string,
+  source: { provider: string; externalId: string },
+  body: ImportRequestBody,
+): Promise<{ print: Print; plates: Plate[]; author: Author | null; previewImages: PreviewImage[]; alreadyImported: boolean }> {
+  const resolved = await resolvePrintablesModel(source.externalId);
+  if (!resolved) {
+    throw new HttpError(404, "This Printables model could not be found, or isn't public.");
+  }
+  const { meta, plateFiles, galleryImages } = resolved;
+
+  const modelFiles = plateFiles.filter((f: PrintablesPlateFile) => MULTI_FILE_PLATE_EXTS.has(path.extname(f.name).toLowerCase()));
+  if (!modelFiles.length) {
+    throw new HttpError(400, "This Printables model has no downloadable model files (only sliced/print-ready files, if any).");
+  }
+  const downloadLinks = await resolvePrintablesDownloadLinks(source.externalId, modelFiles.map((f) => f.id));
+  const downloadResults = await Promise.all(
+    modelFiles
+      .map((f) => ({ file: f, link: downloadLinks.get(f.id) }))
+      .filter((entry): entry is { file: PrintablesPlateFile; link: string } => Boolean(entry.link))
+      .map((entry) => downloadPlainFileToTemp(entry.link, entry.file.name)),
+  );
+  const downloaded = downloadResults
+    .filter((result): result is { input: NewPlateInput } => result !== null && "input" in result)
+    .map((result) => result.input);
+  if (!downloaded.length) {
+    throw new HttpError(400, "None of this model's files could be downloaded.");
+  }
+
+  const author = await upsertAuthorFromImport(meta.author ?? null);
+  const folderId =
+    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
+  const printMeta: PrintMetaInput = {
+    title: body.title ?? meta.title ?? null,
+    notes: body.notes ?? meta.description ?? null,
+    tags: body.tags && body.tags.length ? body.tags : (meta.tags ?? []),
+    folderId,
+    creator: meta.creator ?? null,
+    authorId: author?.id ?? null,
+    sourceProvider: source.provider,
+    sourceExternalId: source.externalId,
+  };
+
+  try {
+    let result: { print: Print; plates: Plate[] };
+    try {
+      result = await createPrint(userId, printMeta, meta.title || `printables-${source.externalId}`, downloaded);
+    } catch (err) {
+      // Race guard: another concurrent import of the same source model won between our
+      // dedup check above and this create -- treat it the same as finding it up front.
+      if (isUniqueConstraintError(err)) {
+        const existing = await findExistingImportedPrint(userId, source);
+        if (existing) return { ...existing, alreadyImported: true };
+      }
+      throw err;
+    }
+    const gallery = galleryImages.map((img) => ({ url: img.url, filename: img.name }));
+    await attachImportedPreviewImages(result.print.id, result.plates[0]?.id, meta.previewImageUrl ?? null, gallery);
+    const previewImages = await prisma.previewImage.findMany({
+      where: { printId: result.print.id },
+      orderBy: { position: "asc" },
+    });
+    return { ...result, author, previewImages, alreadyImported: false };
+  } finally {
+    for (const input of downloaded) {
+      if (input.tempFilePath && fsSync.existsSync(input.tempFilePath)) {
+        await fs.rm(input.tempFilePath, { force: true }).catch(() => undefined);
+      }
+    }
+  }
+}
+
 /** Downloads a URL and creates a Print from it (POST /import) -- one plate for most sources, or
  * several when the source is a Thingiverse Thing (see importThingiverseThing). Returns
  * `alreadyImported: true` (and the existing print, left untouched) instead of re-downloading
@@ -641,6 +721,9 @@ export async function importPrintFromUrl(
 
   if (source?.provider === "thingiverse") {
     return importThingiverseThing(userId, source, body);
+  }
+  if (source?.provider === "printables") {
+    return importPrintablesModel(userId, source, body);
   }
 
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);

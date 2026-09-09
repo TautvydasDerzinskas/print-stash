@@ -237,6 +237,42 @@ export const importsApi = {
     return res.json();
   },
 
+  listPrintablesCollectionEntries: async (payload: ImportLinkPayload): Promise<ImportCollectionEntriesResult> => {
+    const res = await fetch(`${apiBase()}/import/printables-collection/entries`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Could not load this collection");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
+  /** Registers a background job for the selected models and returns immediately -- see
+   *  ImportJobContext.startPrintablesCollectionImport, which follows up with the actual polling.
+   *  Every successful import lands in a PrintStash Collection named after the real Printables
+   *  Collection name. */
+  fromPrintablesCollection: async (payload: ImportLinkPayload & { model_ids: string[] }): Promise<{ job_id: string }> => {
+    const res = await fetch(`${apiBase()}/import/printables-collection`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 401) {
+      throw new UnauthorizedError();
+    }
+    if (!res.ok) {
+      const message = await readErrorMessage(res, "Printables Collection import failed");
+      throw new Error(message);
+    }
+    return res.json();
+  },
+
   getActiveImportJob: async (): Promise<ImportJob | null> => {
     const res = await fetch(`${apiBase()}/import/jobs/active`, { headers: authHeaders() });
     if (res.status === 401) throw new UnauthorizedError();

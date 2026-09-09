@@ -7,6 +7,7 @@ type StartCollectionImportPayload = Parameters<typeof importsApi.fromCollection>
 type StartZipImportPayload = Parameters<typeof importsApi.zipFromLink>[0];
 type StartThingiverseLikesImportPayload = Parameters<typeof importsApi.fromThingiverseLikes>[0];
 type StartThingiverseCollectionImportPayload = Parameters<typeof importsApi.fromThingiverseCollection>[0];
+type StartPrintablesCollectionImportPayload = Parameters<typeof importsApi.fromPrintablesCollection>[0];
 
 type ImportJobContextValue = {
   /** Non-null exactly while a batch import (MakerWorld collection, a Thingiverse Collection or
@@ -18,6 +19,7 @@ type ImportJobContextValue = {
   startZipImport: (payload: StartZipImportPayload) => Promise<void>;
   startThingiverseLikesImport: (payload: StartThingiverseLikesImportPayload) => Promise<void>;
   startThingiverseCollectionImport: (payload: StartThingiverseCollectionImportPayload) => Promise<void>;
+  startPrintablesCollectionImport: (payload: StartPrintablesCollectionImportPayload) => Promise<void>;
 };
 
 const ImportJobContext = createContext<ImportJobContextValue | null>(null);
@@ -114,6 +116,13 @@ export function ImportJobProvider({
     startPolling(job_id);
   }, [startPolling]);
 
+  const startPrintablesCollectionImport = useCallback(async (payload: StartPrintablesCollectionImportPayload) => {
+    const { job_id } = await importsApi.fromPrintablesCollection(payload);
+    const job = await importsApi.getImportJob(job_id);
+    setActiveJob(job);
+    startPolling(job_id);
+  }, [startPolling]);
+
   const value = useMemo(
     () => ({
       activeJob,
@@ -122,8 +131,16 @@ export function ImportJobProvider({
       startZipImport,
       startThingiverseLikesImport,
       startThingiverseCollectionImport,
+      startPrintablesCollectionImport,
     }),
-    [activeJob, startCollectionImport, startZipImport, startThingiverseLikesImport, startThingiverseCollectionImport],
+    [
+      activeJob,
+      startCollectionImport,
+      startZipImport,
+      startThingiverseLikesImport,
+      startThingiverseCollectionImport,
+      startPrintablesCollectionImport,
+    ],
   );
 
   return (

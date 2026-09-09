@@ -68,6 +68,36 @@ function isThingiverseCollectionUrl(url: string): boolean {
   }
 }
 
+/** A user-curated, named Printables Collection (`printables.com/@handle/collections/{id}`) --
+ * the site's bookmark mechanism, one page listing many models rather than a single model page.
+ * Routed to the same collection picker MakerWorld/Thingiverse collections use. */
+function isPrintablesCollectionUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "printables.com" && host !== "www.printables.com") return false;
+    return /\/collections\/\d+/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
+/** A Printables model import goes through its own backend path entirely (see
+ * importService.ts's importPrintablesModel) rather than the generic inspect/zip-picker flow --
+ * skip straight to a plain import call, same reasoning as isThingiverseThingUrl above (and
+ * necessary here too: www.printables.com is Cloudflare-gated, so the generic inspect flow
+ * couldn't resolve one of these URLs anyway). */
+function isPrintablesModelUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes("://") ? url : `https://${url}`);
+    const host = parsed.hostname.toLowerCase();
+    if (host !== "printables.com" && host !== "www.printables.com") return false;
+    return /\/model\/\d+/i.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 // Every dropped/picked entry's relativePath equals its bare filename when the
 // selection has no folder structure. A webkitdirectory folder pick always
 // prefixes relativePath with the folder name, so this only ever fires for a
@@ -95,7 +125,13 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
   const zipPrompt = useZipImportPrompt();
   const collectionPrompt = useCollectionImportPrompt();
   const importModePrompt = useImportModePrompt();
-  const { startCollectionImport, startZipImport, startThingiverseLikesImport, startThingiverseCollectionImport } = useImportJob();
+  const {
+    startCollectionImport,
+    startZipImport,
+    startThingiverseLikesImport,
+    startThingiverseCollectionImport,
+    startPrintablesCollectionImport,
+  } = useImportJob();
   const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
@@ -297,9 +333,36 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
         return;
       }
 
-      if (isThingiverseThingUrl(url)) {
-        // A Thing always resolves to a zip; skip straight past the inspect/zip-picker steps --
-        // the backend already splits it into plates automatically.
+      if (isPrintablesCollectionUrl(url)) {
+        setImporting(false);
+        await collectionPrompt.prompt({
+          label: url,
+          loadEntries: async () => {
+            try {
+              return await importsApi.listPrintablesCollectionEntries(payload);
+            } catch (err) {
+              if (err instanceof UnauthorizedError) onUnauthorized?.();
+              throw err;
+            }
+          },
+          onImportSelected: async (modelIds: string[]) => {
+            try {
+              await startPrintablesCollectionImport({ ...payload, model_ids: modelIds });
+            } catch (err) {
+              if (err instanceof UnauthorizedError) {
+                onUnauthorized?.();
+                return;
+              }
+              throw err;
+            }
+          },
+        });
+        return;
+      }
+
+      if (isThingiverseThingUrl(url) || isPrintablesModelUrl(url)) {
+        // Both always resolve to several files; skip straight past the inspect/zip-picker steps
+        // -- the backend already splits them into plates automatically.
         const imported = await importsApi.fromLink(payload);
         showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();

@@ -51,6 +51,17 @@ describe("identifySourceModel", () => {
   it("returns null for a MakerWorld URL that isn't a model page", () => {
     expect(identifySourceModel("https://makerworld.com/en/collections/12345-name")).toBeNull();
   });
+
+  it("extracts a provider + model id from a Printables model URL", () => {
+    expect(identifySourceModel("https://www.printables.com/model/1786545-strong-garden-hose-holder")).toEqual({
+      provider: "printables",
+      externalId: "1786545",
+    });
+  });
+
+  it("returns null for a Printables URL that isn't a model page", () => {
+    expect(identifySourceModel("https://www.printables.com/@s0ren")).toBeNull();
+  });
 });
 
 describe("import dedup", () => {

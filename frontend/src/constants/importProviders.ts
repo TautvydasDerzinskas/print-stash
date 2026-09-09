@@ -5,8 +5,9 @@
 export type ImportProviderInfo = { label: string; color: string };
 
 export const IMPORT_PROVIDER_INFO: Record<string, ImportProviderInfo> = {
-  makerworld: { label: "MakerWorld", color: "#F07745" },
+  makerworld: { label: "MakerWorld", color: "#00B800" },
   thingiverse: { label: "Thingiverse", color: "#2B78FE" },
+  printables: { label: "Printables", color: "#FA6831" },
 };
 
 export function importProviderInfo(provider: string | null | undefined): ImportProviderInfo | null {

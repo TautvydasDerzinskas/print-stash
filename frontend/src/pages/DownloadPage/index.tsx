@@ -44,7 +44,7 @@ function InstallSteps({ steps }: { steps: InstallStep[] }) {
   return (
     <Stack spacing={2}>
       {steps.map((step, i) => (
-        <Stack key={i} direction="row" spacing={1.5}>
+        <Stack key={step.text} direction="row" spacing={1.5}>
           <Box
             sx={{
               width: 22,
