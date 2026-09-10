@@ -120,7 +120,7 @@ export default function Sidebar({ isAdmin }: Props) {
         justifyContent={collapsed ? "center" : "space-between"}
         sx={{ px: collapsed ? 1 : 2, pt: "20px", pb: "20px" }}
       >
-        {!collapsed && <Wordmark size="sm" />}
+        {!collapsed && <Wordmark size="lg" />}
         <Tooltip title={collapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}>
           <IconButton size="small" onClick={toggleCollapsed}>
             {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}

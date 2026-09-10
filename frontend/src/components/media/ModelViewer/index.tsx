@@ -514,7 +514,7 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
           }}
         >
           <Stack alignItems="center" spacing={1.5}>
-            <BrandMark theme={theme} size="sm" />
+            <BrandMark theme={theme} size="lg" />
             <CircularProgress size={22} />
           </Stack>
         </Box>
