@@ -13,7 +13,7 @@ export type AppSettings = {
   makerworld: MakerWorldSettings;
 };
 
-const STORAGE_KEY = "printstash_settings";
+const STORAGE_KEY = "thingport_settings";
 
 const DEFAULT_SETTINGS: AppSettings = {
   theme: {

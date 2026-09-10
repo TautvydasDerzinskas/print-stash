@@ -1,7 +1,7 @@
 import type { AuthUser } from "../api/auth";
 
-const TOKEN_KEY = "printstash_auth_token";
-const USER_KEY = "printstash_auth_user";
+const TOKEN_KEY = "thingport_auth_token";
+const USER_KEY = "thingport_auth_user";
 
 function getStorage(): Storage | null {
   if (typeof window === "undefined") return null;

@@ -7,8 +7,8 @@ RUN npm ci --no-audit --no-fund && npx prisma generate
 
 FROM dependencies AS test
 COPY . .
-ENV DATABASE_URL="postgresql://printstash:printstash@localhost:5432/printstash_test?schema=public" \
-    FILE_STORAGE=/tmp/printstash-storage
+ENV DATABASE_URL="postgresql://thingport:thingport@localhost:5432/thingport_test?schema=public" \
+    FILE_STORAGE=/tmp/thingport-storage
 CMD ["npm", "test"]
 
 FROM dependencies AS build

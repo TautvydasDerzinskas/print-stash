@@ -8,7 +8,7 @@ const diskStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, os.tmpdir()),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname || "");
-    cb(null, `printstash-upload-${crypto.randomBytes(8).toString("hex")}${ext}`);
+    cb(null, `thingport-upload-${crypto.randomBytes(8).toString("hex")}${ext}`);
   },
 });
 

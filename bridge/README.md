@@ -1,29 +1,29 @@
-# PrintStash Bridge
+# Thingport Bridge
 
-This helper registers the custom protocol `print-stash://`, downloads the requested file, and
-launches it in the slicer PrintStash asked for. It exists because Bambu Studio's own
+This helper registers the custom protocol `thingport://`, downloads the requested file, and
+launches it in the slicer Thingport asked for. It exists because Bambu Studio's own
 `bambustudio://` handler only accepts links from a small allowlist of domains it trusts (Bambu
-Lab's own storefronts, mainly) -- a self-hosted PrintStash instance is never on that list, so
+Lab's own storefronts, mainly) -- a self-hosted Thingport instance is never on that list, so
 "Open in Bambu Studio" silently does nothing without this bridge in between. OrcaSlicer and
 PrusaSlicer's protocol handlers accept any HTTP(S) URL directly, so they're launched straight
 from the browser and never need it.
 
 Protocol format:
-`print-stash://open?url=<download-url>&slicer=<id>&filename=<name>`
+`thingport://open?url=<download-url>&slicer=<id>&filename=<name>`
 
-The `url` parameter should be a direct HTTP(s) download link. PrintStash already includes the
+The `url` parameter should be a direct HTTP(s) download link. Thingport already includes the
 auth token in that URL.
 
 ## Quick install (no shell commands)
 
 Download the latest Bridge binary for your OS from the
-[PrintStash releases](https://github.com/TautvydasDerzinskas/print-stash/releases/latest) page
-(also linked from the in-app Download page) and run it once. It registers the `print-stash://`
+[Thingport releases](https://github.com/TautvydasDerzinskas/Thingport/releases/latest) page
+(also linked from the in-app Download page) and run it once. It registers the `thingport://`
 protocol handler and copies itself into a stable location:
 
-- Windows: `%LOCALAPPDATA%\PrintStash\Bridge\print-stash-bridge.exe`
-- Linux: `~/.local/bin/print-stash-bridge`
-- macOS: `~/Applications/PrintStash Bridge.app`
+- Windows: `%LOCALAPPDATA%\Thingport\Bridge\thingport-bridge.exe`
+- Linux: `~/.local/bin/thingport-bridge`
+- macOS: `~/Applications/Thingport Bridge.app`
 
 ### Windows / Linux
 
@@ -36,19 +36,19 @@ macOS only recognizes a real `.app` bundle as a protocol handler, so install her
 step rather than a plain double-click:
 
 ```bash
-chmod +x ~/Downloads/print-stash-bridge-macos
-xattr -d com.apple.quarantine ~/Downloads/print-stash-bridge-macos   # downloaded files are quarantined by Gatekeeper
-~/Downloads/print-stash-bridge-macos --install
+chmod +x ~/Downloads/thingport-bridge-macos
+xattr -d com.apple.quarantine ~/Downloads/thingport-bridge-macos   # downloaded files are quarantined by Gatekeeper
+~/Downloads/thingport-bridge-macos --install
 ```
 
-This copies itself into `~/Applications/PrintStash Bridge.app` (a background, Dock-less agent)
-and registers the `print-stash://` scheme with Launch Services. If macOS still refuses to run it,
+This copies itself into `~/Applications/Thingport Bridge.app` (a background, Dock-less agent)
+and registers the `thingport://` scheme with Launch Services. If macOS still refuses to run it,
 open System Settings -> Privacy & Security and allow it there instead of using `xattr`.
 
 If the terminal instead prints `Killed: 9` (or `[1] ... killed`) the moment you run it, that's a
 stale, invalidly-signed binary rather than a Gatekeeper block -- re-sign it yourself and retry:
 ```bash
-codesign --force -s - ~/Downloads/print-stash-bridge-macos
+codesign --force -s - ~/Downloads/thingport-bridge-macos
 ```
 
 ## Build
@@ -60,22 +60,22 @@ on macOS itself.
 Windows (PowerShell):
 ```powershell
 cd bridge
-go build -o dist\print-stash-bridge.exe .\cmd\print-stash-bridge
+go build -o dist\thingport-bridge.exe .\cmd\thingport-bridge
 ```
 
 Linux (bash):
 ```bash
 cd bridge
-go build -o dist/print-stash-bridge ./cmd/print-stash-bridge
+go build -o dist/thingport-bridge ./cmd/thingport-bridge
 ```
 
 macOS (bash), universal binary:
 ```bash
 cd bridge
-GOARCH=arm64 go build -o dist/print-stash-bridge-arm64 ./cmd/print-stash-bridge
-GOARCH=amd64 go build -o dist/print-stash-bridge-amd64 ./cmd/print-stash-bridge
-lipo -create -output dist/print-stash-bridge-macos dist/print-stash-bridge-arm64 dist/print-stash-bridge-amd64
-codesign --force -s - dist/print-stash-bridge-macos   # lipo invalidates each slice's signature;
+GOARCH=arm64 go build -o dist/thingport-bridge-arm64 ./cmd/thingport-bridge
+GOARCH=amd64 go build -o dist/thingport-bridge-amd64 ./cmd/thingport-bridge
+lipo -create -output dist/thingport-bridge-macos dist/thingport-bridge-arm64 dist/thingport-bridge-amd64
+codesign --force -s - dist/thingport-bridge-macos   # lipo invalidates each slice's signature;
                                                         # without this, arm64 Macs SIGKILL it on launch
 ```
 
@@ -84,16 +84,16 @@ codesign --force -s - dist/print-stash-bridge-macos   # lipo invalidates each sl
 Windows (PowerShell):
 ```powershell
 cd bridge\scripts
-.\install-windows.ps1 -BridgePath "..\dist\print-stash-bridge.exe"
+.\install-windows.ps1 -BridgePath "..\dist\thingport-bridge.exe"
 ```
 
 Linux (bash):
 ```bash
 cd bridge/scripts
-./install-linux.sh ../dist/print-stash-bridge
+./install-linux.sh ../dist/thingport-bridge
 ```
 
-You can also run the binary directly: `print-stash-bridge --install` (this is required, not just
+You can also run the binary directly: `thingport-bridge --install` (this is required, not just
 convenient, on macOS -- see above).
 
 If your shell blocks scripts, set the execution policy for the current user:
@@ -116,9 +116,9 @@ pre-warm).
 If you still want it, on macOS:
 
 **Easiest** -- System Settings -> General -> Login Items & Extensions -> click **+** and add
-`PrintStash Bridge` from `~/Applications`.
+`Thingport Bridge` from `~/Applications`.
 
-**Or, a LaunchAgent** -- save as `~/Library/LaunchAgents/com.printstash.bridge.plist` (replace
+**Or, a LaunchAgent** -- save as `~/Library/LaunchAgents/com.thingport.bridge.plist` (replace
 `YOUR_USERNAME`):
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -126,10 +126,10 @@ If you still want it, on macOS:
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.printstash.bridge</string>
+    <string>com.thingport.bridge</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/YOUR_USERNAME/Applications/PrintStash Bridge.app/Contents/MacOS/print-stash-bridge</string>
+        <string>/Users/YOUR_USERNAME/Applications/Thingport Bridge.app/Contents/MacOS/thingport-bridge</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
@@ -139,21 +139,21 @@ If you still want it, on macOS:
 then:
 ```bash
 mkdir -p ~/Library/LaunchAgents
-# save the file above as ~/Library/LaunchAgents/com.printstash.bridge.plist
-launchctl load ~/Library/LaunchAgents/com.printstash.bridge.plist
+# save the file above as ~/Library/LaunchAgents/com.thingport.bridge.plist
+launchctl load ~/Library/LaunchAgents/com.thingport.bridge.plist
 ```
 
 ## Config
 
 Create a config file if you want custom slicer paths or arguments:
 
-- Windows: `%APPDATA%\printstash-bridge\config.json`
-- Linux: `~/.config/printstash-bridge/config.json`
-- macOS: `~/Library/Application Support/printstash-bridge/config.json`
+- Windows: `%APPDATA%\thingport-bridge\config.json`
+- Linux: `~/.config/thingport-bridge/config.json`
+- macOS: `~/Library/Application Support/thingport-bridge/config.json`
 
 Use `config.example.json` as a template.
 
-Environment override (per slicer): `PRINTSTASH_SLICER_BAMBUSTUDIO=/path/to/BambuStudio`
+Environment override (per slicer): `THINGPORT_SLICER_BAMBUSTUDIO=/path/to/BambuStudio`
 
 ## Slicer IDs
 
@@ -165,13 +165,13 @@ Environment override (per slicer): `PRINTSTASH_SLICER_BAMBUSTUDIO=/path/to/Bambu
 ## Testing
 
 After install, paste this into your browser's address bar (replace the URL):
-`print-stash://open?url=https://example.com/model.3mf&slicer=bambustudio&filename=model.3mf`
+`thingport://open?url=https://example.com/model.3mf&slicer=bambustudio&filename=model.3mf`
 
 ## Logs
 
-- Windows: `%APPDATA%\printstash-bridge\bridge.log`
-- Linux: `~/.config/printstash-bridge/bridge.log`
-- macOS: `~/Library/Application Support/printstash-bridge/bridge.log`
+- Windows: `%APPDATA%\thingport-bridge\bridge.log`
+- Linux: `~/.config/thingport-bridge/bridge.log`
+- macOS: `~/Library/Application Support/thingport-bridge/bridge.log`
 
 ## Notes
 

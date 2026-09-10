@@ -132,7 +132,7 @@ function AppLayoutShell({
     <ImportJobProvider onUnauthorized={onUnauthorized} onJobCompleted={handleJobCompleted}>
       <Box
         sx={{
-          background: (theme) => theme.printstash.pageBackground,
+          background: (theme) => theme.thingport.pageBackground,
           minHeight: "100vh",
           display: "flex",
         }}

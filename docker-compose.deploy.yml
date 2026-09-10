@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-printstash}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-printstash}
-      - POSTGRES_DB=${POSTGRES_DB:-printstash}
+      - POSTGRES_USER=${POSTGRES_USER:-thingport}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thingport}
+      - POSTGRES_DB=${POSTGRES_DB:-thingport}
     volumes:
-      - printstash_db:/var/lib/postgresql/data
+      - thingport_db:/var/lib/postgresql/data
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printstash}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thingport}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,8 +27,8 @@ services:
 
   backend:
     # Pin to a specific build instead of :latest, e.g.:
-    #   BACKEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-backend:sha-a8fef7d
-    image: ${BACKEND_IMAGE:-ghcr.io/tautvydasderzinskas/printstash-backend:latest}
+    #   BACKEND_IMAGE=ghcr.io/tautvydasderzinskas/thingport-backend:sha-a8fef7d
+    image: ${BACKEND_IMAGE:-ghcr.io/tautvydasderzinskas/thingport-backend:latest}
     restart: unless-stopped
     environment:
       - PUID=${PUID:-1000}
@@ -42,9 +42,9 @@ services:
       - SMTP_SECURE=${SMTP_SECURE:-false}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
-      - SMTP_FROM=${SMTP_FROM:-PrintStash <no-reply@localhost>}
+      - SMTP_FROM=${SMTP_FROM:-Thingport <no-reply@localhost>}
       - FILE_STORAGE=/app/storage
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-thingport}:${POSTGRES_PASSWORD:-thingport}@db:5432/${POSTGRES_DB:-thingport}?schema=public
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - FLARESOLVERR_URL=${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
     depends_on:
@@ -53,7 +53,7 @@ services:
       flaresolverr:
         condition: service_started
     volumes:
-      - printstash_storage:/app/storage
+      - thingport_storage:/app/storage
     networks:
       - app-net
 
@@ -62,8 +62,8 @@ services:
   # pattern as docker-compose.yml, just built from a published image instead of local source.
   frontend:
     # Pin to a specific build instead of :latest, e.g.:
-    #   FRONTEND_IMAGE=ghcr.io/tautvydasderzinskas/printstash-frontend:sha-a8fef7d
-    image: ${FRONTEND_IMAGE:-ghcr.io/tautvydasderzinskas/printstash-frontend:latest}
+    #   FRONTEND_IMAGE=ghcr.io/tautvydasderzinskas/thingport-frontend:sha-a8fef7d
+    image: ${FRONTEND_IMAGE:-ghcr.io/tautvydasderzinskas/thingport-frontend:latest}
     restart: unless-stopped
     ports:
       - "${WEB_PORT:-80}:80"
@@ -73,8 +73,8 @@ services:
       - app-net
 
 volumes:
-  printstash_storage:
-  printstash_db:
+  thingport_storage:
+  thingport_db:
 
 networks:
   app-net:

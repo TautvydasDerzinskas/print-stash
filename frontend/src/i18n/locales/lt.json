@@ -174,7 +174,7 @@
       "backToProfile": "Grįžti į profilį",
       "language": {
         "heading": "Kalba",
-        "subtitle": "Pasirinkite kalbą, naudojamą visame PrintStash."
+        "subtitle": "Pasirinkite kalbą, naudojamą visame Thingport."
       },
       "makerworld": {
         "heading": "MakerWorld",
@@ -190,7 +190,7 @@
         "description": "Jūsų pageidaujama pjaustyklė, naudojama modelio veiksmo „Atverti pjaustyklėje“, kad modelis būtų atidarytas tiesiogiai per tos pjaustyklės nuorodą (pvz. bambustudio://).",
         "label": "Pjaustyklė",
         "failed": "Nepavyko išsaugoti -- bandykite dar kartą.",
-        "bridgeRequiredPrefix": "Bambu Studio failams atverti iš čia reikalinga įdiegta PrintStash Bridge pagalbinė programa --",
+        "bridgeRequiredPrefix": "Bambu Studio failams atverti iš čia reikalinga įdiegta Thingport Bridge pagalbinė programa --",
         "bridgeRequiredLink": "atsisiųskite ją atsisiuntimo puslapyje."
       }
     },
@@ -268,7 +268,7 @@
         "heading": "Saugojimo struktūra",
         "subtitle": "Pasirinkite, kaip valdomi modelių failai tvarkomi diske.",
         "templateHeading": "Kelio šablonas",
-        "templateDesc": "Modelio pavadinimas yra unikalus jo PrintStash aplanke. Modelio pervadinimas taip pat pervadina jo failą, išsaugant plėtinį.",
+        "templateDesc": "Modelio pavadinimas yra unikalus jo Thingport aplanke. Modelio pervadinimas taip pat pervadina jo failą, išsaugant plėtinį.",
         "templateLabel": "Šablonas",
         "templatePlaceholder": "{folder}/{model}/{filename}",
         "examplePathsHeading": "Kelių pavyzdžiai (dvi vieno modelio plokštės)",
@@ -347,7 +347,7 @@
         "passwordLabel": "Slaptažodis",
         "passwordPlaceholder": "Palikite tuščią, kad išsaugotumėte dabartinį slaptažodį",
         "fromLabel": "Siuntėjo adresas",
-        "fromPlaceholder": "PrintStash <no-reply@example.com>",
+        "fromPlaceholder": "Thingport <no-reply@example.com>",
         "save": "Išsaugoti",
         "saving": "Saugoma…",
         "saved": "Išsaugota.",
@@ -417,7 +417,7 @@
       }
     },
     "download": {
-      "pageTitle": "PrintStash Bridge",
+      "pageTitle": "Thingport Bridge",
       "intro": "Nedidelė pagalbinė programa, veikianti jūsų kompiuteryje, kad „Atverti pjaustyklėje“ galėtų perduoti modelį tiesiai jūsų pjaustyklei.",
       "downloadHeading": "Atsisiųsti",
       "modal": {
@@ -435,7 +435,7 @@
           "heading": "Diegimas „macOS“",
           "step1": "Suteikite leidimą vykdyti.",
           "step2": "Pašalinkite Gatekeeper karantino žymą -- atsisiųsti failai automatiškai pažymimi karantinu.",
-          "step3": "Įdiekite jį. Tai nukopijuos programą į ~/Applications ir užregistruos print-stash:// nuorodą.",
+          "step3": "Įdiekite jį. Tai nukopijuos programą į ~/Applications ir užregistruos thingport:// nuorodą.",
           "note": "Jei „macOS“ vis tiek atsisako jį paleisti, atidarykite System Settings -> Privacy & Security ir leiskite jį ten."
         }
       }

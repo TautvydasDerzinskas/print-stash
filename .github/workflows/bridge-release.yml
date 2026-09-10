@@ -38,11 +38,11 @@ jobs:
           CGO_ENABLED: 0
           GOOS: windows
           GOARCH: amd64
-        run: go build -o dist/print-stash-bridge-windows-amd64.exe ./cmd/print-stash-bridge
+        run: go build -o dist/thingport-bridge-windows-amd64.exe ./cmd/thingport-bridge
       - uses: actions/upload-artifact@v4
         with:
           name: bridge-windows-amd64
-          path: bridge/dist/print-stash-bridge-windows-amd64.exe
+          path: bridge/dist/thingport-bridge-windows-amd64.exe
           if-no-files-found: error
 
   build-linux:
@@ -61,15 +61,15 @@ jobs:
           CGO_ENABLED: 0
           GOOS: linux
           GOARCH: amd64
-        run: go build -o dist/print-stash-bridge-linux-amd64 ./cmd/print-stash-bridge
+        run: go build -o dist/thingport-bridge-linux-amd64 ./cmd/thingport-bridge
       - uses: actions/upload-artifact@v4
         with:
           name: bridge-linux-amd64
-          path: bridge/dist/print-stash-bridge-linux-amd64
+          path: bridge/dist/thingport-bridge-linux-amd64
           if-no-files-found: error
 
   build-macos:
-    # Custom-URL-scheme handling on macOS goes through Cocoa (see cmd/print-stash-bridge/
+    # Custom-URL-scheme handling on macOS goes through Cocoa (see cmd/thingport-bridge/
     # urlhandler_darwin.m), so this binary needs cgo + the Xcode toolchain and can only be
     # built on an actual Mac runner -- unlike Windows/Linux, it can't be cross-compiled.
     runs-on: macos-latest
@@ -86,18 +86,18 @@ jobs:
         env:
           CGO_ENABLED: 1
         run: |
-          GOARCH=arm64 go build -o dist/print-stash-bridge-darwin-arm64 ./cmd/print-stash-bridge
-          GOARCH=amd64 go build -o dist/print-stash-bridge-darwin-amd64 ./cmd/print-stash-bridge
+          GOARCH=arm64 go build -o dist/thingport-bridge-darwin-arm64 ./cmd/thingport-bridge
+          GOARCH=amd64 go build -o dist/thingport-bridge-darwin-amd64 ./cmd/thingport-bridge
       - name: Combine into a universal binary
         working-directory: bridge
-        run: lipo -create -output dist/print-stash-bridge-macos dist/print-stash-bridge-darwin-arm64 dist/print-stash-bridge-darwin-amd64
+        run: lipo -create -output dist/thingport-bridge-macos dist/thingport-bridge-darwin-arm64 dist/thingport-bridge-darwin-amd64
       - name: Re-sign universal binary
         working-directory: bridge
-        run: codesign --force -s - dist/print-stash-bridge-macos
+        run: codesign --force -s - dist/thingport-bridge-macos
       - uses: actions/upload-artifact@v4
         with:
           name: bridge-macos
-          path: bridge/dist/print-stash-bridge-macos
+          path: bridge/dist/thingport-bridge-macos
           if-no-files-found: error
 
   release:
@@ -114,10 +114,10 @@ jobs:
       - name: Flatten downloaded artifacts
         run: |
           mkdir -p release
-          mv dist/bridge-windows-amd64/print-stash-bridge-windows-amd64.exe release/
-          mv dist/bridge-linux-amd64/print-stash-bridge-linux-amd64 release/
-          mv dist/bridge-macos/print-stash-bridge-macos release/
-          chmod +x release/print-stash-bridge-linux-amd64 release/print-stash-bridge-macos
+          mv dist/bridge-windows-amd64/thingport-bridge-windows-amd64.exe release/
+          mv dist/bridge-linux-amd64/thingport-bridge-linux-amd64 release/
+          mv dist/bridge-macos/thingport-bridge-macos release/
+          chmod +x release/thingport-bridge-linux-amd64 release/thingport-bridge-macos
       - name: Compute release tag
         id: tag
         run: echo "tag=bridge-$(date +%Y%m%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
@@ -125,16 +125,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
-          name: PrintStash Bridge ${{ steps.tag.outputs.tag }}
+          name: Thingport Bridge ${{ steps.tag.outputs.tag }}
           body: |
-            Automated build of the PrintStash slicer bridge (see `bridge/README.md`) from
+            Automated build of the Thingport slicer bridge (see `bridge/README.md`) from
             ${{ github.sha }}.
 
-            - **Windows**: `print-stash-bridge-windows-amd64.exe` — run it once (double-click is fine) to install.
-            - **Linux**: `print-stash-bridge-linux-amd64` — `chmod +x`, then run it once to install.
-            - **macOS**: `print-stash-bridge-macos` (universal) — `chmod +x`, remove the quarantine flag, then run with `--install`. See the README for the exact commands.
+            - **Windows**: `thingport-bridge-windows-amd64.exe` — run it once (double-click is fine) to install.
+            - **Linux**: `thingport-bridge-linux-amd64` — `chmod +x`, then run it once to install.
+            - **macOS**: `thingport-bridge-macos` (universal) — `chmod +x`, remove the quarantine flag, then run with `--install`. See the README for the exact commands.
           make_latest: true
           files: |
-            release/print-stash-bridge-windows-amd64.exe
-            release/print-stash-bridge-linux-amd64
-            release/print-stash-bridge-macos
+            release/thingport-bridge-windows-amd64.exe
+            release/thingport-bridge-linux-amd64
+            release/thingport-bridge-macos

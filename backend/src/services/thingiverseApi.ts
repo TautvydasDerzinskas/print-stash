@@ -299,7 +299,7 @@ export async function fetchThingiverseUserLikes(
 /** A user-curated, named "Collection" -- the site's other bookmark mechanism besides the
  * automatic per-account "Likes" list (see fetchThingiverseUserLikes above). Unlike Likes, a
  * Collection has a real user-given name (fetchThingiverseCollectionTitle below), which is what
- * lets the import land in a PrintStash Collection named after it instead of a generic bucket. */
+ * lets the import land in a Thingport Collection named after it instead of a generic bucket. */
 export async function fetchThingiverseCollectionThings(
   collectionId: string,
   accessToken: string,

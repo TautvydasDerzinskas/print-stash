@@ -55,7 +55,7 @@ const THINGIVERSE_ACCESS_TOKEN_KEY = "thingiverse_access_token";
 
 // Instance-wide, not per-user: it's a credential for api.thingiverse.com (the official
 // Developer API -- see thingiverseApi.ts), tied to whichever Thingiverse account registered
-// the app at thingiverse.com/apps/create, not to any one PrintStash user's own account. Every
+// the app at thingiverse.com/apps/create, not to any one Thingport user's own account. Every
 // user's Thingiverse imports share it, same as the storage template and preview mode above.
 export async function getThingiverseAccessToken(): Promise<string | null> {
   const row = await prisma.setting.findUnique({ where: { key: THINGIVERSE_ACCESS_TOKEN_KEY } });
@@ -86,7 +86,7 @@ export type SmtpSettings = {
 };
 
 const SMTP_SETTINGS_KEY = "smtp_settings";
-const DEFAULT_SMTP_FROM = "PrintStash <no-reply@localhost>";
+const DEFAULT_SMTP_FROM = "Thingport <no-reply@localhost>";
 
 function envInt(name: string, fallback: number): number {
   const parsed = Number.parseInt(process.env[name] || "", 10);

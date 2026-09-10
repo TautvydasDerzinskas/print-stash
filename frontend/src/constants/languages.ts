@@ -5,4 +5,4 @@ export const SUPPORTED_LANGUAGES = [
 
 export type LanguageCode = (typeof SUPPORTED_LANGUAGES)[number]["code"];
 
-export const LANGUAGE_STORAGE_KEY = "printstash_language";
+export const LANGUAGE_STORAGE_KEY = "thingport_language";

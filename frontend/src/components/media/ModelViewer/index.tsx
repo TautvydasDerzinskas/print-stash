@@ -16,11 +16,11 @@ import {
 } from "../../../utils/modelLoaders";
 import { buildBambuModelGroup, loadCachedBambuGlb, type Parsed3MFData, type PlateSummary } from "../../../utils/bambuThreeMf";
 import { createOrientationGizmo } from "./orientationGizmo";
-import Wordmark from "../../Wordmark";
+import BrandMark from "../../BrandMark";
 
 // This viewer's lighting/tone-mapping setup, build-plate + grid + shadow-catcher rendering, and
 // fitCameraToBox below are ported from maziggy/bambuddy (https://github.com/maziggy/bambuddy,
-// frontend/src/components/ModelViewer.tsx, AGPL-3.0-only). PrintStash uses this file under the
+// frontend/src/components/ModelViewer.tsx, AGPL-3.0-only). Thingport uses this file under the
 // same license -- see LICENSE at the repo root. Multi-plate parsing itself lives in
 // ../../../utils/bambuThreeMf.ts, ported from the same source.
 
@@ -514,7 +514,7 @@ export default function ModelViewer({ url, ext, viewKey, theme, colorOverride, s
           }}
         >
           <Stack alignItems="center" spacing={1.5}>
-            <Wordmark size="sm" />
+            <BrandMark theme={theme} size="sm" />
             <CircularProgress size={22} />
           </Stack>
         </Box>

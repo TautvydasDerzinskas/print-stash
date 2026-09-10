@@ -10,7 +10,7 @@ import { readZipEntry, walkZipEntries } from "../utils/zipReader";
 // extruder-resolution priority, same plate-assignment fallbacks, same component p:path handling
 // -- but not its parsing mechanism. That file walks the DOM node-by-node; a Bambu-sliced 3MF for
 // a genuinely large model can have millions of <vertex>/<triangle> elements, and DOM attribute
-// access at that scale is what causes PrintStash's "3D Preview" to hang indefinitely (root-caused
+// access at that scale is what causes Thingport's "3D Preview" to hang indefinitely (root-caused
 // against a real 224MB/2.66M-triangle repro). This file never builds a DOM for the bulk mesh data
 // -- it scans the raw XML text with a handful of fixed-shape regexes straight into typed arrays,
 // which is the actual fix. It only runs once per plate (in the background, off the request path)
@@ -510,7 +510,7 @@ async function buildGlbGroup(parsed: ParsedModel): Promise<import("three").Group
   const effectivePlateIndexes = hasPlateAssignments ? plateIndexes : [0];
 
   const root = new THREE.Group();
-  root.name = "printstash-preview-root";
+  root.name = "thingport-preview-root";
 
   const plates: PlateSummary[] = [];
   for (const plateIndex of effectivePlateIndexes) {
@@ -574,7 +574,7 @@ async function buildGlbGroup(parsed: ParsedModel): Promise<import("three").Group
   }
 
   root.userData = {
-    printstashPreview: JSON.stringify({
+    thingportPreview: JSON.stringify({
       plates,
       plateThumbnails: Object.fromEntries(parsed.plateThumbnails),
       filamentColors: parsed.filamentColors,

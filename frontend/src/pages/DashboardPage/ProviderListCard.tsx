@@ -14,7 +14,7 @@ type Props = {
   providers: DashboardProvider[];
 };
 
-const OWN_UPLOAD_LABEL = "PrintStash";
+const OWN_UPLOAD_LABEL = "Thingport";
 
 // Reuses the exact same brand colors as the provider badge shown on a model's card thumbnail
 // (see constants/importProviders.ts) -- a direct upload/zip import has no import-source badge
@@ -27,7 +27,7 @@ function chipSx(provider: string): { label: string; sx: object } {
 }
 
 /** Top Providers -- how many of this user's models came from each source (MakerWorld,
- *  Thingiverse, or a direct PrintStash upload). A fixed, small set in practice, so unlike the
+ *  Thingiverse, or a direct Thingport upload). A fixed, small set in practice, so unlike the
  *  other list cards this one has no "see more" dialog and its rows aren't clickable -- there's
  *  no per-provider filtered view to link to yet. */
 export default function ProviderListCard({ providers }: Props) {

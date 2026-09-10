@@ -29,7 +29,7 @@ import Wordmark from "../../Wordmark";
 
 const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
-const SIDEBAR_COLLAPSED_STORAGE_KEY = "printstash_sidebar_collapsed";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "thingport_sidebar_collapsed";
 
 /** Icon-only rail row used for every nav item once the sidebar is collapsed -- a tooltip stands
  *  in for the label. */

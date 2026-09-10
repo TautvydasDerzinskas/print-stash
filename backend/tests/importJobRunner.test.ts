@@ -367,7 +367,7 @@ describe("runThingiverseCollectionImportJob", () => {
     vi.mocked(fetchThingiverseCollectionTitle).mockReset();
   });
 
-  it("files successful imports into a PrintStash Collection named after the real Thingiverse Collection", async () => {
+  it("files successful imports into a Thingport Collection named after the real Thingiverse Collection", async () => {
     await setThingiverseAccessToken("test-token");
     vi.mocked(fetchThingiverseCollectionTitle).mockResolvedValue("Things to Make");
     const mockedImport = vi.mocked(importPrintFromUrl);

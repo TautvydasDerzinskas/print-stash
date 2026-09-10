@@ -174,7 +174,7 @@
       "backToProfile": "Back to Profile",
       "language": {
         "heading": "Language",
-        "subtitle": "Choose the language used throughout PrintStash."
+        "subtitle": "Choose the language used throughout Thingport."
       },
       "makerworld": {
         "heading": "MakerWorld",
@@ -190,7 +190,7 @@
         "description": "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://).",
         "label": "Slicer",
         "failed": "Failed to save -- try again.",
-        "bridgeRequiredPrefix": "Bambu Studio needs the PrintStash Bridge helper app installed to open files from here --",
+        "bridgeRequiredPrefix": "Bambu Studio needs the Thingport Bridge helper app installed to open files from here --",
         "bridgeRequiredLink": "get it from the Download page."
       }
     },
@@ -268,7 +268,7 @@
         "heading": "Storage Structure",
         "subtitle": "Choose how managed model files are organized on disk.",
         "templateHeading": "Path template",
-        "templateDesc": "The model name is unique inside its PrintStash folder. Renaming a model also renames its file while preserving the extension.",
+        "templateDesc": "The model name is unique inside its Thingport folder. Renaming a model also renames its file while preserving the extension.",
         "templateLabel": "Template",
         "templatePlaceholder": "{folder}/{model}/{filename}",
         "examplePathsHeading": "Example paths (two plates of one print)",
@@ -347,7 +347,7 @@
         "passwordLabel": "Password",
         "passwordPlaceholder": "Leave blank to keep the current password",
         "fromLabel": "From address",
-        "fromPlaceholder": "PrintStash <no-reply@example.com>",
+        "fromPlaceholder": "Thingport <no-reply@example.com>",
         "save": "Save",
         "saving": "Saving…",
         "saved": "Saved.",
@@ -417,7 +417,7 @@
       }
     },
     "download": {
-      "pageTitle": "PrintStash Bridge",
+      "pageTitle": "Thingport Bridge",
       "intro": "A small helper app that runs on your computer so \"Open in Slicer\" can hand a model straight to your slicer.",
       "downloadHeading": "Download",
       "modal": {
@@ -435,7 +435,7 @@
           "heading": "Install on macOS",
           "step1": "Make it executable.",
           "step2": "Remove the Gatekeeper quarantine flag -- downloaded files are quarantined automatically.",
-          "step3": "Install it. This copies the app into ~/Applications and registers the print-stash:// link.",
+          "step3": "Install it. This copies the app into ~/Applications and registers the thingport:// link.",
           "note": "If macOS still refuses to run it, open System Settings -> Privacy & Security and allow it there instead."
         }
       }

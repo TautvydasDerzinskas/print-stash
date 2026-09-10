@@ -68,7 +68,7 @@ function friendlyConnectionError(err: unknown): string {
   if (/password authentication failed/i.test(message)) return "Authentication failed for that user/password.";
   if (/database .* does not exist/i.test(message)) return "That database does not exist.";
   if (/relation .?"?User"?.? does not exist/i.test(message)) {
-    return "Connected, but that database has no PrintStash tables yet -- run migrations against it first.";
+    return "Connected, but that database has no Thingport tables yet -- run migrations against it first.";
   }
   return `Could not connect: ${message}`;
 }

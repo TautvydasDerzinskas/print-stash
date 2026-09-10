@@ -82,16 +82,16 @@ export default function DownloadPage() {
   const installSteps: Record<BridgeDownload["os"], InstallStep[]> = {
     windows: [{ text: t("download.modal.windows.step1") }],
     linux: [
-      { text: t("download.modal.linux.step1"), code: "chmod +x print-stash-bridge-linux-amd64" },
-      { text: t("download.modal.linux.step2"), code: "./print-stash-bridge-linux-amd64" },
+      { text: t("download.modal.linux.step1"), code: "chmod +x thingport-bridge-linux-amd64" },
+      { text: t("download.modal.linux.step2"), code: "./thingport-bridge-linux-amd64" },
     ],
     macos: [
-      { text: t("download.modal.macos.step1"), code: "chmod +x ~/Downloads/print-stash-bridge-macos" },
+      { text: t("download.modal.macos.step1"), code: "chmod +x ~/Downloads/thingport-bridge-macos" },
       {
         text: t("download.modal.macos.step2"),
-        code: "xattr -d com.apple.quarantine ~/Downloads/print-stash-bridge-macos",
+        code: "xattr -d com.apple.quarantine ~/Downloads/thingport-bridge-macos",
       },
-      { text: t("download.modal.macos.step3"), code: "~/Downloads/print-stash-bridge-macos --install" },
+      { text: t("download.modal.macos.step3"), code: "~/Downloads/thingport-bridge-macos --install" },
     ],
   };
 

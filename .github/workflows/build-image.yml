@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       image_name:
-        description: "Fully-qualified image name, e.g. ghcr.io/owner/printstash-backend"
+        description: "Fully-qualified image name, e.g. ghcr.io/owner/thingport-backend"
         required: true
         type: string
       context:

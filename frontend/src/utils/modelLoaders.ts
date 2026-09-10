@@ -21,14 +21,14 @@ export type ModelPalette = {
 // and from generateModelSnapshot(), which runs off the React tree entirely) so it reads its
 // colors straight from theme.ts's buildTheme() rather than via useTheme() -- there's no guarantee
 // a component-level ThemeProvider is mounted above every caller, and threading the resolved
-// theme.printstash values through as extra params would ripple through every call site for no
+// theme.thingport values through as extra params would ripple through every call site for no
 // benefit since ResolvedTheme -> Theme is already a pure, cheap lookup.
 function toFloat32(data: ArrayLike<number>): Float32Array {
   return Float32Array.from(data);
 }
 
 export function paletteForTheme(theme: ResolvedTheme): ModelPalette {
-  const { modelColor, modelEmissive } = buildTheme(theme).printstash;
+  const { modelColor, modelEmissive } = buildTheme(theme).thingport;
   return {
     color: new THREE.Color(modelColor),
     emissive: new THREE.Color(modelEmissive),

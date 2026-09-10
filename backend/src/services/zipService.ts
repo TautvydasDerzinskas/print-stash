@@ -151,7 +151,7 @@ export async function extractZipEntriesToPrints(
       const buffer = await readZipEntry(zipPath, entryName, IMPORT_MAX_BYTES);
       if (!buffer) throw new Error("Extracted file exceeds size limit or could not be read");
 
-      tempPath = path.join(os.tmpdir(), `printstash-zip-${crypto.randomBytes(8).toString("hex")}`);
+      tempPath = path.join(os.tmpdir(), `thingport-zip-${crypto.randomBytes(8).toString("hex")}`);
       await fs.writeFile(tempPath, buffer);
 
       // A resolved page title (e.g. MakerWorld's design name) is the same for every entry in

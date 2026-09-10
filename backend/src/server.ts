@@ -15,5 +15,5 @@ prisma.importJob
   .catch((err) => console.error("Failed to recover stale import jobs on startup:", err));
 
 app.listen(API_PORT, () => {
-  console.log(`PrintStash API listening on port ${API_PORT}`);
+  console.log(`Thingport API listening on port ${API_PORT}`);
 });

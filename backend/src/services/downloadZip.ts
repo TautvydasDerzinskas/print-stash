@@ -53,7 +53,7 @@ export async function sendPrintsZip(res: Response, prints: PrintWithPlatesAndFol
   const entries = await buildZipEntries(prints);
   if (!entries.length) throw new HttpError(404, "No files available for download");
 
-  const tmpPath = path.join(os.tmpdir(), `printstash-zip-${crypto.randomBytes(8).toString("hex")}.zip`);
+  const tmpPath = path.join(os.tmpdir(), `thingport-zip-${crypto.randomBytes(8).toString("hex")}.zip`);
   await writeZip(tmpPath, entries);
   res.download(tmpPath, downloadName, (err) => {
     fs.rm(tmpPath, { force: true }, () => undefined);

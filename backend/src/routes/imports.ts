@@ -116,8 +116,8 @@ router.post(
     } catch (err) {
       if (err instanceof MakerworldCaptchaError) throw new HttpError(429, err.message);
       // 400, not 401: this is MakerWorld's own session rejecting our request, not the caller's
-      // PrintStash session -- the frontend's generic API client treats any 401 as "your
-      // PrintStash session expired" and force-logs-out, which would be exactly wrong here. See
+      // Thingport session -- the frontend's generic API client treats any 401 as "your
+      // Thingport session expired" and force-logs-out, which would be exactly wrong here. See
       // the same reasoning at importService.ts's tryMakerworldCloudApi/importThingiverseThing.
       if (err instanceof MakerworldAuthError) throw new HttpError(400, err.message);
       throw err;

@@ -299,7 +299,7 @@ router.post(
       prints = prints.filter((p) => p.tags.includes(tag));
     }
 
-    let downloadName = body.filename || "printstash.zip";
+    let downloadName = body.filename || "thingport.zip";
     if (body.tag) {
       const safeTag = body.tag.replace(/ /g, "_").slice(0, 50) || "tag";
       downloadName = `${safeTag}.zip`;

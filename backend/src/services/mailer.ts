@@ -22,8 +22,8 @@ export async function sendVerificationEmail(to: string, displayName: string, tok
   await transporter.sendMail({
     from: smtp.from,
     to,
-    subject: "Confirm your PrintStash account",
-    text: `Hi ${displayName},\n\nConfirm your email address to finish creating your PrintStash account:\n${link}\n\nThis link expires in 24 hours.`,
-    html: `<p>Hi ${displayName},</p><p>Confirm your email address to finish creating your PrintStash account:</p><p><a href="${link}">${link}</a></p><p>This link expires in 24 hours.</p>`,
+    subject: "Confirm your Thingport account",
+    text: `Hi ${displayName},\n\nConfirm your email address to finish creating your Thingport account:\n${link}\n\nThis link expires in 24 hours.`,
+    html: `<p>Hi ${displayName},</p><p>Confirm your email address to finish creating your Thingport account:</p><p><a href="${link}">${link}</a></p><p>This link expires in 24 hours.</p>`,
   });
 }

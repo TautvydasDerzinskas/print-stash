@@ -7,9 +7,9 @@ export const THEME_IDS: ResolvedTheme[] = ["light", "dark"];
 
 const BODY_FONT_STACK =
   '"Open Sans", "system-ui", "Segoe UI", Roboto, Oxygen, Ubuntu, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif';
-/** The brand/display face used for h5/h6 (page and section titles) and the Wordmark -- kept as
- *  one exported constant so both stay in sync. */
-export const DISPLAY_FONT_STACK = '"PrintStash Display", sans-serif';
+/** The brand/display face used for h5/h6 (page and section titles) -- kept as one exported
+ *  constant so every usage stays in sync. */
+export const DISPLAY_FONT_STACK = '"Thingport", sans-serif';
 
 /**
  * Extra design tokens MUI's Theme doesn't model natively: the page background (a plain color
@@ -18,7 +18,7 @@ export const DISPLAY_FONT_STACK = '"PrintStash Display", sans-serif';
  */
 declare module "@mui/material/styles" {
   interface Theme {
-    printstash: {
+    thingport: {
       pageBackground: string;
       modelColor: string;
       modelEmissive: string;
@@ -29,7 +29,7 @@ declare module "@mui/material/styles" {
     };
   }
   interface ThemeOptions {
-    printstash: {
+    thingport: {
       pageBackground: string;
       modelColor: string;
       modelEmissive: string;
@@ -131,7 +131,7 @@ export function buildTheme(id: ResolvedTheme): Theme {
       MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
       MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: d.panelStrong, color: d.text } } },
     },
-    printstash: {
+    thingport: {
       pageBackground: d.pageBackground,
       modelColor: d.modelColor,
       modelEmissive: d.modelEmissive,

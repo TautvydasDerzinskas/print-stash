@@ -173,7 +173,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
  * official API hasn't shown the same anti-abuse behavior MakerWorld's has), then files every
  * successful import into `collectionTitle` (created on first use, reused on every later import
  * that resolves to the same title -- e.g. every Likes import shares one "Thingiverse Likes"
- * collection; a named Thingiverse Collection gets/reuses a PrintStash Collection of that same
+ * collection; a named Thingiverse Collection gets/reuses a Thingport Collection of that same
  * name). `resolveCollectionTitle` runs after the per-item loop (not before) so a Collection's
  * real name -- an extra API call -- is only fetched once real work has actually happened. */
 async function runThingiverseThingsImportJob(
@@ -294,7 +294,7 @@ export async function runThingiverseLikesImportJob(jobId: string, userId: string
 
 /** Runs a named Thingiverse Collection's batch import in the background -- see
  * routes/imports.ts's POST /import/thingiverse-collection. Unlike Likes, a Collection has a real
- * user-given name (fetchThingiverseCollectionTitle) -- successful imports land in a PrintStash
+ * user-given name (fetchThingiverseCollectionTitle) -- successful imports land in a Thingport
  * Collection of that same name, created on first use and reused if the same Thingiverse
  * Collection is ever imported again. */
 export async function runThingiverseCollectionImportJob(
@@ -315,7 +315,7 @@ export async function runThingiverseCollectionImportJob(
 /** Runs a named Printables Collection's batch import in the background -- see
  * routes/imports.ts's POST /import/printables-collection. Mirrors
  * runThingiverseThingsImportJob's shape (own resolver, same sequential pacing, files successful
- * imports into a PrintStash Collection named after the real Printables Collection name) but
+ * imports into a Thingport Collection named after the real Printables Collection name) but
  * simpler: Printables needs no access token, so there's no equivalent "isn't configured for this
  * instance" failure mode to handle up front. */
 export async function runPrintablesCollectionImportJob(jobId: string, userId: string, body: PrintablesCollectionImportJobBody): Promise<void> {

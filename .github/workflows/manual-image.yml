@@ -26,7 +26,7 @@ jobs:
     uses: ./.github/workflows/build-image.yml
     with:
       project_dir: backend
-      image_name: ghcr.io/${{ github.repository_owner }}/printstash-backend
+      image_name: ghcr.io/${{ github.repository_owner }}/thingport-backend
       context: ./backend
       dockerfile: backend/Dockerfile
       cache_scope: backend
@@ -41,7 +41,7 @@ jobs:
     uses: ./.github/workflows/build-image.yml
     with:
       project_dir: frontend
-      image_name: ghcr.io/${{ github.repository_owner }}/printstash-frontend
+      image_name: ghcr.io/${{ github.repository_owner }}/thingport-frontend
       context: ./frontend
       dockerfile: frontend/Dockerfile
       cache_scope: frontend

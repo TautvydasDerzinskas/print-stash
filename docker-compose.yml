@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-printstash}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-printstash}
-      - POSTGRES_DB=${POSTGRES_DB:-printstash}
+      - POSTGRES_USER=${POSTGRES_USER:-thingport}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-thingport}
+      - POSTGRES_DB=${POSTGRES_DB:-thingport}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     networks:
       - app-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printstash}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-thingport}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -34,7 +34,7 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - FILE_STORAGE=/app/storage
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-printstash}:${POSTGRES_PASSWORD:-printstash}@db:5432/${POSTGRES_DB:-printstash}?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-thingport}:${POSTGRES_PASSWORD:-thingport}@db:5432/${POSTGRES_DB:-thingport}?schema=public
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-}
       - AUTH_SECRET=${AUTH_SECRET:-changeme-secret}
@@ -45,7 +45,7 @@ services:
       - SMTP_SECURE=${SMTP_SECURE:-false}
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
-      - SMTP_FROM=${SMTP_FROM:-PrintStash <no-reply@localhost>}
+      - SMTP_FROM=${SMTP_FROM:-Thingport <no-reply@localhost>}
       - FLARESOLVERR_URL=${FLARESOLVERR_URL:-http://flaresolverr:8191/v1}
     depends_on:
       db:

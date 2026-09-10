@@ -265,7 +265,7 @@ function titleFromSlug(slug: string): string {
 const COLLECTION_TITLE_QUERY = `query ($id: ID!) { collection(id: $id) { id name } }`;
 
 /** Cheap, title-only fetch -- used by the job runner once the batch import is done (see
- * importJobRunner.ts's runPrintablesCollectionImportJob), so the PrintStash Collection it files
+ * importJobRunner.ts's runPrintablesCollectionImportJob), so the Thingport Collection it files
  * results into doesn't require re-running the full listing. */
 export async function fetchPrintablesCollectionTitle(collectionId: string): Promise<string | null> {
   const data = (await fetchPrintablesGraphql(COLLECTION_TITLE_QUERY, { id: collectionId })) as

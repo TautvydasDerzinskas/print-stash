@@ -80,7 +80,7 @@ export const IMPORT_MAKERWORLD_CALL_DELAY_MS = envInt("IMPORT_MAKERWORLD_CALL_DE
 // confirmed to share the same anti-abuse bucket as MakerWorld's design/download-resolution API
 // -- this is a cheap precaution, not a proven-necessary one.
 export const IMPORT_PREVIEW_IMAGE_DELAY_MS = envInt("IMPORT_PREVIEW_IMAGE_DELAY_MS", 250);
-export const IMPORT_USER_AGENT = "PrintStash/1.0";
+export const IMPORT_USER_AGENT = "Thingport/1.0";
 export const IMPORT_BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36";
 

@@ -10,7 +10,7 @@ const app = createApp();
 let token: string;
 
 function tmpFile(name: string, contents: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "printstash-test-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "thingport-test-"));
   const p = path.join(dir, name);
   fs.writeFileSync(p, contents);
   return p;

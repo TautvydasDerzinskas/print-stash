@@ -21,7 +21,7 @@ import type { PlateSummary } from "../../utils/bambuThreeMf";
 // A neutral, theme-independent canvas -- this is a fixed "product shot" style preview, not part
 // of the app's light/dark chrome, so it stays the same regardless of the viewer's theme.
 const PREVIEW_BG = "#e7e7ea";
-// Matches the reference preview's solid red plate color; unrelated to theme.printstash.modelColor.
+// Matches the reference preview's solid red plate color; unrelated to theme.thingport.modelColor.
 const PREVIEW_MODEL_COLOR = "#d32f2f";
 
 type Props = {

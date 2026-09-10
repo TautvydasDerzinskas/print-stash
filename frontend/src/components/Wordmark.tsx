@@ -1,83 +1,29 @@
-import React from "react";
 import Box from "@mui/material/Box";
-import { DISPLAY_FONT_STACK } from "../theme";
+import { useTheme } from "@mui/material/styles";
+import lockupColor from "../assets/logos/thingport-lockup-compact-color.svg";
+import lockupOnDark from "../assets/logos/thingport-lockup-compact-on-dark.svg";
 
 type Props = {
   size?: "lg" | "md" | "sm";
 };
 
-/** The brand mark: a 3D-printing nozzle laying down a triangulated mesh layer. */
-function PrinterMark() {
-  return (
-    <Box
-      component="svg"
-      viewBox="0 0 512 512"
-      fill="currentColor"
-      aria-hidden="true"
-      focusable="false"
-      sx={{ width: "1em", height: "1em", color: "primary.main" }}
-    >
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M319.315,160.192l86.129,49.694v172.528l-149.387,86.292
-          l-149.386-86.235h-0.059V209.769l85.956-49.576l28.923,16.644v32.876l34.51,19.9l34.567-19.96v-32.876L319.315,160.192z
-          M256.233,284.6l-102.655-59.293c-2.421-1.361-4.963-1.673-7.625-0.932c-2.654,0.716-4.671,2.269-6.051,4.655
-          c-1.382,2.411-1.712,4.952-0.991,7.623c0.725,2.652,2.277,4.671,4.655,6.051l102.542,59.177L245.99,420.47
-          c-0.005,2.759,0.964,5.128,2.909,7.099c1.969,1.945,4.335,2.916,7.102,2.909c2.742,0.009,5.088-0.962,7.04-2.909
-          c1.944-1.967,2.915-4.333,2.91-7.099l0.175-118.529l102.539-59.177c2.39-1.389,3.939-3.405,4.656-6.054
-          c0.702-2.654,0.352-5.175-1.049-7.564c-1.382-2.409-3.4-3.979-6.051-4.712c-2.653-0.68-5.174-0.309-7.565,1.105L256.233,284.6z"
-      />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M120.93,73.492h63.258c0-8.494,0-16.99,0-25.487
-          c0.016,0.009,0.036,0.009,0.059,0h143.683c0,8.497,0,16.993,0,25.487h-71.346c-0.157,0.004-0.313,0.004-0.466,0
-          c-2.039,0.125-3.919,0.63-5.645,1.514c-1.339,0.673-2.58,1.584-3.726,2.734c-2.749,2.773-4.165,6.089-4.249,9.951v0.698
-          c0.084,3.841,1.5,7.14,4.249,9.892c1.146,1.168,2.387,2.101,3.726,2.794c1.726,0.863,3.605,1.348,5.645,1.454
-          c0.152-0.004,0.309-0.004,0.466,0c0.036,0.019,0.075,0.039,0.116,0.057h71.289v29.619h-0.116
-          c-19.089,11.024-38.177,22.042-57.266,33.05v36.02l-14.489,8.378l-14.608-8.437v-35.902l-57.321-33.108
-          c0-9.892,0-19.783,0-29.676H120.93c-2.219-0.034-4.256-0.521-6.11-1.454c-1.337-0.693-2.578-1.626-3.724-2.794
-          c-2.75-2.752-4.167-6.051-4.249-9.892v-0.698c0.082-3.862,1.499-7.178,4.249-9.951c1.146-1.15,2.387-2.062,3.724-2.734
-          C116.674,74.049,118.711,73.544,120.93,73.492z"
-      />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M397.24,75.006c1.356,0.673,2.616,1.584,3.782,2.734
-          c2.748,2.773,4.165,6.089,4.249,9.951v0.698c-0.084,3.841-1.501,7.14-4.249,9.892c-1.166,1.168-2.426,2.101-3.782,2.794
-          c-1.855,0.934-3.892,1.42-6.11,1.454h-12.337c-14.826,0.01-29.648,0.01-44.463,0h-6.401V73.492h63.201
-          C393.349,73.544,395.385,74.049,397.24,75.006z"
-      />
-    </Box>
-  );
-}
-
-const FONT_SIZES: Record<NonNullable<Props["size"]>, string> = {
+const HEIGHTS: Record<NonNullable<Props["size"]>, string> = {
   lg: "2.25rem",
   md: "1.5rem",
   sm: "1.125rem",
 };
 
+/** The Thingport logo lockup (icon + wordmark combined into one image) -- swaps between the
+ *  light- and dark-theme variants based on the active MUI palette mode. */
 export default function Wordmark({ size = "md" }: Props) {
-  const fontSize = FONT_SIZES[size];
+  const theme = useTheme();
+  const src = theme.palette.mode === "dark" ? lockupOnDark : lockupColor;
   return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      <Box sx={{ fontSize, lineHeight: 0 }}>
-        <PrinterMark />
-      </Box>
-      <Box
-        component="span"
-        sx={{
-          fontSize,
-          fontFamily: DISPLAY_FONT_STACK,
-          fontWeight: 900,
-          letterSpacing: "0.01em",
-          color: "text.primary",
-        }}
-      >
-        PrintStash
-      </Box>
-    </Box>
+    <Box
+      component="img"
+      src={src}
+      alt="Thingport"
+      sx={{ height: HEIGHTS[size], width: "auto", display: "block" }}
+    />
   );
 }

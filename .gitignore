@@ -17,7 +17,7 @@ yarn-error.log*
 # Prisma
 backend/prisma/dev.db*
 
-# PrintStash runtime content
+# Thingport runtime content
 data/
 imports/
 backend/storage/

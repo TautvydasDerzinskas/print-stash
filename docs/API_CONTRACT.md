@@ -1,4 +1,4 @@
-# PrintStash API contract
+# Thingport API contract
 
 Node.js + Express + Prisma (Postgres) backend, ported from MakersVault's FastAPI/SQLModel/SQLite
 backend, with one structural change: a **Print** is a set of one or more **Plates** (multi-part

@@ -74,7 +74,7 @@ const PROJECT_SETTINGS_JSON = JSON.stringify({
 });
 
 async function buildFixture3mf(destPath: string): Promise<void> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "printstash-3mf-fixture-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "thingport-3mf-fixture-"));
   const modelPath = path.join(dir, "3dmodel.model");
   const settingsPath = path.join(dir, "model_settings.config");
   const projectPath = path.join(dir, "project_settings.config");
@@ -135,7 +135,7 @@ const WRAPPER_MODEL_SETTINGS_XML = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 async function buildWrapperFixture3mf(destPath: string): Promise<void> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "printstash-3mf-wrapper-fixture-"));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "thingport-3mf-wrapper-fixture-"));
   const modelPath = path.join(dir, "3dmodel.model");
   const settingsPath = path.join(dir, "model_settings.config");
   const projectPath = path.join(dir, "project_settings.config");
@@ -158,7 +158,7 @@ describe("modelPreviewCache", () => {
     // only needs the model-previews cache directory, which the running app normally gets via
     // src/db.ts's startup side effect. Recreate that here so the test stays DB-independent.
     await fs.mkdir(path.dirname(modelPreviewGlbPath("x")), { recursive: true });
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "printstash-3mf-out-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "thingport-3mf-out-"));
     fixturePath = path.join(dir, "fixture.3mf");
     await buildFixture3mf(fixturePath);
   });
@@ -182,10 +182,10 @@ describe("modelPreviewCache", () => {
 
     let root: any = null;
     gltf.scene.traverse((obj: any) => {
-      if (obj.userData?.printstashPreview) root = obj;
+      if (obj.userData?.thingportPreview) root = obj;
     });
     expect(root).toBeTruthy();
-    const meta = JSON.parse(root.userData.printstashPreview);
+    const meta = JSON.parse(root.userData.thingportPreview);
     expect(meta.plates).toEqual([
       { index: 1, name: "First plate", objectCount: 1 },
       { index: 2, name: "Second plate", objectCount: 1 },
@@ -229,7 +229,7 @@ describe("modelPreviewCache -- internal <component> references", () => {
 
   beforeAll(async () => {
     await fs.mkdir(path.dirname(modelPreviewGlbPath("x")), { recursive: true });
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "printstash-3mf-wrapper-out-"));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "thingport-3mf-wrapper-out-"));
     wrapperFixturePath = path.join(dir, "wrapper.3mf");
     await buildWrapperFixture3mf(wrapperFixturePath);
   });
@@ -252,10 +252,10 @@ describe("modelPreviewCache -- internal <component> references", () => {
 
     let root: any = null;
     gltf.scene.traverse((obj: any) => {
-      if (obj.userData?.printstashPreview) root = obj;
+      if (obj.userData?.thingportPreview) root = obj;
     });
     expect(root).toBeTruthy();
-    const meta = JSON.parse(root.userData.printstashPreview);
+    const meta = JSON.parse(root.userData.thingportPreview);
     // The wrapper object (id 2) has no <mesh> of its own -- its single mesh only exists because
     // the component reference to object 1 was resolved and merged in.
     expect(meta.plates).toEqual([{ index: 1, name: "Only plate", objectCount: 1 }]);

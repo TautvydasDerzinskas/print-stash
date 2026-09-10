@@ -176,8 +176,8 @@ async function tryMakerworldCloudApi(url: string, body: ImportRequestBody): Prom
   } catch (err) {
     if (err instanceof MakerworldCaptchaError) throw new HttpError(429, err.message);
     // 400, not 401: this is MakerWorld's own session rejecting our request, not the caller's
-    // PrintStash session -- the frontend's generic API client treats any 401 as "your
-    // PrintStash session expired" and force-logs-out, which would be exactly wrong here.
+    // Thingport session -- the frontend's generic API client treats any 401 as "your
+    // Thingport session expired" and force-logs-out, which would be exactly wrong here.
     if (err instanceof MakerworldAuthError) throw new HttpError(400, err.message);
     throw err;
   }
@@ -323,7 +323,7 @@ export async function downloadImportToTemp(
   const filename = buildImportFilename(finalUrl, response.headers, body.filename ?? meta.filename);
   const mime = mimeFromContentType(response.headers.get("content-type"), filename);
   const suffix = path.extname(filename) || "";
-  const tempPath = path.join(os.tmpdir(), `printstash-import-${crypto.randomBytes(8).toString("hex")}${suffix}`);
+  const tempPath = path.join(os.tmpdir(), `thingport-import-${crypto.randomBytes(8).toString("hex")}${suffix}`);
   try {
     await streamToFileCapped(response, tempPath, IMPORT_MAX_BYTES);
   } catch (err) {
@@ -525,7 +525,7 @@ async function downloadPlainFileToTemp(url: string, suggestedName: string): Prom
     const filename = sanitizeFilename(suggestedName);
     const tempFilePath = path.join(
       os.tmpdir(),
-      `printstash-thingiverse-${crypto.randomBytes(8).toString("hex")}${path.extname(filename)}`,
+      `thingport-thingiverse-${crypto.randomBytes(8).toString("hex")}${path.extname(filename)}`,
     );
     await streamToFileCapped(res, tempFilePath, IMPORT_MAX_BYTES);
     return { input: { filename, mime: guessMimeFromPath(filename), tempFilePath } };
@@ -559,7 +559,7 @@ async function importThingiverseThing(
   } catch (err) {
     if (err instanceof ThingiverseRateLimitError) throw new HttpError(429, err.message);
     // 400, not 401: this is the server's configured Thingiverse Access Token being rejected, not
-    // the caller's PrintStash session -- see the identical reasoning at tryMakerworldCloudApi
+    // the caller's Thingport session -- see the identical reasoning at tryMakerworldCloudApi
     // above for why 401 specifically would mislead the frontend into logging the user out.
     if (err instanceof ThingiverseAuthError) throw new HttpError(400, err.message);
     throw err;

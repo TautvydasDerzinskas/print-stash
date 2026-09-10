@@ -6,12 +6,12 @@ $ErrorActionPreference = "Stop"
 
 if (-not $BridgePath) {
   $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-  $BridgePath = Join-Path $scriptDir "..\dist\print-stash-bridge.exe"
+  $BridgePath = Join-Path $scriptDir "..\dist\thingport-bridge.exe"
 }
 
 $BridgePath = (Resolve-Path $BridgePath).Path
-$targetDir = Join-Path $env:LOCALAPPDATA "PrintStash\Bridge"
-$targetExe = Join-Path $targetDir "print-stash-bridge.exe"
+$targetDir = Join-Path $env:LOCALAPPDATA "Thingport\Bridge"
+$targetExe = Join-Path $targetDir "thingport-bridge.exe"
 
 New-Item -ItemType Directory -Path $targetDir -Force | Out-Null
 Copy-Item -Path $BridgePath -Destination $targetExe -Force
@@ -31,6 +31,6 @@ function Register-Protocol {
   Set-ItemProperty -Path $commandKey -Name "(Default)" -Value "`"$TargetExe`" `"%1`"" -Force
 }
 
-Register-Protocol -Protocol "print-stash" -Label "PrintStash Bridge" -TargetExe $targetExe
+Register-Protocol -Protocol "thingport" -Label "Thingport Bridge" -TargetExe $targetExe
 
 Write-Host "Installed protocol handler at $targetExe"

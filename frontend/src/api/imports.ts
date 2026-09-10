@@ -219,7 +219,7 @@ export const importsApi = {
 
   /** Registers a background job for the selected Things and returns immediately -- see
    *  ImportJobContext.startThingiverseCollectionImport, which follows up with the actual
-   *  polling. Every successful import lands in a PrintStash Collection named after the real
+   *  polling. Every successful import lands in a Thingport Collection named after the real
    *  Thingiverse Collection name. */
   fromThingiverseCollection: async (payload: ImportLinkPayload & { thing_ids: string[] }): Promise<{ job_id: string }> => {
     const res = await fetch(`${apiBase()}/import/thingiverse-collection`, {
@@ -255,7 +255,7 @@ export const importsApi = {
 
   /** Registers a background job for the selected models and returns immediately -- see
    *  ImportJobContext.startPrintablesCollectionImport, which follows up with the actual polling.
-   *  Every successful import lands in a PrintStash Collection named after the real Printables
+   *  Every successful import lands in a Thingport Collection named after the real Printables
    *  Collection name. */
   fromPrintablesCollection: async (payload: ImportLinkPayload & { model_ids: string[] }): Promise<{ job_id: string }> => {
     const res = await fetch(`${apiBase()}/import/printables-collection`, {

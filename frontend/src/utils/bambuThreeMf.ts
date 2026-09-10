@@ -1,12 +1,12 @@
 // A Bambu Studio project .3mf is a zip: 3D/3dmodel.model holds <object> elements (either an
 // inline <mesh> or <component p:path="..."> references to per-object files under 3D/Objects/)
 // and a <build> section placing objects on the bed; Metadata/model_settings.config assigns each
-// object to a "plate" (one page of the Bambu Studio build-plate UI, not a PrintStash Plate row --
+// object to a "plate" (one page of the Bambu Studio build-plate UI, not a Thingport Plate row --
 // a single imported/uploaded 3MF here always stays one Plate, its internal plates are a purely
 // client-side rendering/browsing concept) and to a filament/extruder index; Metadata/
 // project_settings.config carries the filament_colour palette. The coordinate swap in
 // createGeometryFromMesh below is kept identical to the original (a Y/Z swap with no sign flip) --
-// PrintStash's own STL/OBJ/STEP loaders use a rotateX(-90deg) instead, which is not the same
+// Thingport's own STL/OBJ/STEP loaders use a rotateX(-90deg) instead, which is not the same
 // transform (it negates one axis), so callers must not apply that rotation to this loader's output.
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -475,11 +475,11 @@ export async function loadCachedBambuGlb(url: string): Promise<CachedBambuGlb | 
 
     let root: THREE.Object3D | null = null;
     gltf.scene.traverse((obj) => {
-      if (!root && typeof obj.userData?.printstashPreview === "string") root = obj;
+      if (!root && typeof obj.userData?.thingportPreview === "string") root = obj;
     });
     if (!root) return null;
 
-    const meta = JSON.parse((root as THREE.Object3D).userData.printstashPreview) as {
+    const meta = JSON.parse((root as THREE.Object3D).userData.thingportPreview) as {
       plates: PlateSummary[];
       plateThumbnails: Record<string, string>;
       filamentColors: string[];
