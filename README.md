@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/src/assets/logos/thingport-lockup-stacked-color.svg" alt="Thingport" width="420">
+<img src="frontend/src/assets/logos/thingport-lockup-stacked-color.svg" alt="Thingport" width="250">
 
 <h3>Your personal 3D model library.</h3>
 
@@ -10,9 +10,9 @@ from the places where you discover them.
 </p>
 
 <p>
-  <a href="https://github.com/TautvydasDerzinskas/Thingport/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/TautvydasDerzinskas/Thingport/ci.yml?label=build" alt="Build">
-  </a>
+  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/build-image.yml/badge.svg" alt="Build">
+  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/frontend-image.yml/badge.svg" alt="Frontend">
+  <img src="https://github.com/TautvydasDerzinskas/Thingport/actions/workflows/backend-image.yml/badge.svg" alt="Backend">
   <img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/React-61DAFB?logo=react&logoColor=black" alt="React">
   <img src="https://img.shields.io/badge/Three.js-000000?logo=three.js&logoColor=white" alt="Three.js">
