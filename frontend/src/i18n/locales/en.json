@@ -1112,6 +1112,7 @@
         "saveFailed": "Failed to save the collection. Please try again."
       },
       "detail": {
+        "title": "Collection: {{name}}",
         "empty": "No models in this collection yet.",
         "confirmDelete": "Delete \"{{name}}\"? Models in it are not deleted.",
         "deleteFailed": "Failed to delete the collection."
@@ -1119,6 +1120,12 @@
       "errors": {
         "loadFailed": "Unable to load collections.",
         "notFound": "Collection not found."
+      }
+    },
+    "tags": {
+      "detail": {
+        "title": "Tag: {{name}}",
+        "empty": "No models with this tag yet."
       }
     },
     "errors": {

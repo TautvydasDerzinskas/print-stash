@@ -246,6 +246,7 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
                     label={tag}
                     size="small"
                     variant="outlined"
+                    onClick={() => navigate(`/models/tags/${encodeURIComponent(tag)}`)}
                     sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.primary" }}
                   />
                 ))}
@@ -256,7 +257,13 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
           </Paper>
         </Box>
 
-        <ModelSidePanel print={print} onSelectFolder={onSelectFolder} onUnauthorized={onUnauthorized} />
+        {/* alignSelf: stretch overrides the grid's own alignItems: "start" just for this column,
+            so this box is as tall as the (taller) left column -- giving the sticky panel inside
+            it room to travel as the page scrolls instead of being stuck the moment its own
+            (short) content ends. */}
+        <Box sx={{ alignSelf: "stretch" }}>
+          <ModelSidePanel print={print} onSelectFolder={onSelectFolder} onUnauthorized={onUnauthorized} />
+        </Box>
       </Box>
 
       {previewOpen && <Model3DPreviewModal print={print} onClose={() => setPreviewOpen(false)} />}

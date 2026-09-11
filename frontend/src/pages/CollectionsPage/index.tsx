@@ -75,7 +75,19 @@ export default function CollectionsPage({ onUnauthorized, theme, previewMode }: 
           <CircularProgress size={22} />
         </Stack>
       ) : collections.length ? (
-        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(6, 1fr)",
+            columnGap: "20px",
+            rowGap: "20px",
+            "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(6, 1fr)" },
+            "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(5, 1fr)" },
+            "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(4, 1fr)" },
+            "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+            "@media (max-width: 860px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+          }}
+        >
           {collections.map(collection => (
             <CollectionCard
               key={collection.id}

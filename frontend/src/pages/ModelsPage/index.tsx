@@ -220,10 +220,11 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
                   gridTemplateColumns: "repeat(5, 1fr)",
                   columnGap: "20px",
                   rowGap: "20px",
-                  "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(4, 1fr)" },
-                  "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(3, 1fr)" },
-                  "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(2, 1fr)" },
-                  "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(1, 1fr)" },
+                  "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(5, 1fr)" },
+                  "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(4, 1fr)" },
+                  "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+                  "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+                  "@media (max-width: 860px)": { gridTemplateColumns: "repeat(1, 1fr)" },
                 }}
               >
                 {items.map(item => (

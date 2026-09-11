@@ -1113,6 +1113,7 @@
         "saveFailed": "Nepavyko išsaugoti kolekcijos. Bandykite dar kartą."
       },
       "detail": {
+        "title": "Kolekcija: {{name}}",
         "empty": "Šioje kolekcijoje kol kas nėra modelių.",
         "confirmDelete": "Ištrinti „{{name}}“? Joje esantys modeliai nebus ištrinti.",
         "deleteFailed": "Nepavyko ištrinti kolekcijos."
@@ -1120,6 +1121,12 @@
       "errors": {
         "loadFailed": "Nepavyko įkelti kolekcijų.",
         "notFound": "Kolekcija nerasta."
+      }
+    },
+    "tags": {
+      "detail": {
+        "title": "Žyma: {{name}}",
+        "empty": "Su šia žyma modelių kol kas nėra."
       }
     },
     "errors": {

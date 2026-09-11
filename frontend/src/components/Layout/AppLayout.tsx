@@ -60,6 +60,13 @@ function useRouteChrome() {
     // Overridden by CollectionDetailPage's usePageHeader once the collection loads.
     title = t("models:collections.pageTitle");
     onBack = () => navigate(-1);
+  } else if (path.startsWith("/models/tags/")) {
+    // The tag name is already known from the URL (unlike a collection, a tag isn't a fetched
+    // entity), so this is set directly rather than waiting on TagDetailPage's usePageHeader --
+    // avoids a "Models" title flash before that effect runs.
+    const tagName = path.slice("/models/tags/".length);
+    title = tagName ? t("models:tags.detail.title", { name: decodeURIComponent(tagName) }) : t("models:pageTitle");
+    onBack = () => navigate(-1);
   } else if (path.startsWith("/models/")) {
     title = t("models:pageTitle");
     onBack = () => navigate(-1);

@@ -59,7 +59,7 @@ export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }
   const authorName = print.author?.name || print.author?.handle || print.creator || null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "12px", position: "sticky", top: 16 }}>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "12px", position: { xs: "static", md: "sticky" }, top: 16 }}>
       <Stack spacing={2}>
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>

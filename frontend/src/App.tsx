@@ -12,6 +12,7 @@ import ModelsPage from "./pages/ModelsPage";
 import ModelDetailPage from "./pages/ModelDetailPage";
 import CollectionsPage from "./pages/CollectionsPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
+import TagDetailPage from "./pages/TagDetailPage";
 import AuthorPage from "./pages/AuthorPage";
 import AuthPage from "./pages/AuthPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
@@ -119,6 +120,10 @@ function AppShell({
         <Route
           path="/models/collections/:collectionId"
           element={<CollectionDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+        />
+        <Route
+          path="/models/tags/:tagName"
+          element={<TagDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
         />
         <Route
           path="/models/:printId"

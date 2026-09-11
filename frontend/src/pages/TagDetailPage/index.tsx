@@ -1,21 +1,20 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
-import { type Collection, collectionsApi } from "../../api/collections";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
+import { type Collection, collectionsApi } from "../../api/collections";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
-import { collectionDisplayName } from "../../utils/collectionDisplay";
 import ModelCard from "../ModelsPage/ModelCard";
 import SortTabs from "../ModelsPage/SortTabs";
-import CollectionActionsMenu from "./CollectionActionsMenu";
+import CollectionCard from "../CollectionsPage/CollectionCard";
 
 const PAGE_SIZE = 24;
 
@@ -25,13 +24,17 @@ type Props = {
   onUnauthorized?: () => void;
 };
 
-export default function CollectionDetailPage({ theme, previewMode, onUnauthorized }: Props) {
-  const { collectionId } = useParams<{ collectionId: string }>();
-  const navigate = useNavigate();
+/** Same list/grid/sort/infinite-scroll shape as CollectionDetailPage, but for a tag: tags aren't
+ *  entities with their own id/description/menu, just a string carried in the URL, so there's no
+ *  fetch-by-id step (or "not found" state) -- the page header title comes directly from the
+ *  route param and the list is prints filtered by that tag, plus (since collections can carry
+ *  tags too) any collections carrying it, shown first in the same grid as CollectionCards. */
+export default function TagDetailPage({ theme, previewMode, onUnauthorized }: Props) {
+  const { tagName } = useParams<{ tagName: string }>();
+  const tag = tagName ? decodeURIComponent(tagName) : "";
   const { t } = useTranslation(["models", "common"]);
-  const [collection, setCollection] = useState<Collection | null>(null);
-  const [notFound, setNotFound] = useState(false);
   const [items, setItems] = useState<Print[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -49,19 +52,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
     });
   };
 
-  const goBack = () => navigate("/models/collections");
-
-  usePageHeader({
-    title: collection ? t("models:collections.detail.title", { name: collectionDisplayName(collection, t) }) : undefined,
-    actions: collection && !collection.system_key ? (
-      <CollectionActionsMenu
-        collection={collection}
-        onUpdated={setCollection}
-        onUnauthorized={onUnauthorized}
-        onDeleted={goBack}
-      />
-    ) : undefined,
-  });
+  usePageHeader({ title: tag ? t("models:tags.detail.title", { name: tag }) : undefined });
 
   const handleError = (err: unknown, message?: string) => {
     if (err instanceof UnauthorizedError) {
@@ -74,38 +65,52 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
   };
 
   useEffect(() => {
-    if (!collectionId) return;
+    if (!tag) return;
     let cancelled = false;
     setLoading(true);
-    setNotFound(false);
     (async () => {
       try {
-        const [collectionResult, printsResult] = await Promise.all([
-          collectionsApi.get(collectionId),
-          printsApi.list({ collection_id: collectionId, order_by: sortMode, limit: PAGE_SIZE, offset: 0 }),
-        ]);
+        const result = await printsApi.list({ tags: [tag], order_by: sortMode, limit: PAGE_SIZE, offset: 0 });
         if (cancelled) return;
-        setCollection(collectionResult);
-        setItems(printsResult.items);
-        setOffset(printsResult.items.length);
-        setHasMore(printsResult.hasMore);
+        setItems(result.items);
+        setOffset(result.items.length);
+        setHasMore(result.hasMore);
       } catch (err) {
         if (cancelled) return;
-        if (handleError(err)) return;
-        setNotFound(true);
+        handleError(err, t("models:errors.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [collectionId, sortMode]);
+  }, [tag, sortMode]);
+
+  // Collections list has no server-side tag filter (and isn't paginated -- CollectionsPage
+  // fetches all of them too), so this filters client-side and refetches only on tag change, not
+  // sortMode -- collections here aren't sorted, just shown ahead of the prints grid.
+  useEffect(() => {
+    if (!tag) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await collectionsApi.list();
+        if (cancelled) return;
+        setCollections(all.filter(c => c.tags.includes(tag)));
+      } catch (err) {
+        if (cancelled) return;
+        handleError(err, t("models:errors.loadFailed"));
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tag]);
 
   const loadMore = async () => {
-    if (loadingMore || !hasMore || !collectionId) return;
+    if (loadingMore || !hasMore || !tag) return;
     setLoadingMore(true);
     try {
-      const result = await printsApi.list({ collection_id: collectionId, order_by: sortMode, limit: PAGE_SIZE, offset });
+      const result = await printsApi.list({ tags: [tag], order_by: sortMode, limit: PAGE_SIZE, offset });
       setItems(prev => [...prev, ...result.items]);
       setOffset(offset + result.items.length);
       setHasMore(result.hasMore);
@@ -126,23 +131,12 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
     );
   }
 
-  if (notFound || !collection) {
-    return (
-      <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
-        <Typography variant="body2">{t("models:collections.errors.notFound")}</Typography>
-      </Stack>
-    );
-  }
-
   return (
     <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
-      {collection.description && (
-        <Typography variant="body2" color="text.secondary">{collection.description}</Typography>
-      )}
       <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
         <SortTabs value={sortMode} onChange={setSortMode} />
       </Box>
-      {items.length ? (
+      {collections.length || items.length ? (
         <Stack spacing={2}>
           <Box
             sx={{
@@ -157,6 +151,17 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
               "@media (max-width: 860px)": { gridTemplateColumns: "repeat(2, 1fr)" },
             }}
           >
+            {collections.map(collection => (
+              <CollectionCard
+                key={collection.id}
+                collection={collection}
+                theme={theme}
+                previewMode={previewMode}
+                onUpdated={updated => setCollections(prev => prev.map(c => (c.id === updated.id ? updated : c)))}
+                onDeleted={deletedId => setCollections(prev => prev.filter(c => c.id !== deletedId))}
+                onUnauthorized={onUnauthorized}
+              />
+            ))}
             {items.map(item => (
               <ModelCard
                 key={item.id}
@@ -164,16 +169,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
                 theme={theme}
                 previewMode={previewMode}
                 onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
-                onFavoriteChange={updated =>
-                  setItems(prev =>
-                    // Viewing the built-in Favourites collection itself: unfavoriting an item here
-                    // should drop it from view immediately, same as any other removal, instead of
-                    // leaving a now-stale entry until the next full reload.
-                    collection?.system_key === "favorites" && !updated.is_favorite
-                      ? prev.filter(i => i.id !== updated.id)
-                      : prev.map(i => (i.id === updated.id ? updated : i)),
-                  )
-                }
+                onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUnauthorized={onUnauthorized}
               />
             ))}
@@ -191,7 +187,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
         </Stack>
       ) : (
         <Stack alignItems="center" spacing={1} sx={{ py: 8, color: "text.secondary" }}>
-          <Typography variant="body2">{t("models:collections.detail.empty")}</Typography>
+          <Typography variant="body2">{t("models:tags.detail.empty")}</Typography>
         </Stack>
       )}
     </Stack>
