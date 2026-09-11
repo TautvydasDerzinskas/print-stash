@@ -3,6 +3,7 @@
     "shell": {
       "apiUnreachable": "API unreachable. Ensure the API container is running and reachable.",
       "backToLibrary": "Back to library",
+      "backToTop": "Back to top",
       "sessionExpired": "Your session has expired. Please sign in again."
     },
     "auth": {

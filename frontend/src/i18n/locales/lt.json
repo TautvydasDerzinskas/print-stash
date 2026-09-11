@@ -3,6 +3,7 @@
     "shell": {
       "apiUnreachable": "API nepasiekiamas. Įsitikinkite, kad API konteineris veikia ir pasiekiamas.",
       "backToLibrary": "Grįžti į biblioteką",
+      "backToTop": "Grįžti į viršų",
       "sessionExpired": "Jūsų sesija baigėsi. Prašome prisijungti iš naujo."
     },
     "auth": {

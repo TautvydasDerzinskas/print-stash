@@ -8,6 +8,7 @@ import Alert from "@mui/material/Alert";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import ImportProgressBar from "./ImportProgressBar";
+import BackToTopButton from "./BackToTopButton";
 import { ConfirmProvider } from "../ConfirmProvider";
 import { ToastProvider } from "../ToastProvider";
 import { PageHeaderContext, type PageHeader } from "./PageHeaderContext";
@@ -176,6 +177,7 @@ function AppLayoutShell({
         </Box>
       </Box>
       <ImportProgressBar />
+      <BackToTopButton />
     </ImportJobProvider>
   );
 }
