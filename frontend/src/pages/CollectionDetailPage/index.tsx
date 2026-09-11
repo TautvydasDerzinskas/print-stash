@@ -135,7 +135,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
   }
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={{ maxWidth: "1920px", mx: "auto" }}>
       {collection.description && (
         <Typography variant="body2" color="text.secondary">{collection.description}</Typography>
       )}
@@ -144,7 +144,18 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
       </Box>
       {items.length ? (
         <Stack spacing={2}>
-          <Box sx={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", columnGap: "20px", rowGap: "20px" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(6, 1fr)",
+              columnGap: "20px",
+              rowGap: "20px",
+              "@media (max-width: 1979px)": { gridTemplateColumns: "repeat(5, 1fr)" },
+              "@media (max-width: 1684px)": { gridTemplateColumns: "repeat(4, 1fr)" },
+              "@media (max-width: 1404px)": { gridTemplateColumns: "repeat(3, 1fr)" },
+              "@media (max-width: 1124px)": { gridTemplateColumns: "repeat(2, 1fr)" },
+            }}
+          >
             {items.map(item => (
               <ModelCard
                 key={item.id}
