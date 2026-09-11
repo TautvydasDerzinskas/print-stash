@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import Box from "@mui/material/Box";
+import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
 import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
@@ -120,7 +121,16 @@ export default function Sidebar({ isAdmin }: Props) {
         justifyContent={collapsed ? "center" : "space-between"}
         sx={{ px: collapsed ? 1 : 2, pt: "20px", pb: "20px" }}
       >
-        {!collapsed && <Wordmark size="lg" />}
+        {!collapsed && (
+          <Link
+            component={RouterLink}
+            to="/"
+            aria-label={t("sidebar.dashboard")}
+            sx={{ display: "flex", alignItems: "center", lineHeight: 0 }}
+          >
+            <Wordmark size="lg" />
+          </Link>
+        )}
         <Tooltip title={collapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}>
           <IconButton size="small" onClick={toggleCollapsed}>
             {collapsed ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />}

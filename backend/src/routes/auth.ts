@@ -11,6 +11,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { getAllowRegistrations, isSmtpConfigured } from "../services/settingsService";
 import { sendVerificationEmail } from "../services/mailer";
 import { createLog } from "../services/auditLog";
+import { seedDefaultFolders } from "../services/folderService";
 import { toUserOut } from "../dto";
 import type { Prisma, Role } from "@prisma/client";
 
@@ -64,17 +65,23 @@ router.post(
     const smtpConfigured = !bootstrapping && (await isSmtpConfigured());
     const verification = smtpConfigured ? newVerificationToken() : null;
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        displayName: body.displayName,
-        role,
-        emailVerified: !smtpConfigured,
-        emailVerificationToken: verification?.token ?? null,
-        emailVerificationExpires: verification?.expires ?? null,
-      },
-    });
+    // Wrapped together so an account never ends up missing its starter categories (or vice
+    // versa) because of a failure partway through -- see seedDefaultFolders.
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          displayName: body.displayName,
+          role,
+          emailVerified: !smtpConfigured,
+          emailVerificationToken: verification?.token ?? null,
+          emailVerificationExpires: verification?.expires ?? null,
+        },
+      });
+      await seedDefaultFolders(tx, created.id);
+      return created;
+    }, { timeout: 15000 }); // seedDefaultFolders is ~80 sequential inserts -- Prisma's 5s default is too tight
 
     if (smtpConfigured && verification) {
       try {

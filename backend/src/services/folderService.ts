@@ -1,5 +1,7 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { HttpError } from "../utils/fileUtils";
+import { DEFAULT_CATEGORIES, type DefaultCategoryNode } from "../seedData/defaultCategories";
 
 /** Ensures a parent folder exists (and belongs to userId) and that assigning it keeps the
  * category tree at most two levels deep: a category can only be nested under a top-level
@@ -28,4 +30,42 @@ export async function validateParentFolder(
   }
 
   return parentId;
+}
+
+/** Materializes DEFAULT_CATEGORIES into real Folder rows for a brand-new user, so every account
+ * starts with a ready-made category tree (and the import auto-routing its cat-id mappings
+ * enable) with zero manual setup -- see routes/auth.ts's /register. Takes a Prisma client so the
+ * caller can run it inside the same transaction as the user's own creation, keeping "account
+ * exists" and "account has its starter categories" atomic. */
+export async function seedDefaultFolders(
+  tx: Prisma.TransactionClient,
+  userId: string,
+): Promise<void> {
+  async function createNode(node: DefaultCategoryNode, parentId: string | null, position: number): Promise<void> {
+    const folder = await tx.folder.create({
+      data: {
+        userId,
+        name: node.name,
+        tags: node.tags ?? [],
+        parentId,
+        position,
+        metaTitle: node.metaTitle ?? null,
+        metaDescription: node.metaDescription ?? null,
+        makerworldCatIds: node.makerworldCatIds ?? [],
+        thingiverseCatIds: node.thingiverseCatIds ?? [],
+        printablesCatIds: node.printablesCatIds ?? [],
+      },
+    });
+    let i = 0;
+    for (const child of node.children ?? []) {
+      await createNode(child, folder.id, i);
+      i++;
+    }
+  }
+
+  let i = 0;
+  for (const root of DEFAULT_CATEGORIES) {
+    await createNode(root, null, i);
+    i++;
+  }
 }
