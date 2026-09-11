@@ -12,20 +12,20 @@ import Collapse from "@mui/material/Collapse";
 import CircularProgress from "@mui/material/CircularProgress";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
-import type { Folder, FolderMetaInput } from "../../api/folders";
-import { translateFolderDisplay } from "../../utils/translateFolderDisplay";
+import type { Category, CategoryMetaInput } from "../../api/categories";
+import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
 import CategoryManagerModal from "./CategoryManagerModal";
 
 type Props = {
-  folders: Folder[];
+  categories: Category[];
   loading: boolean;
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   onCreate: (name: string, parentId: string | null) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onReorder: (folderIds: string[]) => Promise<void>;
-  onUpdateMeta: (id: string, meta: FolderMetaInput) => Promise<void>;
+  onReorder: (categoryIds: string[]) => Promise<void>;
+  onUpdateMeta: (id: string, meta: CategoryMetaInput) => Promise<void>;
 };
 
 /** The Models page's own category browser: a pinned "All" row, then a strictly two-level tree --
@@ -34,18 +34,18 @@ type Props = {
  *  just that one. Only one top-level category can be expanded at a time, and it only collapses
  *  when another one is clicked. Creating, renaming, and deleting categories all happen in the
  *  cog-triggered CategoryManagerModal, not inline here. */
-export default function CategoriesPanel({ folders, loading, selectedId, onSelect, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
+export default function CategoriesPanel({ categories, loading, selectedId, onSelect, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
   const { t, i18n } = useTranslation(["models", "common"]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
-  const displayName = (folder: Folder) => translateFolderDisplay(folder, i18n).name;
+  const displayName = (category: Category) => translateCategoryDisplay(category, i18n).name;
 
   const untitledLabel = t("models:categories.untitled");
 
   const { roots, childrenByParent } = useMemo(() => {
-    const childrenMap: Record<string, Folder[]> = {};
-    const rootList: Folder[] = [];
-    folders.forEach(f => {
+    const childrenMap: Record<string, Category[]> = {};
+    const rootList: Category[] = [];
+    categories.forEach(f => {
       if (f.parent_id) {
         if (!childrenMap[f.parent_id]) childrenMap[f.parent_id] = [];
         childrenMap[f.parent_id].push(f);
@@ -53,7 +53,7 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
         rootList.push(f);
       }
     });
-    const byPosition = (a: Folder, b: Folder) => a.position - b.position || a.name.localeCompare(b.name);
+    const byPosition = (a: Category, b: Category) => a.position - b.position || a.name.localeCompare(b.name);
     Object.keys(childrenMap).forEach(key => {
       childrenMap[key] = childrenMap[key].toSorted(byPosition);
     });
@@ -61,7 +61,7 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
       roots: rootList.toSorted(byPosition),
       childrenByParent: childrenMap,
     };
-  }, [folders]);
+  }, [categories]);
 
   const handleRootClick = (id: string) => {
     setExpandedId(id);
@@ -192,7 +192,7 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
 
       {managerOpen && (
         <CategoryManagerModal
-          folders={folders}
+          categories={categories}
           onClose={() => setManagerOpen(false)}
           onCreate={onCreate}
           onRename={onRename}

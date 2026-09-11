@@ -102,7 +102,7 @@ describe("importPrintFromUrl -- Printables", () => {
   });
 
   it("imports a model's files as plates, matches category, and attaches metadata + images", async () => {
-    const folder = await prisma.folder.create({
+    const category = await prisma.category.create({
       data: { userId, name: "Printables Tests", tags: [], printablesCatIds: [1, CATEGORY_ID, 2] },
     });
 
@@ -117,7 +117,7 @@ describe("importPrintFromUrl -- Printables", () => {
     expect(result.print.sourceExternalId).toBe(MODEL_ID);
     expect(result.print.notes).toContain("Mounting");
     expect(result.print.tags.toSorted()).toEqual(["garden", "hose"]);
-    expect(result.print.folderId).toBe(folder.id);
+    expect(result.print.categoryId).toBe(category.id);
 
     expect(result.plates.map((p) => p.filename)).toEqual(["garden-hose-holder.3mf"]);
 

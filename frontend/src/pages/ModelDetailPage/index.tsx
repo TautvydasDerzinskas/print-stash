@@ -28,11 +28,11 @@ import ModelSidePanel from "./ModelSidePanel";
 
 type Props = {
   theme: ResolvedTheme;
-  onSelectFolder: (id: string) => void;
+  onSelectCategory: (id: string) => void;
   onUnauthorized?: () => void;
 };
 
-export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized }: Props) {
+export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorized }: Props) {
   const { printId } = useParams<{ printId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["models", "common", "library"]);
@@ -43,7 +43,7 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // Back always returns wherever the user came from (the models grid, filtered to whichever
-  // folder they'd selected, or an author page) -- browser history already carries that, so this
+  // category they'd selected, or an author page) -- browser history already carries that, so this
   // is also what a post-delete redirect below reuses.
   const goBack = () => navigate(-1);
 
@@ -262,7 +262,7 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
             it room to travel as the page scrolls instead of being stuck the moment its own
             (short) content ends. */}
         <Box sx={{ alignSelf: "stretch" }}>
-          <ModelSidePanel print={print} onSelectFolder={onSelectFolder} onUnauthorized={onUnauthorized} />
+          <ModelSidePanel print={print} onSelectCategory={onSelectCategory} onUnauthorized={onUnauthorized} />
         </Box>
       </Box>
 

@@ -147,4 +147,29 @@ router.delete(
   }),
 );
 
+// Drops one print's membership -- the print itself, and every other collection it's in, are
+// untouched. Only meaningful for a real collection: the built-in Favourites/Browsing History
+// pseudo-collections have no CollectionItem rows to remove (their membership is Print.favoritedAt
+// / Print.lastViewedAt) -- the frontend routes "remove" there through unfavorite instead.
+router.delete(
+  "/collection/:id/items/:printId",
+  asyncHandler(async (req, res) => {
+    if (isSystemCollectionId(req.params.id)) {
+      throw new HttpError(400, "This collection can't be edited");
+    }
+    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!collection) throw new HttpError(404, "Collection not found");
+    const print = await prisma.print.findFirst({ where: { id: req.params.printId, userId: req.userId } });
+    if (!print) throw new HttpError(404, "Print not found");
+    await prisma.collectionItem.deleteMany({ where: { collectionId: collection.id, printId: print.id } });
+    res.json({ ok: true });
+    void createLog({
+      userId: req.userId!,
+      action: "collection_item_removed",
+      targetId: collection.id,
+      details: { printId: print.id, name: print.name },
+    });
+  }),
+);
+
 export default router;

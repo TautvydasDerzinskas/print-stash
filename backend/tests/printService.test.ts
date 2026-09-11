@@ -15,11 +15,11 @@ describe("validateStorageTemplate", () => {
   });
 
   it("rejects a template missing {filename}", () => {
-    expect(() => validateStorageTemplate("{folder}/{model}")).toThrow(/exactly once/);
+    expect(() => validateStorageTemplate("{category}/{model}")).toThrow(/exactly once/);
   });
 
   it("rejects an unknown token", () => {
-    expect(() => validateStorageTemplate("{folder}/{bogus}/{filename}")).toThrow(/Unknown storage token/);
+    expect(() => validateStorageTemplate("{category}/{bogus}/{filename}")).toThrow(/Unknown storage token/);
   });
 
   it("rejects {filename} outside the final segment", () => {

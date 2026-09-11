@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { UnauthorizedError } from "../../api/client";
 import { importsApi } from "../../api/imports";
 import { printsApi } from "../../api/prints";
-import { entriesFromFileList, uploadEntriesToFolder } from "../../utils/uploadTree";
+import { entriesFromFileList, uploadEntriesToCategory } from "../../utils/uploadTree";
 import { buildUploadEntriesFromZip, isZipFile, readZipEntries } from "../../utils/zipUtils";
 import { useZipImportPrompt } from "./ZipImportModal";
 import { useCollectionImportPrompt } from "./CollectionImportModal";
@@ -108,7 +108,7 @@ function isFlatFileSet(entries: { file: File; relativePath: string }[]) {
 
 type Props = {
   onUploaded: () => void;
-  folderId?: string | null;
+  categoryId?: string | null;
   makerworldCookie?: string | null;
   onUnauthorized?: () => void;
 };
@@ -116,7 +116,7 @@ type Props = {
 /** Backs the top bar's "+ Add" menu -- Upload opens a hidden file input, Import opens a
  *  paste-a-link dialog. Both funnel into the same zip/multi-plate/collection prompts used
  *  elsewhere in the app, so `modals` must be rendered by the caller alongside the menu. */
-export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnauthorized }: Props) {
+export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUnauthorized }: Props) {
   const { t } = useTranslation("app");
   const showToast = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -136,7 +136,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
     try {
-      const result = await printsApi.upload(files, { folder_id: folderId || undefined, mode: "multiplate" });
+      const result = await printsApi.upload(files, { category_id: categoryId || undefined, mode: "multiplate" });
       return { uploaded: result.prints.length, failed: [] as string[] };
     } catch (err) {
       if (err instanceof UnauthorizedError) {
@@ -175,12 +175,12 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
             if (mode === "multiplate") {
               applyResult(await uploadFlatAsMultiplate(normalEntries.map(entry => entry.file)));
             } else {
-              applyResult(await uploadEntriesToFolder(normalEntries, folderId || null, onUnauthorized));
+              applyResult(await uploadEntriesToCategory(normalEntries, categoryId || null, onUnauthorized));
             }
           },
         });
       } else {
-        const result = await uploadEntriesToFolder(normalEntries, folderId || null, onUnauthorized);
+        const result = await uploadEntriesToCategory(normalEntries, categoryId || null, onUnauthorized);
         applyResult(result);
       }
     }
@@ -192,7 +192,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
       await zipPrompt.prompt({
         label: entry.file.name,
         onImportAsZip: async () => {
-          const result = await uploadEntriesToFolder([entry], folderId || null, onUnauthorized);
+          const result = await uploadEntriesToCategory([entry], categoryId || null, onUnauthorized);
           applyResult(result);
         },
         loadEntries: async () => {
@@ -206,7 +206,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
             zipData = result.data;
           }
           const unzipEntries = buildUploadEntriesFromZip(zipData || {}, selectedPaths, basePath);
-          const result = await uploadEntriesToFolder(unzipEntries, folderId || null, onUnauthorized);
+          const result = await uploadEntriesToCategory(unzipEntries, categoryId || null, onUnauthorized);
           applyResult(result);
         },
       });
@@ -245,7 +245,7 @@ export function useUploadImport({ onUploaded, folderId, makerworldCookie, onUnau
       const cookie = (makerworldCookie || "").trim();
       const payload = {
         url,
-        folder_id: folderId || undefined,
+        category_id: categoryId || undefined,
         makerworld_cookie: cookie || undefined,
       };
 

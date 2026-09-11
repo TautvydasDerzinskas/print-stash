@@ -51,7 +51,7 @@ type AppShellProps = {
   onUserUpdated: (user: AuthUser) => void;
 };
 
-/** Everything that needs router context (route-derived chrome, folder selection that also
+/** Everything that needs router context (route-derived chrome, category selection that also
  *  navigates). Split out from App so App itself can stay outside <BrowserRouter>. */
 function AppShell({
   isAdmin,
@@ -68,12 +68,12 @@ function AppShell({
   onUserUpdated,
 }: AppShellProps) {
   const navigate = useNavigate();
-  const [folderId, setFolderId] = React.useState<string | null>(null);
+  const [categoryId, setCategoryId] = React.useState<string | null>(null);
   const [nonce, setNonce] = React.useState(0);
-  const [folderVersion, setFolderVersion] = React.useState(0);
+  const [categoryVersion, setCategoryVersion] = React.useState(0);
 
-  const handleFoldersChanged = React.useCallback(() => {
-    setFolderVersion(v => v + 1);
+  const handleCategoriesChanged = React.useCallback(() => {
+    setCategoryVersion(v => v + 1);
   }, []);
 
   const handlePrintsChanged = React.useCallback(() => {
@@ -85,8 +85,8 @@ function AppShell({
       muiTheme={muiTheme}
       themeSelection={settings.theme.selected}
       apiUp={apiUp}
-      folderId={folderId}
-      onSelectFolder={setFolderId}
+      categoryId={categoryId}
+      onSelectCategory={setCategoryId}
       onPrintsChanged={handlePrintsChanged}
       onUnauthorized={onUnauthorized}
       isAdmin={isAdmin}
@@ -102,10 +102,10 @@ function AppShell({
           path="/models"
           element={
             <ModelsPage
-              folderId={folderId}
-              onSelectFolder={setFolderId}
-              foldersVersion={folderVersion}
-              onFoldersChanged={handleFoldersChanged}
+              categoryId={categoryId}
+              onSelectCategory={setCategoryId}
+              categoriesVersion={categoryVersion}
+              onCategoriesChanged={handleCategoriesChanged}
               printsVersion={nonce}
               onUnauthorized={onUnauthorized}
               theme={resolvedTheme}
@@ -127,7 +127,7 @@ function AppShell({
         />
         <Route
           path="/models/:printId"
-          element={<ModelDetailPage theme={resolvedTheme} onSelectFolder={setFolderId} onUnauthorized={onUnauthorized} />}
+          element={<ModelDetailPage theme={resolvedTheme} onSelectCategory={setCategoryId} onUnauthorized={onUnauthorized} />}
         />
         <Route path="/authors/:authorId" element={<AuthorPage />} />
         <Route

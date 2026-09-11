@@ -23,27 +23,27 @@ import CheckIcon from "@mui/icons-material/Check";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import type { Folder, FolderMetaInput } from "../../api/folders";
+import type { Category, CategoryMetaInput } from "../../api/categories";
 import { useConfirm } from "../../components/ConfirmProvider";
 import CategoryMetaDialog from "./CategoryMetaDialog";
 
 type Props = {
-  folders: Folder[];
+  categories: Category[];
   onClose: () => void;
   onCreate: (name: string, parentId: string | null) => Promise<void>;
   onRename: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onReorder: (folderIds: string[]) => Promise<void>;
-  onUpdateMeta: (id: string, meta: FolderMetaInput) => Promise<void>;
+  onReorder: (categoryIds: string[]) => Promise<void>;
+  onUpdateMeta: (id: string, meta: CategoryMetaInput) => Promise<void>;
 };
 
-function hasMeta(folder: Folder): boolean {
+function hasMeta(category: Category): boolean {
   return Boolean(
-    folder.meta_title ||
-      folder.meta_description ||
-      folder.makerworld_cat_ids ||
-      folder.thingiverse_cat_ids ||
-      folder.printables_cat_ids,
+    category.meta_title ||
+      category.meta_description ||
+      category.makerworld_cat_ids ||
+      category.thingiverse_cat_ids ||
+      category.printables_cat_ids,
   );
 }
 
@@ -256,16 +256,16 @@ function AddRow({ indent, placeholder, busy, onAdd }: {
   );
 }
 
-export default function CategoryManagerModal({ folders, onClose, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
+export default function CategoryManagerModal({ categories, onClose, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [metaFolder, setMetaFolder] = useState<Folder | null>(null);
+  const [metaCategory, setMetaCategory] = useState<Category | null>(null);
 
   const { roots, childrenByParent } = useMemo(() => {
-    const childrenMap: Record<string, Folder[]> = {};
-    const rootList: Folder[] = [];
-    folders.forEach(f => {
+    const childrenMap: Record<string, Category[]> = {};
+    const rootList: Category[] = [];
+    categories.forEach(f => {
       if (f.parent_id) {
         if (!childrenMap[f.parent_id]) childrenMap[f.parent_id] = [];
         childrenMap[f.parent_id].push(f);
@@ -273,7 +273,7 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
         rootList.push(f);
       }
     });
-    const byPosition = (a: Folder, b: Folder) => a.position - b.position || a.name.localeCompare(b.name);
+    const byPosition = (a: Category, b: Category) => a.position - b.position || a.name.localeCompare(b.name);
     Object.keys(childrenMap).forEach(key => {
       childrenMap[key] = childrenMap[key].toSorted(byPosition);
     });
@@ -281,30 +281,30 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
       roots: rootList.toSorted(byPosition),
       childrenByParent: childrenMap,
     };
-  }, [folders]);
+  }, [categories]);
 
   const untitledLabel = t("models:categories.untitled");
 
-  const handleDeleteCategory = async (folder: Folder) => {
-    const hasChildren = (childrenByParent[folder.id] || []).length > 0;
+  const handleDeleteCategory = async (category: Category) => {
+    const hasChildren = (childrenByParent[category.id] || []).length > 0;
     const message = hasChildren
-      ? t("models:categories.manager.confirmDeleteCategoryWithSub", { name: folder.name || untitledLabel })
-      : t("models:categories.manager.confirmDeleteCategory", { name: folder.name || untitledLabel });
+      ? t("models:categories.manager.confirmDeleteCategoryWithSub", { name: category.name || untitledLabel })
+      : t("models:categories.manager.confirmDeleteCategory", { name: category.name || untitledLabel });
     if (!(await confirmDialog({ message, destructive: true }))) return;
-    setBusyId(folder.id);
+    setBusyId(category.id);
     try {
-      await onDelete(folder.id);
+      await onDelete(category.id);
     } finally {
       setBusyId(null);
     }
   };
 
-  const handleDeleteSubcategory = async (folder: Folder) => {
-    const message = t("models:categories.manager.confirmDeleteSubcategory", { name: folder.name || untitledLabel });
+  const handleDeleteSubcategory = async (category: Category) => {
+    const message = t("models:categories.manager.confirmDeleteSubcategory", { name: category.name || untitledLabel });
     if (!(await confirmDialog({ message, destructive: true }))) return;
-    setBusyId(folder.id);
+    setBusyId(category.id);
     try {
-      await onDelete(folder.id);
+      await onDelete(category.id);
     } finally {
       setBusyId(null);
     }
@@ -358,7 +358,7 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
                   metaTitle={root.meta_title}
                   metaDescription={root.meta_description}
                   hasDetails={hasMeta(root)}
-                  onOpenMeta={() => setMetaFolder(root)}
+                  onOpenMeta={() => setMetaCategory(root)}
                   onRename={name => onRename(root.id, name)}
                   onDelete={() => handleDeleteCategory(root)}
                 />
@@ -376,7 +376,7 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
                       metaTitle={child.meta_title}
                       metaDescription={child.meta_description}
                       hasDetails={hasMeta(child)}
-                      onOpenMeta={() => setMetaFolder(child)}
+                      onOpenMeta={() => setMetaCategory(child)}
                       onRename={name => onRename(child.id, name)}
                       onDelete={() => handleDeleteSubcategory(child)}
                     />
@@ -428,11 +428,11 @@ export default function CategoryManagerModal({ folders, onClose, onCreate, onRen
         <Button onClick={onClose}>{t("common:close")}</Button>
       </DialogActions>
     </Dialog>
-    {metaFolder && (
+    {metaCategory && (
       <CategoryMetaDialog
-        folder={metaFolder}
-        onClose={() => setMetaFolder(null)}
-        onSave={meta => onUpdateMeta(metaFolder.id, meta)}
+        category={metaCategory}
+        onClose={() => setMetaCategory(null)}
+        onSave={meta => onUpdateMeta(metaCategory.id, meta)}
       />
     )}
     </>

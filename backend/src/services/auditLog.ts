@@ -11,7 +11,8 @@ export type LogAction =
   | "model_deleted"
   | "collection_created"
   | "collection_edited"
-  | "collection_deleted";
+  | "collection_deleted"
+  | "collection_item_removed";
 
 /** Writes one admin-audit-trail entry (see the Log model's schema.prisma doc comment). Always
  * fire-and-forget (`void createLog(...)`, never awaited by the caller) -- a logging failure must

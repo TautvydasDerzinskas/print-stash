@@ -20,7 +20,7 @@ type Props = {
 // share the {model} directory under the default template.
 const PLATE_PREVIEW_VALUES: Record<string, string>[] = [
   {
-    folder: "Props/Workshop",
+    category: "Props/Workshop",
     collection: "Tabletop",
     tags: "Print in place + Useful",
     creator: "Example creator",
@@ -31,7 +31,7 @@ const PLATE_PREVIEW_VALUES: Record<string, string>[] = [
     plate: "1",
   },
   {
-    folder: "Props/Workshop",
+    category: "Props/Workshop",
     collection: "Tabletop",
     tags: "Print in place + Useful",
     creator: "Example creator",
@@ -43,7 +43,7 @@ const PLATE_PREVIEW_VALUES: Record<string, string>[] = [
   },
 ];
 
-const DEFAULT_TEMPLATE = "{folder}/{model}/{filename}";
+const DEFAULT_TEMPLATE = "{category}/{model}/{filename}";
 
 export default function StorageSection({ onUnauthorized }: Props) {
   const { t } = useTranslation("app");

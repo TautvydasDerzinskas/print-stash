@@ -120,12 +120,12 @@ describe("importPrintFromUrl -- Thingiverse", () => {
 
   it("imports a Thing's model files as plates, matches category, and attaches metadata + images", async () => {
     await setThingiverseAccessToken(ACCESS_TOKEN);
-    // A folder configured with several category ids, only one of which (129, "3D Printing
+    // A category configured with several category ids, only one of which (129, "3D Printing
     // Tests") actually matches this Thing -- proves both that category matching works against
     // the official API's separate categories_url (previously believed infeasible against the
-    // internal v2 API), and that a folder listing multiple ids matches on ANY overlap, not just
+    // internal v2 API), and that a category listing multiple ids matches on ANY overlap, not just
     // an exact single-id equality.
-    const folder = await prisma.folder.create({
+    const category = await prisma.category.create({
       data: { userId, name: "Thingiverse Tests", tags: [], thingiverseCatIds: [999001, CATEGORY_ID, 999002] },
     });
 
@@ -140,7 +140,7 @@ describe("importPrintFromUrl -- Thingiverse", () => {
     expect(result.print.sourceExternalId).toBe(THING_ID);
     expect(result.print.notes).toContain("test");
     expect(result.print.tags.toSorted()).toEqual(["Test Fixture", "Widget"]);
-    expect(result.print.folderId).toBe(folder.id);
+    expect(result.print.categoryId).toBe(category.id);
 
     // instructions.pdf is not a recognized plate format -- only the two .stl files should have
     // become plates.

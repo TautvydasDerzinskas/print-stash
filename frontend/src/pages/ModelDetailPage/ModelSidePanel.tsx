@@ -22,7 +22,7 @@ import DownloadPickerDialog from "./DownloadPickerDialog";
 
 type Props = {
   print: Print;
-  onSelectFolder: (id: string) => void;
+  onSelectCategory: (id: string) => void;
   onUnauthorized?: () => void;
 };
 
@@ -33,7 +33,7 @@ type Props = {
  *  "Download model files" (the same picker-or-direct-download flow as ModelActionsMenu's
  *  Download, via useDownloadPrint so the two can't drift), view/print counts, and -- only for an
  *  actually-imported print, per source_provider -- when it was imported. */
-export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }: Props) {
+export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
   const slicerPreference = useSlicerPreference();
@@ -47,8 +47,8 @@ export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }
     : undefined;
 
   const goToCategory = () => {
-    if (!print.folder_id) return;
-    onSelectFolder(print.folder_id);
+    if (!print.category_id) return;
+    onSelectCategory(print.category_id);
     navigate("/models");
   };
 
@@ -85,7 +85,7 @@ export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }
           </Stack>
         </Box>
 
-        {print.folder_id && print.folder_name && (
+        {print.category_id && print.category_name && (
           <Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
               {t("models:detail.category")}
@@ -103,7 +103,7 @@ export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }
               }}
             >
               <FolderIcon fontSize="small" />
-              <Typography variant="body2" fontWeight={600}>{print.folder_name}</Typography>
+              <Typography variant="body2" fontWeight={600}>{print.category_name}</Typography>
             </ButtonBase>
           </Box>
         )}

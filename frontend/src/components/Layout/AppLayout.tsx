@@ -23,8 +23,8 @@ type AppLayoutProps = {
    *  instead and has already collapsed "system" into a concrete value by this point. */
   themeSelection: ThemeSelection;
   apiUp: boolean | null;
-  folderId: string | null;
-  onSelectFolder: (id: string | null) => void;
+  categoryId: string | null;
+  onSelectCategory: (id: string | null) => void;
   onPrintsChanged: () => void;
   onUnauthorized: () => void;
   isAdmin: boolean;
@@ -118,8 +118,8 @@ type ShellProps = Omit<AppLayoutProps, "muiTheme">;
 function AppLayoutShell({
   themeSelection,
   apiUp,
-  folderId,
-  onSelectFolder,
+  categoryId,
+  onSelectCategory,
   onPrintsChanged,
   onUnauthorized,
   isAdmin,
@@ -149,8 +149,8 @@ function AppLayoutShell({
           display: "flex",
         }}
       >
-        <Sidebar isAdmin={isAdmin} onSelectFolder={onSelectFolder} />
-        <Box component="main" sx={{ flex: 1, p: 2, overflow: "auto" }}>
+        <Sidebar isAdmin={isAdmin} onSelectCategory={onSelectCategory} />
+        <Box component="main" sx={{ flex: 1, p: 2 }}>
           {apiUp === false && (
             <Alert severity="error" sx={{ mb: 1.5 }}>
               {t("shell.apiUnreachable")}
@@ -160,7 +160,7 @@ function AppLayoutShell({
             title={pageHeader?.title || routeTitle}
             onBack={pageHeader?.onBack ?? routeOnBack}
             actions={pageHeader?.actions}
-            folderId={folderId}
+            categoryId={categoryId}
             makerworldCookie={makerworldCookie}
             onUploaded={onPrintsChanged}
             onUnauthorized={onUnauthorized}

@@ -55,7 +55,7 @@ type Print = {
   creator?: string | null;
   collection?: string | null;
   tags: string[];
-  folder_id?: string | null;
+  category_id?: string | null;
   storage_path?: string | null; // parent directory shared by all plates
   plates: Plate[];              // ordered by position, length >= 1
   thumb_url?: string | null;    // denormalized = plates[0].thumb_url, for card grids
@@ -65,7 +65,7 @@ type Print = {
   slicer_filename?: string | null;
 };
 
-type Folder = { id: string; name: string; tags: string[]; parent_id?: string | null };
+type Category = { id: string; name: string; tags: string[]; parent_id?: string | null };
 ```
 
 ## Routes
@@ -81,8 +81,8 @@ Mechanical renames from MakersVault (identical request/response shape, `asset` �
 - `GET/POST /print/:id/files`, `GET/DELETE /print/:id/files/:fileId` (supporting files, unchanged
   semantics)
 - `GET/DELETE /print/:id/prepared-print`
-- `POST /print/:id/tags`, `POST /print/:id/meta`, `DELETE /print/:id`, `POST /print/:id/folder`
-- `GET/POST /folders`, `PATCH /folder/:id`, `DELETE /folder/:id`, `GET /folder/:id/download`
+- `POST /print/:id/tags`, `POST /print/:id/meta`, `DELETE /print/:id`, `POST /print/:id/category`
+- `GET/POST /categories`, `PATCH /category/:id`, `DELETE /category/:id`, `GET /category/:id/download`
 - `POST /import`, `POST /import/inspect`, `POST /import/zip/entries`, `POST /import/zip` — URL and
   zip-extraction imports always create a single-plate print per item (the separate/multiplate
   choice below only applies to the direct upload picker/drag-drop).
@@ -108,48 +108,48 @@ Shape changes / new routes (plate-aware):
 - `GET /plate/:plateId/thumb.jpg` — a specific plate's thumbnail (for the plate switcher UI).
 - `POST /plate/:plateId/thumbnail-generated` — client-rendered PNG/JPEG/WebP snapshot for one
   plate (replaces `POST /asset/{id}/thumbnail-generated`), same 8MB cap.
-- `GET /prints` (was `GET /assets`) — same filters (`q`, `tags`, `folder_id`) and pagination
+- `GET /prints` (was `GET /assets`) — same filters (`q`, `tags`, `category_id`) and pagination
   (`limit`, `offset`, `X-Has-More`/`X-Next-Offset` headers); sort key becomes
   `name, plates[0].filename, id`.
 - `GET /tags` (was `GET /tags`) — same filters, implemented via `unnest(tags)` over the filtered
   `Print` set.
-- `POST /download/zip` — body `{ print_ids?: string[], tag?: string, folder_id?: string, filename?: string }`
+- `POST /download/zip` — body `{ print_ids?: string[], tag?: string, category_id?: string, filename?: string }`
   (was `{ asset_ids, tag, folder_id, filename }`).
 - `POST /import/zip` response — `{ prints: Print[], failed: string[] }` (was `{ assets, failed }`).
-- `POST /download/zip`, `GET /folder/:id/download` — zip arcname becomes
-  `{folder_or_unassigned}/{print.name}/{plate.filename}` for every plate, and
-  `{folder_or_unassigned}/{print.name}/supporting/{file.filename}` for supporting files. The extra
+- `POST /download/zip`, `GET /category/:id/download` — zip arcname becomes
+  `{category_or_unassigned}/{print.name}/{plate.filename}` for every plate, and
+  `{category_or_unassigned}/{print.name}/supporting/{file.filename}` for supporting files. The extra
   `{print.name}` directory level (new vs. MakersVault) is required so sibling plates from
   different prints, or same-named plates across prints, can't collide in the zip.
 
 Retired: `POST /asset/{id}/rename` (renaming "the file" doesn't map onto a print with no single
 filename) — replaced by `POST /print/:id/plate/:plateId/rename` for plate filenames, while
-`Print.name` (the folder-unique display name) renames via the existing `POST /print/:id/meta`.
+`Print.name` (the category-unique display name) renames via the existing `POST /print/:id/meta`.
 
 ## Storage path templating
 
 Same template contract as MakersVault (`validate_storage_template`, default
-`{folder}/{model}/{filename}`, tokens `folder,collection,tags,creator,model,name,filename,id`,
+`{category}/{model}/{filename}`, tokens `category,collection,tags,creator,model,name,filename,id`,
 `{filename}` required exactly once in the final path segment). Rendered **once per Plate**:
 
 - `{model}` / `{name}` = `Print.name` (shared by every plate of a print — this is what makes all
-  plates land in the same `{folder}/{model}/` directory under the default template).
+  plates land in the same `{category}/{model}/` directory under the default template).
 - `{filename}` = the individual `Plate.filename`.
-- `{folder}`, `{collection}`, `{tags}`, `{creator}` = pulled from the parent `Print`.
+- `{category}`, `{collection}`, `{tags}`, `{creator}` = pulled from the parent `Print`.
 - `{id}` = the owning `Print.id` (not a plate id).
 - New optional token `{plate}` = 1-based `Plate.position + 1`, for templates that want an explicit
   per-plate disambiguator. Not needed by the default template.
 
 Filename collisions between two plates of the *same* print (e.g. two uploads both named
 `body.stl`) are resolved by an `availablePlateFilename(printId, dirTokens, desiredFilename)`
-helper that auto-suffixes (`body.stl` -> `body-2.stl`), mirroring the existing per-folder
+helper that auto-suffixes (`body.stl` -> `body-2.stl`), mirroring the existing per-category
 `unique_model_name`/`available_model_name` dedup pattern. `PrintFile`s (supporting/prepared) are
 never template-rendered; they always live at `STORAGE/bundles/{printId}/{fileId}/{filename}`.
 
 ## Behavioral notes carried over unchanged
 
-- Folder-scoped `Print.name` uniqueness (case-insensitive), including at the root — enforced via
-  `nameNormalized` + the composite unique index plus a partial unique index for `folderId IS
+- Category-scoped `Print.name` uniqueness (case-insensitive), including at the root — enforced via
+  `nameNormalized` + the composite unique index plus a partial unique index for `categoryId IS
   NULL` (see `schema.prisma` migration comment).
 - Prepared-print detection/metadata sniffing (`prepared_print.py` logic) stays **print-level**: a
   sliced job output covers the whole build plate across all plates, so it is not tied to a single

@@ -84,7 +84,7 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
         url: modelUrl,
         notes: body.notes ?? null,
         tags: body.tags ?? [],
-        folder_id: body.folder_id ?? null,
+        category_id: body.category_id ?? null,
         makerworld_cookie: body.makerworld_cookie,
         makerworldPaceMs: IMPORT_MAKERWORLD_CALL_DELAY_MS,
       };
@@ -207,7 +207,7 @@ async function runThingiverseThingsImportJob(
         url: thingUrl,
         notes: body.notes ?? null,
         tags: body.tags ?? [],
-        folder_id: body.folder_id ?? null,
+        category_id: body.category_id ?? null,
       };
       try {
         const { print, alreadyImported } = await importPrintFromUrl(userId, thingUrl, itemBody);
@@ -334,7 +334,7 @@ export async function runPrintablesCollectionImportJob(jobId: string, userId: st
         url: modelUrl,
         notes: body.notes ?? null,
         tags: body.tags ?? [],
-        folder_id: body.folder_id ?? null,
+        category_id: body.category_id ?? null,
       };
       try {
         const { print, alreadyImported } = await importPrintFromUrl(userId, modelUrl, itemBody);
@@ -415,7 +415,7 @@ export async function runZipImportJob(jobId: string, userId: string, body: ZipIm
         title: body.title ?? meta.title,
         notes: body.notes ?? meta.description,
         tags: body.tags && body.tags.length ? body.tags : meta.tags,
-        folderId: body.folder_id,
+        categoryId: body.category_id,
         creator: meta.creator,
         authorId: author?.id ?? null,
         previewImageUrl: meta.previewImageUrl,

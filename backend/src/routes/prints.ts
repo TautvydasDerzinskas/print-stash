@@ -22,30 +22,43 @@ import type { Prisma } from "@prisma/client";
 const router = Router();
 router.use(requireAuth);
 
+// Tag matching is case-insensitive (a print tagged "Fun" should still show up under "fun"), which
+// Postgres array containment (`hasEvery`/`hasSome`) doesn't support natively -- so tags are left
+// out of the DB where clause and matched in JS instead, via matchesTagList below. Every route that
+// filters by tags already fetches full print rows before paginating in application code (see GET
+// /prints), so this costs nothing extra.
+function parseTagList(req: Request): string[] {
+  const tagsParam = typeof req.query.tags === "string" ? req.query.tags : "";
+  return tagsParam
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+}
+
+function matchesTagList(printTags: string[], tagList: string[]): boolean {
+  if (!tagList.length) return true;
+  const printTagsLower = new Set(printTags.map((t) => t.toLowerCase()));
+  return tagList.every((t) => printTagsLower.has(t.toLowerCase()));
+}
+
 function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
-  const tagsParam = typeof req.query.tags === "string" ? req.query.tags : "";
-  const folderIdParam = typeof req.query.folder_id === "string" ? req.query.folder_id : "";
-  const folderIds = folderIdParam
+  const categoryIdParam = typeof req.query.category_id === "string" ? req.query.category_id : "";
+  const categoryIds = categoryIdParam
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
   const collectionId = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
 
   const where: Prisma.PrintWhereInput = { userId: req.userId };
-  if (folderIds.length === 1) where.folderId = folderIds[0];
-  else if (folderIds.length > 1) where.folderId = { in: folderIds };
+  if (categoryIds.length === 1) where.categoryId = categoryIds[0];
+  else if (categoryIds.length > 1) where.categoryId = { in: categoryIds };
   if (collectionId) {
     const systemKey = systemCollectionKeyForId(collectionId);
     if (systemKey === "favorites") where.favoritedAt = { not: null };
     else if (systemKey === "history") where.lastViewedAt = { not: null };
     else where.collectionItems = { some: { collectionId } };
   }
-  const tagList = tagsParam
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
-  if (tagList.length) where.tags = { hasEvery: tagList };
   if (q) {
     where.OR = [
       { name: { contains: q, mode: "insensitive" } },
@@ -80,7 +93,7 @@ router.post(
         title: body.title || null,
         notes: body.notes || null,
         tags,
-        folderId: body.folder_id || null,
+        categoryId: body.category_id || null,
       };
 
       const printsOut = [];
@@ -139,7 +152,8 @@ router.get(
     }
 
     const where = buildPrintWhere(req);
-    const prints = await prisma.print.findMany({
+    const tagList = parseTagList(req);
+    const allMatching = await prisma.print.findMany({
       where,
       include: {
         plates: { orderBy: { position: "asc" } },
@@ -147,6 +161,7 @@ router.get(
         author: true,
       },
     });
+    const prints = tagList.length ? allMatching.filter((p) => matchesTagList(p.tags, tagList)) : allMatching;
     const printIds = prints.map((p) => p.id);
     const files = printIds.length ? await prisma.printFile.findMany({ where: { printId: { in: printIds } } }) : [];
     const filesByPrint = new Map<string, typeof files>();
@@ -243,7 +258,7 @@ router.post(
   asyncHandler(async (req, res) => {
     // Recorded explicitly from the detail page's download actions (single-file, per-plate, or
     // "download all as zip"), rather than inside the plate-file/zip routes themselves -- those
-    // are shared by the 3D viewer, snapshot generation, and bulk tag/folder zips, none of which
+    // are shared by the 3D viewer, snapshot generation, and bulk tag/category zips, none of which
     // are a user downloading *this* model.
     await prisma.print.updateMany({
       where: { id: req.params.id, userId: req.userId },
@@ -259,7 +274,9 @@ router.get(
   "/tags",
   asyncHandler(async (req, res) => {
     const where = buildPrintWhere(req);
-    const rows = await prisma.print.findMany({ where, select: { tags: true } });
+    const tagList = parseTagList(req);
+    const allRows = await prisma.print.findMany({ where, select: { tags: true } });
+    const rows = tagList.length ? allRows.filter((r) => matchesTagList(r.tags, tagList)) : allRows;
     const found = new Set<string>();
     for (const row of rows) {
       for (const tag of row.tags) {
@@ -276,7 +293,7 @@ router.get(
 const downloadSchema = z.object({
   print_ids: z.array(z.string()).optional(),
   tag: z.string().optional(),
-  folder_id: z.string().optional(),
+  category_id: z.string().optional(),
   filename: z.string().optional(),
 });
 
@@ -284,15 +301,15 @@ router.post(
   "/download/zip",
   asyncHandler(async (req, res) => {
     const body = parseBody(downloadSchema, req.body);
-    if (!(body.print_ids?.length || body.tag || body.folder_id)) {
-      throw new HttpError(400, "Provide print_ids, tag, or folder_id to download.");
+    if (!(body.print_ids?.length || body.tag || body.category_id)) {
+      throw new HttpError(400, "Provide print_ids, tag, or category_id to download.");
     }
     const where: Prisma.PrintWhereInput = { userId: req.userId };
     if (body.print_ids?.length) where.id = { in: body.print_ids };
-    if (body.folder_id) where.folderId = body.folder_id;
+    if (body.category_id) where.categoryId = body.category_id;
     let prints = await prisma.print.findMany({
       where,
-      include: { plates: { orderBy: { position: "asc" } }, folder: true },
+      include: { plates: { orderBy: { position: "asc" } }, category: true },
     });
     if (body.tag) {
       const tag = body.tag.trim();
@@ -304,10 +321,10 @@ router.post(
       const safeTag = body.tag.replace(/ /g, "_").slice(0, 50) || "tag";
       downloadName = `${safeTag}.zip`;
     }
-    if (body.folder_id) {
-      const folder = prints.find((p) => p.folder)?.folder;
-      if (folder) {
-        const safeName = folder.name.replace(/ /g, "_").slice(0, 50) || "folder";
+    if (body.category_id) {
+      const category = prints.find((p) => p.category)?.category;
+      if (category) {
+        const safeName = category.name.replace(/ /g, "_").slice(0, 50) || "category";
         downloadName = `${safeName}.zip`;
       }
     }
@@ -401,7 +418,7 @@ router.post(
     const data: Prisma.PrintUpdateInput = {};
     const requestedName = body.name !== undefined ? body.name : body.title;
     if (requestedName !== undefined) {
-      const nextName = await uniqueModelName(req.userId!, requestedName, print.folderId, print.id);
+      const nextName = await uniqueModelName(req.userId!, requestedName, print.categoryId, print.id);
       if (nextName !== print.name) {
         data.name = nextName;
         data.nameNormalized = nextName.trim().toLowerCase();
@@ -420,29 +437,29 @@ router.post(
   }),
 );
 
-const folderUpdateSchema = z.object({ folder_id: z.string().nullable().optional() });
+const categoryUpdateSchema = z.object({ category_id: z.string().nullable().optional() });
 router.post(
-  "/print/:id/folder",
+  "/print/:id/category",
   asyncHandler(async (req, res) => {
-    const body = parseBody(folderUpdateSchema, req.body);
+    const body = parseBody(categoryUpdateSchema, req.body);
     const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
     if (!print) throw new HttpError(404, "Print not found");
-    const folderId = body.folder_id || null;
+    const categoryId = body.category_id || null;
     const data: Prisma.PrintUpdateInput = {};
-    if (folderId) {
-      const folder = await prisma.folder.findFirst({ where: { id: folderId, userId: req.userId } });
-      if (!folder) throw new HttpError(400, "Folder not found");
-      await uniqueModelName(req.userId!, print.name, folder.id, print.id);
-      data.folder = { connect: { id: folder.id } };
+    if (categoryId) {
+      const category = await prisma.category.findFirst({ where: { id: categoryId, userId: req.userId } });
+      if (!category) throw new HttpError(400, "Category not found");
+      await uniqueModelName(req.userId!, print.name, category.id, print.id);
+      data.category = { connect: { id: category.id } };
     } else {
       await uniqueModelName(req.userId!, print.name, null, print.id);
-      data.folder = { disconnect: true };
+      data.category = { disconnect: true };
     }
     const updated = await prisma.print.update({ where: { id: print.id }, data });
     const plates = await prisma.plate.findMany({ where: { printId: print.id }, orderBy: { position: "asc" } });
     await relocatePrint(updated, plates);
     res.json({ print: await printOutById(req.userId!, print.id) });
-    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "folder", name: updated.name } });
+    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "category", name: updated.name } });
   }),
 );
 

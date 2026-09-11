@@ -42,7 +42,7 @@ const importRequestSchema = z.object({
   title: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
   tags: z.array(z.string()).default([]),
-  folder_id: z.string().nullable().optional(),
+  category_id: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
   makerworld_cookie: z.string().nullable().optional(),
 });

@@ -13,16 +13,16 @@ enum Role {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  passwordHash  String
-  displayName   String
-  role          Role           @default(MEMBER)
+  id                       String         @id @default(cuid())
+  email                    String         @unique
+  passwordHash             String
+  displayName              String
+  role                     Role           @default(MEMBER)
   // Defaults to true so the migration doesn't retroactively lock out every existing account --
   // new registrations explicitly set this false when SMTP is configured (see routes/auth.ts's
   // isSmtpConfigured branch), true (no verification needed) otherwise.
-  emailVerified            Boolean   @default(true)
-  emailVerificationToken   String?   @unique
+  emailVerified            Boolean        @default(true)
+  emailVerificationToken   String?        @unique
   emailVerificationExpires DateTime?
   // Set while an email change (Profile > Change email) is awaiting confirmation -- swapped into
   // `email` by POST /verify-email once the link is clicked. Null the rest of the time.
@@ -35,46 +35,46 @@ model User {
   // slicer's own registered URL protocol (e.g. bambustudio://) -- see
   // services/slicerPreferenceService.ts. Not yet acted on anywhere; just stored for now.
   slicer                   String?
-  folders       Folder[]
-  prints        Print[]
-  collections   Collection[]
-  importJobs    ImportJob[]
-  notifications Notification[]
-  logs          Log[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  categories               Category[]
+  prints                   Print[]
+  collections              Collection[]
+  importJobs               ImportJob[]
+  notifications            Notification[]
+  logs                     Log[]
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 }
 
-model Folder {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name             String
-  tags             String[] @default([])
-  parentId         String?
-  parent           Folder?  @relation("FolderTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children         Folder[] @relation("FolderTree")
+model Category {
+  id                String     @id @default(cuid())
+  userId            String
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  tags              String[]   @default([])
+  parentId          String?
+  parent            Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children          Category[] @relation("CategoryTree")
   // Manual sort order within a sibling group (same userId + parentId), set by the "move up/down"
   // controls in the category manager. Not DB-uniqueness-constrained (parentId is nullable, and
   // Postgres treats NULLs as distinct, so a unique index wouldn't actually cover the root-level
   // sibling group) -- ordering is only ever applied via the reorder endpoint, which always
   // rewrites every sibling's position together.
-  position         Int      @default(0)
-  metaTitle        String?
-  metaDescription  String?
+  position          Int        @default(0)
+  metaTitle         String?
+  metaDescription   String?
   // When set, an import from that site whose own category id matches ANY of these auto-lands
-  // in this folder (see importService.ts's resolveFolderIdByCategory -- a Prisma `hasSome`
-  // overlap check), unless the caller already picked a folder explicitly. Each site's category
-  // ids are independent integer namespaces. A folder can list several ids (e.g. a parent
-  // category and a couple of its subcategories) since one folder may reasonably want to catch
+  // in this category (see importService.ts's resolveCategoryIdByCategory -- a Prisma `hasSome`
+  // overlap check), unless the caller already picked a category explicitly. Each site's category
+  // ids are independent integer namespaces. A category can list several ids (e.g. a parent
+  // category and a couple of its subcategories) since one category may reasonably want to catch
   // more than one upstream category -- entered/edited as a "800;71;1001"-style semicolon-
-  // separated string (see routes/folders.ts's parseCatIdsInput), stored as a real int array.
-  makerworldCatIds  Int[] @default([])
-  thingiverseCatIds Int[] @default([])
-  printablesCatIds  Int[] @default([])
+  // separated string (see routes/categories.ts's parseCatIdsInput), stored as a real int array.
+  makerworldCatIds  Int[]      @default([])
+  thingiverseCatIds Int[]      @default([])
+  printablesCatIds  Int[]      @default([])
   prints            Print[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   @@index([userId, parentId, position])
   @@index([tags], type: Gin)
@@ -84,18 +84,18 @@ model Folder {
 }
 
 model Print {
-  id               String         @id @default(cuid())
+  id               String           @id @default(cuid())
   userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   name             String
   nameNormalized   String
   title            String?
   notes            String?
   creator          String?
   collection       String?
-  tags             String[]       @default([])
-  viewCount        Int            @default(0)
-  printCount       Int            @default(0)
+  tags             String[]         @default([])
+  viewCount        Int              @default(0)
+  printCount       Int              @default(0)
   // Backs the two built-in "Favourites"/"Browsing History" pseudo-collections (see
   // routes/collections.ts's SYSTEM_COLLECTIONS) -- not a real Collection/CollectionItem row.
   // lastViewedAt is stamped on every GET /print/:id alongside viewCount, so "Browsing History"
@@ -108,24 +108,24 @@ model Print {
   // for uploads, zip/folder-scan imports, and anything not resolvable to a stable provider id.
   sourceProvider   String?
   sourceExternalId String?
-  folderId         String?
-  folder           Folder?        @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  categoryId       String?
+  category         Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   authorId         String?
-  author           Author?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  author           Author?          @relation(fields: [authorId], references: [id], onDelete: SetNull)
   sourcePath       String?
   plates           Plate[]
   previewImages    PreviewImage[]
-  files            PrintFile[]    @relation("PrintFiles")
-  preparedFileId   String?        @unique
-  preparedFile     PrintFile?     @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
+  files            PrintFile[]      @relation("PrintFiles")
+  preparedFileId   String?          @unique
+  preparedFile     PrintFile?       @relation("PreparedFile", fields: [preparedFileId], references: [id], onDelete: SetNull)
   preparedMetadata Json?
   collectionItems  CollectionItem[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  @@unique([userId, folderId, nameNormalized])
+  @@unique([userId, categoryId, nameNormalized])
   @@unique([userId, sourceProvider, sourceExternalId])
-  @@index([userId, folderId, name])
+  @@index([userId, categoryId, name])
   @@index([tags], type: Gin)
   @@index([authorId])
   @@index([userId, favoritedAt])
@@ -187,23 +187,23 @@ enum ImportJobStatus {
 /// import is already in progress" lock, and survives a page refresh since the frontend can just
 /// ask for the user's active job again.
 model ImportJob {
-  id                  String          @id @default(cuid())
-  userId              String
-  user                User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type                ImportJobType
-  status              ImportJobStatus @default(RUNNING)
-  sourceUrl           String
-  sourceLabel         String?
-  provider            String?
-  total               Int             @default(0)
-  processed           Int             @default(0)
-  imported            Int             @default(0)
-  alreadyInLibrary    Int             @default(0)
-  failedCount         Int             @default(0)
-  errorMessage        String?
-  resultCollectionId  String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  id                 String          @id @default(cuid())
+  userId             String
+  user               User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type               ImportJobType
+  status             ImportJobStatus @default(RUNNING)
+  sourceUrl          String
+  sourceLabel        String?
+  provider           String?
+  total              Int             @default(0)
+  processed          Int             @default(0)
+  imported           Int             @default(0)
+  alreadyInLibrary   Int             @default(0)
+  failedCount        Int             @default(0)
+  errorMessage       String?
+  resultCollectionId String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
 
   @@index([userId, status])
 }

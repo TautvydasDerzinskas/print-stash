@@ -7,7 +7,7 @@ import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
-import { type Folder, type FolderMetaInput, foldersApi } from "../../api/folders";
+import { type Category, type CategoryMetaInput, categoriesApi } from "../../api/categories";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
@@ -20,10 +20,10 @@ import SortTabs from "./SortTabs";
 const PAGE_SIZE = 24;
 
 type Props = {
-  folderId: string | null;
-  onSelectFolder: (id: string | null) => void;
-  foldersVersion: number;
-  onFoldersChanged: () => void;
+  categoryId: string | null;
+  onSelectCategory: (id: string | null) => void;
+  categoriesVersion: number;
+  onCategoriesChanged: () => void;
   /** Bumped whenever prints change elsewhere (e.g. the top bar's upload/import) so the grid
    *  refetches without needing a full remount -- keeps this page's own state (like the category
    *  manager modal) intact across those refreshes. */
@@ -33,10 +33,10 @@ type Props = {
   previewMode: PreviewMode;
 };
 
-export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, onFoldersChanged, printsVersion, onUnauthorized, theme, previewMode }: Props) {
+export default function ModelsPage({ categoryId, onSelectCategory, categoriesVersion, onCategoriesChanged, printsVersion, onUnauthorized, theme, previewMode }: Props) {
   const { t } = useTranslation(["models", "common"]);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  const [foldersLoading, setFoldersLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [items, setItems] = useState<Print[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -55,24 +55,50 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
     });
   };
 
+  // Keeps the selected category mirrored into ?category=<id> so the URL is copy-able/bookmarkable
+  // and a reload lands back on the same filtered view, while categoryId itself stays lifted to
+  // AppShell (it also needs to survive navigating away to a model and back). Two effects, one per
+  // direction, each a no-op once the two already agree, so they can't loop against each other.
+  const categoryParam = searchParams.get("category");
+
+  // URL -> state: adopts ?category on first load and on any navigation that changes it externally
+  // (browser back/forward, a pasted link).
+  useEffect(() => {
+    if (categoryParam !== categoryId) onSelectCategory(categoryParam);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryParam]);
+
+  // state -> URL: covers every other way categoryId can change -- clicking a category, or it being
+  // cleared out from under the user (e.g. deleteCategory below clearing the active selection).
+  useEffect(() => {
+    if ((searchParams.get("category") || null) === categoryId) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (categoryId) next.set("category", categoryId);
+      else next.delete("category");
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryId]);
+
   // A root category has no models of its own directly in the tree UI, so selecting one should
   // pull in every model filed under any of its subcategories (plus the root itself, since prints
   // can technically still be filed directly on it).
-  const folderIdFilter = useMemo(() => {
-    if (!folderId) return undefined;
-    const isRoot = folders.some(f => f.id === folderId && !f.parent_id);
-    if (!isRoot) return folderId;
-    const childIds = folders.filter(f => f.parent_id === folderId).map(f => f.id);
-    return [folderId, ...childIds];
-  }, [folderId, folders]);
+  const categoryIdFilter = useMemo(() => {
+    if (!categoryId) return undefined;
+    const isRoot = categories.some(f => f.id === categoryId && !f.parent_id);
+    if (!isRoot) return categoryId;
+    const childIds = categories.filter(f => f.parent_id === categoryId).map(f => f.id);
+    return [categoryId, ...childIds];
+  }, [categoryId, categories]);
 
   // Plain "Models" (and the route's default back-to-Dashboard) while nothing's selected; once a
   // category is active, the title reflects it and back instead clears the filter -- "back to
   // all" one level at a time, matching the sidebar's own initial-vs-filtered framing.
-  const selectedFolder = folderId ? folders.find(f => f.id === folderId) ?? null : null;
+  const selectedCategory = categoryId ? categories.find(f => f.id === categoryId) ?? null : null;
   usePageHeader({
-    title: selectedFolder ? `${t("models:pageTitle")} - ${selectedFolder.name || t("models:categories.untitled")}` : undefined,
-    onBack: folderId ? () => onSelectFolder(null) : undefined,
+    title: selectedCategory ? `${t("models:pageTitle")} - ${selectedCategory.name || t("models:categories.untitled")}` : undefined,
+    onBack: categoryId ? () => onSelectCategory(null) : undefined,
   });
 
   const handleError = (err: unknown, message?: string) => {
@@ -86,24 +112,24 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
   };
 
   useEffect(() => {
-    setFoldersLoading(true);
+    setCategoriesLoading(true);
     (async () => {
       try {
-        setFolders(await foldersApi.list());
+        setCategories(await categoriesApi.list());
       } catch (err) {
         handleError(err, t("models:errors.loadCategoriesFailed"));
       } finally {
-        setFoldersLoading(false);
+        setCategoriesLoading(false);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foldersVersion]);
+  }, [categoriesVersion]);
 
   useEffect(() => {
     setLoading(true);
     (async () => {
       try {
-        const result = await printsApi.list({ folder_id: folderIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset: 0 });
+        const result = await printsApi.list({ category_id: categoryIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset: 0 });
         setItems(result.items);
         setOffset(result.items.length);
         setHasMore(result.hasMore);
@@ -114,13 +140,13 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [folderIdFilter, printsVersion, sortMode]);
+  }, [categoryIdFilter, printsVersion, sortMode]);
 
   const loadMore = async () => {
     if (loadingMore || !hasMore) return;
     setLoadingMore(true);
     try {
-      const result = await printsApi.list({ folder_id: folderIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset });
+      const result = await printsApi.list({ category_id: categoryIdFilter, order_by: sortMode, limit: PAGE_SIZE, offset });
       setItems(prev => [...prev, ...result.items]);
       setOffset(offset + result.items.length);
       setHasMore(result.hasMore);
@@ -135,18 +161,18 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
 
   const createCategory = async (name: string, parentId: string | null) => {
     try {
-      await foldersApi.create(name, [], parentId || undefined);
-      onFoldersChanged();
+      await categoriesApi.create(name, [], parentId || undefined);
+      onCategoriesChanged();
     } catch (err) {
       handleError(err, t("models:errors.createCategoryFailed"));
     }
   };
 
   const renameCategory = async (id: string, name: string) => {
-    const existing = folders.find(f => f.id === id);
+    const existing = categories.find(f => f.id === id);
     try {
-      await foldersApi.update(id, name, existing?.tags || [], existing?.parent_id || undefined);
-      onFoldersChanged();
+      await categoriesApi.update(id, name, existing?.tags || [], existing?.parent_id || undefined);
+      onCategoriesChanged();
     } catch (err) {
       handleError(err, t("models:errors.renameCategoryFailed"));
     }
@@ -154,27 +180,27 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
 
   const deleteCategory = async (id: string) => {
     try {
-      await foldersApi.delete(id);
-      onFoldersChanged();
-      if (folderId === id) onSelectFolder(null);
+      await categoriesApi.delete(id);
+      onCategoriesChanged();
+      if (categoryId === id) onSelectCategory(null);
     } catch (err) {
       handleError(err, t("models:errors.deleteCategoryFailed"));
     }
   };
 
-  const reorderCategories = async (folderIds: string[]) => {
+  const reorderCategories = async (categoryIds: string[]) => {
     try {
-      await foldersApi.reorder(folderIds);
-      onFoldersChanged();
+      await categoriesApi.reorder(categoryIds);
+      onCategoriesChanged();
     } catch (err) {
       handleError(err, t("models:errors.reorderCategoryFailed"));
     }
   };
 
-  const updateCategoryMeta = async (id: string, meta: FolderMetaInput) => {
+  const updateCategoryMeta = async (id: string, meta: CategoryMetaInput) => {
     try {
-      await foldersApi.updateMeta(id, meta);
-      onFoldersChanged();
+      await categoriesApi.updateMeta(id, meta);
+      onCategoriesChanged();
     } catch (err) {
       // Unlike the other handlers here, this one rethrows anything but the auth-redirect case:
       // CategoryMetaDialog shows the specific message (e.g. a bad category-id string naming the
@@ -192,10 +218,10 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
       </Box>
       <Stack direction="row" spacing={2} alignItems="flex-start">
         <CategoriesPanel
-          folders={folders}
-          loading={foldersLoading}
-          selectedId={folderId}
-          onSelect={onSelectFolder}
+          categories={categories}
+          loading={categoriesLoading}
+          selectedId={categoryId}
+          onSelect={onSelectCategory}
           onCreate={createCategory}
           onRename={renameCategory}
           onDelete={deleteCategory}
@@ -203,9 +229,9 @@ export default function ModelsPage({ folderId, onSelectFolder, foldersVersion, o
           onUpdateMeta={updateCategoryMeta}
         />
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {selectedFolder?.meta_title && (
+          {selectedCategory?.meta_title && (
             <Box sx={{ mb: 2 }}>
-              <CategoryBanner folder={selectedFolder} />
+              <CategoryBanner category={selectedCategory} />
             </Box>
           )}
           {loading ? (

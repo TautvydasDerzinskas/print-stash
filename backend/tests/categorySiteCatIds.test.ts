@@ -3,16 +3,16 @@ import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/db";
 
-// PATCH /folder/:id/meta's makerworld_cat_ids/thingiverse_cat_ids/printables_cat_ids fields:
-// free-text "800;71;1001"-style input, parsed and validated by routes/folders.ts's
-// parseCatIdsInput into the real Folder.*CatIds int array that importService.ts's
-// resolveFolderIdByCategory matches against (see thingiverseImport.test.ts for that side of it).
+// PATCH /category/:id/meta's makerworld_cat_ids/thingiverse_cat_ids/printables_cat_ids fields:
+// free-text "800;71;1001"-style input, parsed and validated by routes/categories.ts's
+// parseCatIdsInput into the real Category.*CatIds int array that importService.ts's
+// resolveCategoryIdByCategory matches against (see thingiverseImport.test.ts for that side of it).
 
 const app = createApp();
 let token: string;
 
 beforeAll(async () => {
-  const email = `folder-category-ids-test-${Date.now()}@example.com`;
+  const email = `category-ids-test-${Date.now()}@example.com`;
   const res = await request(app)
     .post("/api/register")
     .send({ displayName: "Category Ids Test", email, password: "password123" });
@@ -26,31 +26,31 @@ function auth() {
   return { Authorization: `Bearer ${token}` };
 }
 
-async function createFolder(name: string): Promise<string> {
-  const res = await request(app).post("/api/folders").set(auth()).send({ name, tags: [] });
+async function createCategory(name: string): Promise<string> {
+  const res = await request(app).post("/api/categories").set(auth()).send({ name, tags: [] });
   expect(res.status).toBe(200);
   return res.body.id;
 }
 
-describe("PATCH /folder/:id/meta -- multi-value category ids", () => {
+describe("PATCH /category/:id/meta -- multi-value category ids", () => {
   it("parses a semicolon-separated string into multiple ids, and round-trips it back the same way", async () => {
-    const folderId = await createFolder("Multi Cat Folder");
+    const categoryId = await createCategory("Multi Cat Category");
     const res = await request(app)
-      .patch(`/api/folder/${folderId}/meta`)
+      .patch(`/api/category/${categoryId}/meta`)
       .set(auth())
       .send({ thingiverse_cat_ids: "800;71;1001" });
 
     expect(res.status).toBe(200);
     expect(res.body.thingiverse_cat_ids).toBe("800;71;1001");
 
-    const stored = await prisma.folder.findUnique({ where: { id: folderId } });
+    const stored = await prisma.category.findUnique({ where: { id: categoryId } });
     expect(stored?.thingiverseCatIds).toEqual([800, 71, 1001]);
   });
 
   it("tolerates stray/duplicate separators and whitespace, deduping the result", async () => {
-    const folderId = await createFolder("Messy Input Folder");
+    const categoryId = await createCategory("Messy Input Category");
     const res = await request(app)
-      .patch(`/api/folder/${folderId}/meta`)
+      .patch(`/api/category/${categoryId}/meta`)
       .set(auth())
       .send({ makerworld_cat_ids: " 800 ;;71; 800 ;1001;" });
 
@@ -59,21 +59,21 @@ describe("PATCH /folder/:id/meta -- multi-value category ids", () => {
   });
 
   it("clears the field on an empty or whitespace-only string", async () => {
-    const folderId = await createFolder("Clearable Folder");
-    await request(app).patch(`/api/folder/${folderId}/meta`).set(auth()).send({ printables_cat_ids: "42" });
+    const categoryId = await createCategory("Clearable Category");
+    await request(app).patch(`/api/category/${categoryId}/meta`).set(auth()).send({ printables_cat_ids: "42" });
 
-    const res = await request(app).patch(`/api/folder/${folderId}/meta`).set(auth()).send({ printables_cat_ids: "   " });
+    const res = await request(app).patch(`/api/category/${categoryId}/meta`).set(auth()).send({ printables_cat_ids: "   " });
     expect(res.status).toBe(200);
     expect(res.body.printables_cat_ids).toBe("");
 
-    const stored = await prisma.folder.findUnique({ where: { id: folderId } });
+    const stored = await prisma.category.findUnique({ where: { id: categoryId } });
     expect(stored?.printablesCatIds).toEqual([]);
   });
 
   it("rejects a non-numeric token, naming it in the error", async () => {
-    const folderId = await createFolder("Bad Input Folder");
+    const categoryId = await createCategory("Bad Input Category");
     const res = await request(app)
-      .patch(`/api/folder/${folderId}/meta`)
+      .patch(`/api/category/${categoryId}/meta`)
       .set(auth())
       .send({ thingiverse_cat_ids: "800;abc;71" });
 
@@ -82,10 +82,10 @@ describe("PATCH /folder/:id/meta -- multi-value category ids", () => {
   });
 
   it("rejects zero, negative, and decimal ids", async () => {
-    const folderId = await createFolder("Invalid Numbers Folder");
+    const categoryId = await createCategory("Invalid Numbers Category");
     for (const bad of ["0", "-5", "1.5"]) {
       const res = await request(app)
-        .patch(`/api/folder/${folderId}/meta`)
+        .patch(`/api/category/${categoryId}/meta`)
         .set(auth())
         .send({ thingiverse_cat_ids: bad });
       expect(res.status).toBe(400);
@@ -93,19 +93,19 @@ describe("PATCH /folder/:id/meta -- multi-value category ids", () => {
   });
 
   it("rejects an excessive number of ids", async () => {
-    const folderId = await createFolder("Too Many Ids Folder");
+    const categoryId = await createCategory("Too Many Ids Category");
     const manyIds = Array.from({ length: 51 }, (_, i) => i + 1).join(";");
     const res = await request(app)
-      .patch(`/api/folder/${folderId}/meta`)
+      .patch(`/api/category/${categoryId}/meta`)
       .set(auth())
       .send({ thingiverse_cat_ids: manyIds });
     expect(res.status).toBe(400);
   });
 
   it("keeps each site's ids independent of the others", async () => {
-    const folderId = await createFolder("Independent Sites Folder");
+    const categoryId = await createCategory("Independent Sites Category");
     const res = await request(app)
-      .patch(`/api/folder/${folderId}/meta`)
+      .patch(`/api/category/${categoryId}/meta`)
       .set(auth())
       .send({ makerworld_cat_ids: "1;2", thingiverse_cat_ids: "3;4", printables_cat_ids: "5;6" });
 

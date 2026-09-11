@@ -1,10 +1,10 @@
 /** A ready-made category taxonomy modeled on MakerWorld's own top-level categories, with
  * matching Thingiverse and Printables category ids attached to each node -- see
- * services/folderService.ts's seedDefaultFolders, which materializes this into real Folder rows
+ * services/categoryService.ts's seedDefaultCategories, which materializes this into real Category rows
  * for a new user. Those cat-id arrays are what let an import from any of the three sites
- * auto-land in the right category (see importService.ts's resolveFolderIdByCategory) the moment
+ * auto-land in the right category (see importService.ts's resolveCategoryIdByCategory) the moment
  * an account exists, with zero manual setup. At most two levels deep (root + children), matching
- * the same limit folderService.ts's validateParentFolder enforces everywhere else.
+ * the same limit categoryService.ts's validateParentCategory enforces everywhere else.
  *
  * Sourced from a real-world category tree an operator had already built out by hand and asked to
  * ship as the default; edit freely -- this is just starting data, not a fixed taxonomy. */

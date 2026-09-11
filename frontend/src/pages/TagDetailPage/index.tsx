@@ -96,7 +96,8 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized }: Pr
       try {
         const all = await collectionsApi.list();
         if (cancelled) return;
-        setCollections(all.filter(c => c.tags.includes(tag)));
+        const tagLower = tag.toLowerCase();
+        setCollections(all.filter(c => c.tags.some(ct => ct.toLowerCase() === tagLower)));
       } catch (err) {
         if (cancelled) return;
         handleError(err, t("models:errors.loadFailed"));

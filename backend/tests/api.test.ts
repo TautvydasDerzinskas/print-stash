@@ -11,7 +11,7 @@ const app = createApp();
 
 let token: string;
 const createdPrintIds: string[] = [];
-const createdFolderIds: string[] = [];
+const createdCategoryIds: string[] = [];
 
 function tmpFile(name: string, contents: string): string {
   // supertest's .attach() uses the path's basename as the uploaded filename, so each file
@@ -52,9 +52,9 @@ afterAll(async () => {
   for (const id of createdPrintIds) {
     await cleanupPrint(id).catch(() => undefined);
   }
-  for (const id of createdFolderIds) {
+  for (const id of createdCategoryIds) {
     await request(app)
-      .delete(`/api/folder/${id}`)
+      .delete(`/api/category/${id}`)
       .set("Authorization", `Bearer ${token}`)
       .catch(() => undefined);
   }
@@ -126,6 +126,29 @@ describe("auth", () => {
       .set("Authorization", `Bearer ${otherToken}`)
       .send({ tags: ["hijacked"] });
     expect(tagRes.status).toBe(404);
+  });
+});
+
+describe("tag filtering is case-insensitive", () => {
+  it("GET /prints?tags= matches regardless of casing on either side", async () => {
+    const f = tmpFile("cased-tag.stl", "solid cased endsolid");
+    const uploadRes = await auth(request(app).post("/api/upload")).attach("files", f);
+    fs.rmSync(f, { force: true });
+    expect(uploadRes.status).toBe(200);
+    const printId = uploadRes.body.prints[0].id as string;
+    await trackPrint(printId);
+
+    const tagRes = await auth(request(app).post(`/api/print/${printId}/tags`)).send({ tags: ["Fun"] });
+    expect(tagRes.status).toBe(200);
+
+    const lower = await auth(request(app).get("/api/prints")).query({ tags: "fun" });
+    expect(lower.body.some((p: { id: string }) => p.id === printId)).toBe(true);
+
+    const upper = await auth(request(app).get("/api/prints")).query({ tags: "FUN" });
+    expect(upper.body.some((p: { id: string }) => p.id === printId)).toBe(true);
+
+    const tagsList = await auth(request(app).get("/api/tags")).query({ tags: "fun" });
+    expect(tagsList.body).toContain("Fun");
   });
 });
 
@@ -252,45 +275,45 @@ describe("plate add/remove/reorder/rename", () => {
   });
 });
 
-describe("folder CRUD + cycle rejection", () => {
-  it("creates, lists, updates, and deletes a folder", async () => {
-    const create = await auth(request(app).post("/api/folders")).send({ name: "Test Folder A", tags: ["x"] });
+describe("category CRUD + cycle rejection", () => {
+  it("creates, lists, updates, and deletes a category", async () => {
+    const create = await auth(request(app).post("/api/categories")).send({ name: "Test Category A", tags: ["x"] });
     expect(create.status).toBe(200);
-    const folderId = create.body.id;
+    const categoryId = create.body.id;
 
-    const list = await auth(request(app).get("/api/folders"));
+    const list = await auth(request(app).get("/api/categories"));
     expect(list.status).toBe(200);
-    expect(list.body.some((f: any) => f.id === folderId)).toBe(true);
+    expect(list.body.some((f: any) => f.id === categoryId)).toBe(true);
 
-    const update = await auth(request(app).patch(`/api/folder/${folderId}`)).send({ name: "Test Folder A Renamed", tags: [] });
+    const update = await auth(request(app).patch(`/api/category/${categoryId}`)).send({ name: "Test Category A Renamed", tags: [] });
     expect(update.status).toBe(200);
-    expect(update.body.name).toBe("Test Folder A Renamed");
+    expect(update.body.name).toBe("Test Category A Renamed");
 
-    const del = await auth(request(app).delete(`/api/folder/${folderId}`));
+    const del = await auth(request(app).delete(`/api/category/${categoryId}`));
     expect(del.status).toBe(200);
   });
 
   it("rejects a parent that does not exist", async () => {
-    const res = await auth(request(app).post("/api/folders")).send({ name: "Orphan", tags: [], parent_id: "does-not-exist" });
+    const res = await auth(request(app).post("/api/categories")).send({ name: "Orphan", tags: [], parent_id: "does-not-exist" });
     expect(res.status).toBe(400);
   });
 
   it("rejects creating a cycle", async () => {
-    const parent = await auth(request(app).post("/api/folders")).send({ name: "Cycle Parent", tags: [] });
-    const child = await auth(request(app).post("/api/folders")).send({
+    const parent = await auth(request(app).post("/api/categories")).send({ name: "Cycle Parent", tags: [] });
+    const child = await auth(request(app).post("/api/categories")).send({
       name: "Cycle Child",
       tags: [],
       parent_id: parent.body.id,
     });
-    const attempt = await auth(request(app).patch(`/api/folder/${parent.body.id}`)).send({
+    const attempt = await auth(request(app).patch(`/api/category/${parent.body.id}`)).send({
       name: "Cycle Parent",
       tags: [],
       parent_id: child.body.id,
     });
     expect(attempt.status).toBe(400);
 
-    await auth(request(app).delete(`/api/folder/${child.body.id}`));
-    await auth(request(app).delete(`/api/folder/${parent.body.id}`));
+    await auth(request(app).delete(`/api/category/${child.body.id}`));
+    await auth(request(app).delete(`/api/category/${parent.body.id}`));
   });
 });
 
@@ -337,14 +360,14 @@ describe("prepared-print attach/detect/remove", () => {
 });
 
 describe("zip download arcname structure", () => {
-  it("nests plates under {folder}/{print.name}/ and supporting files under .../supporting/", async () => {
-    const folder = await auth(request(app).post("/api/folders")).send({ name: "Zip Folder Test", tags: [] });
-    createdFolderIds.push(folder.body.id);
+  it("nests plates under {category}/{print.name}/ and supporting files under .../supporting/", async () => {
+    const category = await auth(request(app).post("/api/categories")).send({ name: "Zip Category Test", tags: [] });
+    createdCategoryIds.push(category.body.id);
 
     const f = tmpFile("zippy.stl", "solid zippy endsolid");
     const upload = await auth(request(app).post("/api/upload"))
       .field("title", "Zippy Print")
-      .field("folder_id", folder.body.id)
+      .field("category_id", category.body.id)
       .attach("files", f);
     const printId = upload.body.prints[0].id;
     createdPrintIds.push(printId);
@@ -368,7 +391,7 @@ describe("zip download arcname structure", () => {
     fs.writeFileSync(tmpZip, zipRes.body as Buffer);
     const entries = await listZipEntries(tmpZip);
     const names = entries.filter((e) => !e.isDirectory).map((e) => e.name).toSorted();
-    expect(names).toEqual(["Zip Folder Test/Zippy Print/supporting/readme.txt", "Zip Folder Test/Zippy Print/zippy.stl"]);
+    expect(names).toEqual(["Zip Category Test/Zippy Print/supporting/readme.txt", "Zip Category Test/Zippy Print/zippy.stl"]);
     fs.rmSync(tmpZip, { force: true });
   });
 });

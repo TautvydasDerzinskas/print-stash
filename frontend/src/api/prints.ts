@@ -59,9 +59,9 @@ export type Print = {
   author?: Author | null;
   collection?: string | null;
   tags: string[];
-  folder_id?: string | null;
+  category_id?: string | null;
   // Only populated by GET /print/:id (the detail page) -- list endpoints don't join it.
-  folder_name?: string | null;
+  category_name?: string | null;
   created_at: string;
   storage_path?: string | null;
   plates: Plate[]; // ordered by position, length >= 1
@@ -74,7 +74,7 @@ export type Print = {
   view_count: number;
   print_count: number;
   is_favorite: boolean;
-  // Null for uploads, zip/folder-scan imports, and anything not resolvable to a known provider.
+  // Null for uploads, zip/category-scan imports, and anything not resolvable to a known provider.
   // source_url is the reconstructed original model page, for an "Open in {Provider}" link.
   source_provider?: string | null;
   source_url?: string | null;
@@ -102,7 +102,7 @@ export const printsApi = {
   list: async (params: {
     q?: string;
     tags?: string[];
-    folder_id?: string | string[];
+    category_id?: string | string[];
     collection_id?: string;
     order_by?: PrintSortMode;
     limit?: number;
@@ -111,8 +111,8 @@ export const printsApi = {
     const qs = new URLSearchParams();
     if (params.q) qs.set("q", params.q);
     if (params.tags && params.tags.length) qs.set("tags", params.tags.join(","));
-    if (params.folder_id && params.folder_id.length) {
-      qs.set("folder_id", Array.isArray(params.folder_id) ? params.folder_id.join(",") : params.folder_id);
+    if (params.category_id && params.category_id.length) {
+      qs.set("category_id", Array.isArray(params.category_id) ? params.category_id.join(",") : params.category_id);
     }
     if (params.collection_id) qs.set("collection_id", params.collection_id);
     if (params.order_by) qs.set("orderBy", params.order_by);
@@ -139,12 +139,12 @@ export const printsApi = {
   listTags: async (params: {
     q?: string;
     tags?: string[];
-    folder_id?: string;
+    category_id?: string;
   } = {}): Promise<string[]> => {
     const qs = new URLSearchParams();
     if (params.q) qs.set("q", params.q);
     if (params.tags && params.tags.length) qs.set("tags", params.tags.join(","));
-    if (params.folder_id) qs.set("folder_id", params.folder_id);
+    if (params.category_id) qs.set("category_id", params.category_id);
     const res = await fetch(`${apiBase()}/tags?${qs.toString()}`, {
       headers: authHeaders(),
     });
@@ -158,7 +158,7 @@ export const printsApi = {
       title?: string;
       notes?: string;
       tags?: string[];
-      folder_id?: string;
+      category_id?: string;
       mode?: "separate" | "multiplate";
     } = {}
   ): Promise<UploadPrintsResult> => {
@@ -169,7 +169,7 @@ export const printsApi = {
     if (opts.title) fd.set("title", opts.title);
     if (opts.notes) fd.set("notes", opts.notes);
     if (opts.tags && opts.tags.length) fd.set("tags", opts.tags.join(","));
-    if (opts.folder_id) fd.set("folder_id", opts.folder_id);
+    if (opts.category_id) fd.set("category_id", opts.category_id);
     if (opts.mode && files.length > 1) fd.set("mode", opts.mode);
     const res = await fetch(`${apiBase()}/upload`, {
       method: "POST",
@@ -338,20 +338,20 @@ export const printsApi = {
     return res.json();
   },
 
-  updateFolder: async (id: string, folder_id: string | null) => {
-    const res = await fetch(`${apiBase()}/print/${id}/folder`, {
+  updateCategory: async (id: string, category_id: string | null) => {
+    const res = await fetch(`${apiBase()}/print/${id}/category`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ folder_id }),
+      body: JSON.stringify({ category_id }),
     });
     if (res.status === 401) throw new UnauthorizedError();
     if (!res.ok) {
-      throw new Error(await readErrorMessage(res, "Folder update failed"));
+      throw new Error(await readErrorMessage(res, "Category update failed"));
     }
     return res.json();
   },
 
-  downloadZip: async (opts: { print_ids?: string[]; tag?: string; folder_id?: string; filename?: string }) => {
+  downloadZip: async (opts: { print_ids?: string[]; tag?: string; category_id?: string; filename?: string }) => {
     const res = await fetch(`${apiBase()}/download/zip`, {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),

@@ -35,7 +35,7 @@ export type PrintMetaInput = {
   title?: string | null;
   notes?: string | null;
   tags?: string[];
-  folderId?: string | null;
+  categoryId?: string | null;
   creator?: string | null;
   collection?: string | null;
   /** Id of an already-upserted Author row (see authorService.ts), e.g. "makerworld:12345". */
@@ -124,7 +124,7 @@ export async function refreshAutoPreparedMetadata(printId: string): Promise<void
 type CreatedPlate = { record: Plate; effectivePath: string | null };
 
 async function createPlateAtPosition(
-  print: Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId" | "userId">,
+  print: Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "categoryId" | "userId">,
   input: NewPlateInput,
   position: number,
 ): Promise<CreatedPlate> {
@@ -160,15 +160,15 @@ export async function createPrint(
   plateInputs: NewPlateInput[],
 ): Promise<{ print: Print; plates: Plate[] }> {
   if (!plateInputs.length) throw new Error("createPrint requires at least one plate");
-  // meta.folderId can come straight from a request body (upload/import/zip) with no prior
+  // meta.categoryId can come straight from a request body (upload/import/zip) with no prior
   // ownership check by the caller -- verify here, once, rather than trusting every call site
-  // to have already confirmed it (the FK to Folder.id alone doesn't prove *this user* owns it).
-  if (meta.folderId) {
-    const folder = await prisma.folder.findFirst({ where: { id: meta.folderId, userId } });
-    if (!folder) throw new HttpError(400, "Folder not found");
+  // to have already confirmed it (the FK to Category.id alone doesn't prove *this user* owns it).
+  if (meta.categoryId) {
+    const category = await prisma.category.findFirst({ where: { id: meta.categoryId, userId } });
+    if (!category) throw new HttpError(400, "Category not found");
   }
   const baseName = (meta.title || "").trim() || nameHint;
-  const finalName = await availableModelName(userId, baseName, meta.folderId ?? null);
+  const finalName = await availableModelName(userId, baseName, meta.categoryId ?? null);
 
   const print = await prisma.print.create({
     data: {
@@ -180,7 +180,7 @@ export async function createPrint(
       creator: meta.creator?.trim() || null,
       collection: meta.collection?.trim() || null,
       tags: (meta.tags || []).map((t) => t.trim()).filter(Boolean),
-      folderId: meta.folderId ?? null,
+      categoryId: meta.categoryId ?? null,
       authorId: meta.authorId ?? null,
       sourceProvider: meta.sourceProvider ?? null,
       sourceExternalId: meta.sourceExternalId ?? null,

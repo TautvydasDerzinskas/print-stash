@@ -1,5 +1,5 @@
 import { UnauthorizedError } from "../api/client";
-import { foldersApi } from "../api/folders";
+import { categoriesApi } from "../api/categories";
 import { printsApi } from "../api/prints";
 
 export type UploadEntry = {
@@ -85,26 +85,26 @@ export async function entriesFromDataTransfer(dataTransfer: DataTransfer): Promi
   return output;
 }
 
-export async function uploadEntriesToFolder(
+export async function uploadEntriesToCategory(
   entries: UploadEntry[],
-  parentFolderId: string | null,
+  parentCategoryId: string | null,
   onUnauthorized?: () => void
 ) {
   const failed: string[] = [];
   let uploaded = 0;
   let aborted = false;
   const uploadedEntries: UploadEntry[] = [];
-  const folderCache = new Map<string, string>();
-  const baseKey = parentFolderId || "root";
+  const categoryCache = new Map<string, string>();
+  const baseKey = parentCategoryId || "root";
 
-  const getOrCreateFolder = async (parentId: string | null, parentKey: string, name: string) => {
+  const getOrCreateCategory = async (parentId: string | null, parentKey: string, name: string) => {
     const key = `${parentKey}/${name}`;
-    const existing = folderCache.get(key);
+    const existing = categoryCache.get(key);
     if (existing) return existing;
-    const created = await foldersApi.create(name, [], parentId || undefined);
-    const folderId = (created as { id: string }).id;
-    folderCache.set(key, folderId);
-    return folderId;
+    const created = await categoriesApi.create(name, [], parentId || undefined);
+    const categoryId = (created as { id: string }).id;
+    categoryCache.set(key, categoryId);
+    return categoryId;
   };
 
   for (const entry of entries) {
@@ -112,11 +112,11 @@ export async function uploadEntriesToFolder(
     const segments = normalized.split("/").filter(Boolean);
     if (!segments.length) continue;
     segments.pop();
-    let targetFolderId = parentFolderId;
+    let targetCategoryId = parentCategoryId;
     let parentKey = baseKey;
     for (const segment of segments) {
       try {
-        targetFolderId = await getOrCreateFolder(targetFolderId, parentKey, segment);
+        targetCategoryId = await getOrCreateCategory(targetCategoryId, parentKey, segment);
         parentKey = `${parentKey}/${segment}`;
       } catch (err) {
         if (err instanceof UnauthorizedError) {
@@ -124,19 +124,19 @@ export async function uploadEntriesToFolder(
           aborted = true;
           break;
         }
-        console.error("Folder creation failed for", segment, err);
+        console.error("Category creation failed for", segment, err);
         failed.push(entry.file.name);
-        targetFolderId = null;
+        targetCategoryId = null;
         break;
       }
     }
     if (aborted) break;
-    if (targetFolderId === null && segments.length) continue;
+    if (targetCategoryId === null && segments.length) continue;
     try {
       // Every leaf of a folder tree (dropped folder or webkitdirectory picker)
       // is always its own single-plate print, so this is always a one-file
       // upload -- the separate/multiplate mode never applies here.
-      await printsApi.upload([entry.file], { folder_id: targetFolderId || undefined });
+      await printsApi.upload([entry.file], { category_id: targetCategoryId || undefined });
       uploaded += 1;
       uploadedEntries.push(entry);
     } catch (err) {

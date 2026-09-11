@@ -5,7 +5,7 @@ import zlib from "node:zlib";
 // Minimal streaming ZIP writer (local header + streamed DEFLATE data + trailing data
 // descriptor + central directory + EOCD). No external zip-writing dependency is available in
 // this project (yauzl, the existing dependency, is read-only), so archive creation for
-// /download/zip and /folder/:id/download is implemented directly against node:zlib here.
+// /download/zip and /category/:id/download is implemented directly against node:zlib here.
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);

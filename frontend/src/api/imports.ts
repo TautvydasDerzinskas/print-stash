@@ -54,7 +54,7 @@ type ImportLinkPayload = {
   title?: string;
   notes?: string;
   tags?: string[];
-  folder_id?: string;
+  category_id?: string;
   filename?: string;
   makerworld_cookie?: string;
 };

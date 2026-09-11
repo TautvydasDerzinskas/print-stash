@@ -6,10 +6,10 @@ import { HttpError } from "../utils/fileUtils";
 import { STORAGE, THUMBS } from "../config";
 import { prisma } from "../db";
 import { listZipEntries, readZipEntry } from "../utils/zipReader";
-import type { Folder, Plate, Print } from "@prisma/client";
+import type { Category, Plate, Print } from "@prisma/client";
 
 export const STORAGE_TEMPLATE_TOKENS = [
-  "folder",
+  "category",
   "collection",
   "tags",
   "creator",
@@ -20,7 +20,7 @@ export const STORAGE_TEMPLATE_TOKENS = [
   "plate",
 ] as const;
 
-export const DEFAULT_STORAGE_TEMPLATE = "{folder}/{model}/{filename}";
+export const DEFAULT_STORAGE_TEMPLATE = "{category}/{model}/{filename}";
 
 const TOKEN_RE = /\{([a-z_]+)\}/g;
 // oxlint-disable-next-line no-control-regex -- stripping control chars is the point here.
@@ -62,15 +62,15 @@ function renderTemplate(template: string, values: Record<string, string>): strin
   });
 }
 
-export async function folderSegments(userId: string, folderId: string | null | undefined): Promise<string[]> {
-  if (!folderId) return ["Unassigned"];
+export async function categorySegments(userId: string, categoryId: string | null | undefined): Promise<string[]> {
+  if (!categoryId) return ["Unassigned"];
   const segments: string[] = [];
   const visited = new Set<string>();
-  let current: Folder | null = await prisma.folder.findFirst({ where: { id: folderId, userId } });
+  let current: Category | null = await prisma.category.findFirst({ where: { id: categoryId, userId } });
   while (current && !visited.has(current.id)) {
     visited.add(current.id);
-    segments.unshift(sanitizePathSegment(current.name, "Folder"));
-    current = current.parentId ? await prisma.folder.findFirst({ where: { id: current.parentId, userId } }) : null;
+    segments.unshift(sanitizePathSegment(current.name, "Category"));
+    current = current.parentId ? await prisma.category.findFirst({ where: { id: current.parentId, userId } }) : null;
   }
   return segments.length ? segments : ["Unassigned"];
 }
@@ -84,7 +84,7 @@ function assertWithinStorage(relative: string): string {
   return relative;
 }
 
-type PrintLike = Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "folderId" | "userId">;
+type PrintLike = Pick<Print, "id" | "name" | "creator" | "collection" | "tags" | "categoryId" | "userId">;
 
 /** Renders the on-disk relative path for one plate of a print using the storage template.
  * Every user's files live under their own u-<userId> segment beneath the (instance-wide)
@@ -99,7 +99,7 @@ export async function renderPlateStoragePath(
   const tagLabel = (print.tags || []).map((t) => t.trim()).filter(Boolean).join(" + ") || "Untagged";
   const modelLabel = sanitizePathSegment(print.name, "Model");
   const values: Record<string, string> = {
-    folder: (await folderSegments(print.userId, print.folderId)).join("/"),
+    category: (await categorySegments(print.userId, print.categoryId)).join("/"),
     collection: sanitizePathSegment(print.collection || "Uncollected", "Uncollected"),
     tags: sanitizePathSegment(tagLabel, "Untagged"),
     creator: sanitizePathSegment(print.creator || "Unknown creator", "Unknown creator"),
@@ -119,7 +119,7 @@ export async function renderPlateStoragePath(
 export function samplePlateStoragePaths(template: string): [string, string] {
   const safeTemplate = validateStorageTemplate(template);
   const base = {
-    folder: "Props/Workshop",
+    category: "Props/Workshop",
     collection: "Tabletop",
     tags: "Print in place + Useful",
     creator: "Example creator",
@@ -136,44 +136,44 @@ function normalizeName(name: string): string {
   return name.trim().toLowerCase();
 }
 
-/** Throws 409 if `requested` is already taken in this folder (for this user). Used for
+/** Throws 409 if `requested` is already taken in this category (for this user). Used for
  * explicit renames. */
 export async function uniqueModelName(
   userId: string,
   requested: string,
-  folderId: string | null,
+  categoryId: string | null,
   excludeId?: string,
 ): Promise<string> {
   const base = sanitizePathSegment(requested, "Model");
   const existing = await prisma.print.findFirst({
     where: {
       userId,
-      folderId: folderId ?? null,
+      categoryId: categoryId ?? null,
       nameNormalized: normalizeName(base),
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
   });
-  if (existing) throw new HttpError(409, `A print named "${base}" already exists in this folder`);
+  if (existing) throw new HttpError(409, `A print named "${base}" already exists in this category`);
   return base;
 }
 
-/** Auto-suffixes `requested` until it's free in this folder (for this user). Used for
+/** Auto-suffixes `requested` until it's free in this category (for this user). Used for
  * creation/reassignment. */
 export async function availableModelName(
   userId: string,
   requested: string,
-  folderId: string | null,
+  categoryId: string | null,
   excludeId?: string,
 ): Promise<string> {
   const base = sanitizePathSegment(requested, "Model");
   let candidate = base;
   let suffix = 2;
-  // Small folders in practice; a loop of sequential existence checks is simple and correct.
+  // Small categories in practice; a loop of sequential existence checks is simple and correct.
   for (;;) {
     const existing = await prisma.print.findFirst({
       where: {
         userId,
-        folderId: folderId ?? null,
+        categoryId: categoryId ?? null,
         nameNormalized: normalizeName(candidate),
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
@@ -224,7 +224,7 @@ export async function pruneEmptyStorageDirs(start: string): Promise<void> {
 }
 
 /**
- * Re-renders and (if needed) moves every plate of a print after a name/folder/tag/creator/
+ * Re-renders and (if needed) moves every plate of a print after a name/category/tag/creator/
  * collection change. Mirrors MakersVault's relocate_asset, generalized to N plates. Supporting
  * and prepared PrintFiles are never touched here — they live at a fixed bundles/ path.
  */
@@ -251,7 +251,7 @@ export async function relocatePrint(print: PrintLike, plates: Plate[], template?
   }
 }
 
-/** Re-lays-out managed print storage. Pass `userId` for a folder rename/delete affecting only
+/** Re-lays-out managed print storage. Pass `userId` for a category rename/delete affecting only
  * that user's own prints; omit it for an instance-wide storage-template change (admin-only --
  * see requireAdmin on POST /settings/storage), which needs to touch every user's files. */
 export async function reorganizeManagedPrints(

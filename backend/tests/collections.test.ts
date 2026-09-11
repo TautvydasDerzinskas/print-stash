@@ -86,6 +86,53 @@ describe("collections routes", () => {
   });
 });
 
+describe("removing one item from a collection", () => {
+  it("drops membership without deleting the print, leaving other collections untouched", async () => {
+    const uploadRes = await request(app)
+      .post("/api/upload")
+      .set(auth())
+      .attach("files", tmpFile("remove-item.stl", "solid remove-item endsolid"));
+    expect(uploadRes.status).toBe(200);
+    const printId = uploadRes.body.prints[0].id;
+
+    const collectionA = await request(app).post("/api/collections").set(auth()).send({ name: "Remove Item A" });
+    const collectionB = await request(app).post("/api/collections").set(auth()).send({ name: "Remove Item B" });
+    await addPrintsToCollection(collectionA.body.id, [printId]);
+    await addPrintsToCollection(collectionB.body.id, [printId]);
+
+    const removeRes = await request(app)
+      .delete(`/api/collection/${collectionA.body.id}/items/${printId}`)
+      .set(auth());
+    expect(removeRes.status).toBe(200);
+
+    const afterA = await request(app).get(`/api/collection/${collectionA.body.id}`).set(auth());
+    expect(afterA.body.item_count).toBe(0);
+    const afterB = await request(app).get(`/api/collection/${collectionB.body.id}`).set(auth());
+    expect(afterB.body.item_count).toBe(1);
+
+    const printRes = await request(app).get(`/api/print/${printId}`).set(auth());
+    expect(printRes.status).toBe(200);
+
+    await request(app).delete(`/api/print/${printId}`).set(auth());
+    await request(app).delete(`/api/collection/${collectionA.body.id}`).set(auth());
+    await request(app).delete(`/api/collection/${collectionB.body.id}`).set(auth());
+  });
+
+  it("rejects removing from a system collection", async () => {
+    const uploadRes = await request(app)
+      .post("/api/upload")
+      .set(auth())
+      .attach("files", tmpFile("remove-item-fav.stl", "solid remove-item-fav endsolid"));
+    const printId = uploadRes.body.prints[0].id;
+    await request(app).post(`/api/print/${printId}/favorite`).set(auth());
+
+    const res = await request(app).delete(`/api/collection/favorites/items/${printId}`).set(auth());
+    expect(res.status).toBe(400);
+
+    await request(app).delete(`/api/print/${printId}`).set(auth());
+  });
+});
+
 describe("collection/print deletion cascades", () => {
   it("deleting a collection does not delete the models in it", async () => {
     const uploadRes = await request(app)
@@ -115,17 +162,17 @@ describe("collection/print deletion cascades", () => {
   });
 
   it("deleting a model removes it from every category and collection it's assigned to", async () => {
-    const folderRes = await request(app)
-      .post("/api/folders")
+    const categoryRes = await request(app)
+      .post("/api/categories")
       .set(auth())
-      .send({ name: "Cascade Folder" });
-    expect(folderRes.status).toBe(200);
-    const folderId = folderRes.body.id;
+      .send({ name: "Cascade Category" });
+    expect(categoryRes.status).toBe(200);
+    const categoryId = categoryRes.body.id;
 
     const uploadRes = await request(app)
       .post("/api/upload")
       .set(auth())
-      .field("folder_id", folderId)
+      .field("category_id", categoryId)
       .attach("files", tmpFile("remove-me.stl", "solid remove endsolid"));
     expect(uploadRes.status).toBe(200);
     const printId = uploadRes.body.prints[0].id;
@@ -145,8 +192,8 @@ describe("collection/print deletion cascades", () => {
     expect(deleteRes.status).toBe(200);
 
     // Gone from the category it was filed under.
-    const folderPrints = await request(app).get("/api/prints").set(auth()).query({ folder_id: folderId });
-    expect(folderPrints.body.some((p: { id: string }) => p.id === printId)).toBe(false);
+    const categoryPrints = await request(app).get("/api/prints").set(auth()).query({ category_id: categoryId });
+    expect(categoryPrints.body.some((p: { id: string }) => p.id === printId)).toBe(false);
 
     // Gone from the collection it was assigned to.
     const afterDelete = await request(app).get(`/api/collection/${collectionId}`).set(auth());
@@ -155,7 +202,7 @@ describe("collection/print deletion cascades", () => {
     expect(collectionPrints.body).toEqual([]);
 
     await request(app).delete(`/api/collection/${collectionId}`).set(auth());
-    await request(app).delete(`/api/folder/${folderId}`).set(auth());
+    await request(app).delete(`/api/category/${categoryId}`).set(auth());
   });
 });
 

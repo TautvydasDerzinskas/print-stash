@@ -57,12 +57,12 @@ function CollapsedNavIcon({ icon, label, selected, onClick }: {
 
 type Props = {
   isAdmin: boolean;
-  onSelectFolder: (id: string | null) => void;
+  onSelectCategory: (id: string | null) => void;
 };
 
 /** The persistent app-wide navigation rail: Dashboard, Models, Collections, Downloads, and
- *  (for admins) Administration. Folder browsing lives inside the Models page itself, not here. */
-export default function Sidebar({ isAdmin, onSelectFolder }: Props) {
+ *  (for admins) Administration. Category browsing lives inside the Models page itself, not here. */
+export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -101,7 +101,7 @@ export default function Sidebar({ isAdmin, onSelectFolder }: Props) {
   // Always lands on the unfiltered grid, even if a category was selected the last time Models
   // was open -- unlike the in-page back button, which keeps the filter (see useRouteChrome).
   const goToModelsRoot = () => {
-    onSelectFolder(null);
+    onSelectCategory(null);
     navigate("/models");
   };
 

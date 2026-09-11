@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_CATEGORIES, type DefaultCategoryNode } from "../src/seedData/defaultCategories";
 
-// Pure data-shape checks for the starter category tree seedDefaultFolders (folderService.ts)
+// Pure data-shape checks for the starter category tree seedDefaultCategories (categoryService.ts)
 // materializes for every new user -- no DB/app needed, since this only validates the static
-// data itself against the same constraints the rest of the app enforces on real Folder rows.
+// data itself against the same constraints the rest of the app enforces on real Category rows.
 
 function flatten(nodes: DefaultCategoryNode[], depth = 0): Array<{ node: DefaultCategoryNode; depth: number }> {
   return nodes.flatMap((node) => [
@@ -30,7 +30,7 @@ describe("DEFAULT_CATEGORIES", () => {
     expect(DEFAULT_CATEGORIES.length).toBeGreaterThan(0);
   });
 
-  it("never nests more than two levels deep, matching validateParentFolder's limit", () => {
+  it("never nests more than two levels deep, matching validateParentCategory's limit", () => {
     for (const { depth } of all) {
       expect(depth).toBeLessThanOrEqual(1);
     }
@@ -46,7 +46,7 @@ describe("DEFAULT_CATEGORIES", () => {
     expect(duplicateSiblingNames(DEFAULT_CATEGORIES)).toEqual([]);
   });
 
-  it("only uses positive whole-number category ids, matching routes/folders.ts's parseCatIdsInput rules", () => {
+  it("only uses positive whole-number category ids, matching routes/categories.ts's parseCatIdsInput rules", () => {
     for (const { node } of all) {
       for (const ids of [node.makerworldCatIds, node.thingiverseCatIds, node.printablesCatIds]) {
         for (const id of ids ?? []) {

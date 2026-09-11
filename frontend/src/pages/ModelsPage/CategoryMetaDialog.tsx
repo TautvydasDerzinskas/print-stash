@@ -9,31 +9,31 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
-import type { Folder, FolderMetaInput } from "../../api/folders";
+import type { Category, CategoryMetaInput } from "../../api/categories";
 
 type Props = {
-  folder: Folder;
+  category: Category;
   onClose: () => void;
-  onSave: (meta: FolderMetaInput) => Promise<void>;
+  onSave: (meta: CategoryMetaInput) => Promise<void>;
 };
 
 /** Meta title/description/site-category-ids editor for one category, opened from its "details"
  *  icon in the manager. Saving with all fields blank clears the category's metadata entirely.
  *  The three `*CatIds` fields drive auto-categorization on import (see importService.ts's
- *  resolveFolderIdByCategory on the backend): when an imported model's own site category id
- *  matches ANY id listed here, it lands in this category automatically -- a folder can list
+ *  resolveCategoryIdByCategory on the backend): when an imported model's own site category id
+ *  matches ANY id listed here, it lands in this category automatically -- a category can list
  *  several ids per site (e.g. a parent category plus a couple of its subcategories), entered as
- *  plain numbers separated by ";" (parsed and validated server-side by routes/folders.ts's
+ *  plain numbers separated by ";" (parsed and validated server-side by routes/categories.ts's
  *  parseCatIdsInput). A validation failure (a typo, say) is shown inline here and keeps the
  *  dialog open with the edits intact, rather than closing and discarding them. */
-export default function CategoryMetaDialog({ folder, onClose, onSave }: Props) {
+export default function CategoryMetaDialog({ category, onClose, onSave }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const untitledLabel = t("models:categories.untitled");
-  const [title, setTitle] = useState(folder.meta_title ?? "");
-  const [description, setDescription] = useState(folder.meta_description ?? "");
-  const [makerworldCatIds, setMakerworldCatIds] = useState(folder.makerworld_cat_ids);
-  const [thingiverseCatIds, setThingiverseCatIds] = useState(folder.thingiverse_cat_ids);
-  const [printablesCatIds, setPrintablesCatIds] = useState(folder.printables_cat_ids);
+  const [title, setTitle] = useState(category.meta_title ?? "");
+  const [description, setDescription] = useState(category.meta_description ?? "");
+  const [makerworldCatIds, setMakerworldCatIds] = useState(category.makerworld_cat_ids);
+  const [thingiverseCatIds, setThingiverseCatIds] = useState(category.thingiverse_cat_ids);
+  const [printablesCatIds, setPrintablesCatIds] = useState(category.printables_cat_ids);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,7 +59,7 @@ export default function CategoryMetaDialog({ folder, onClose, onSave }: Props) {
   return (
     <Dialog open onClose={() => !saving && onClose()} fullWidth maxWidth="sm">
       <DialogTitle>
-        {t("models:categories.manager.metaDialogTitle", { name: folder.name || untitledLabel })}
+        {t("models:categories.manager.metaDialogTitle", { name: category.name || untitledLabel })}
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 0.5 }}>

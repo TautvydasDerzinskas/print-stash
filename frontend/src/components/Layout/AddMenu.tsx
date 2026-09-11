@@ -19,7 +19,7 @@ import { useUploadImport } from "../uploads/useUploadImport";
 import { useImportJob } from "./ImportJobContext";
 
 type Props = {
-  folderId?: string | null;
+  categoryId?: string | null;
   makerworldCookie?: string | null;
   onUploaded: () => void;
   onUnauthorized?: () => void;
@@ -28,13 +28,13 @@ type Props = {
 /** The top bar's "+ Add" button -- Upload opens the file picker directly, Import opens a
  *  small paste-a-link dialog. Both share the upload/import plumbing (and the zip / multi-plate
  *  / collection follow-up prompts it can trigger) via useUploadImport. */
-export default function AddMenu({ folderId, makerworldCookie, onUploaded, onUnauthorized }: Props) {
+export default function AddMenu({ categoryId, makerworldCookie, onUploaded, onUnauthorized }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
   const [linkValue, setLinkValue] = React.useState("");
   const { isImporting } = useImportJob();
-  const upload = useUploadImport({ folderId, makerworldCookie, onUploaded, onUnauthorized });
+  const upload = useUploadImport({ categoryId, makerworldCookie, onUploaded, onUnauthorized });
 
   const closeMenu = () => setAnchorEl(null);
 

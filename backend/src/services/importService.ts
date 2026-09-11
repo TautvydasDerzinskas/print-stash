@@ -63,7 +63,7 @@ export type ImportRequestBody = ImportCookies & {
   title?: string | null;
   notes?: string | null;
   tags?: string[];
-  folder_id?: string | null;
+  category_id?: string | null;
   filename?: string | null;
   /** Internal only -- never comes from the request body/schema. Set by runCollectionImportJob
    *  on each per-design body it builds for a MakerWorld collection batch import, and read
@@ -412,32 +412,32 @@ export async function attachImportedPreviewImages(
   }
 }
 
-const CATEGORY_SITE_FOLDER_FIELD = {
+const CATEGORY_SITE_CAT_IDS_FIELD = {
   makerworld: "makerworldCatIds",
   thingiverse: "thingiverseCatIds",
   printables: "printablesCatIds",
 } as const;
 
-/** When the caller didn't pick a folder explicitly, checks whether any of the user's folders
+/** When the caller didn't pick a category explicitly, checks whether any of the user's categories
  * declared a `*CatIds` list for this source site overlapping the model's own category ids -- if
- * so, the import auto-lands there instead of staying uncategorized. A folder can list several
+ * so, the import auto-lands there instead of staying uncategorized. A category can list several
  * ids per site (e.g. a parent category plus a couple of its subcategories -- see
- * routes/folders.ts's parseCatIdsInput), so this is a set-overlap ("hasSome") check, not an
+ * routes/categories.ts's parseCatIdsInput), so this is a set-overlap ("hasSome") check, not an
  * equality one. Site-scoped (each site's category ids are an independent namespace) and
  * best-effort: a lookup failure just leaves the print uncategorized rather than failing the
  * import. */
-async function resolveFolderIdByCategory(
+async function resolveCategoryIdByCategory(
   userId: string,
   categorySite: ImportedPageMetadata["categorySite"],
   siteCategoryIds: number[],
 ): Promise<string | null> {
   if (!categorySite || !siteCategoryIds.length) return null;
-  const field = CATEGORY_SITE_FOLDER_FIELD[categorySite];
-  const folder = await prisma.folder.findFirst({
+  const field = CATEGORY_SITE_CAT_IDS_FIELD[categorySite];
+  const category = await prisma.category.findFirst({
     where: { userId, [field]: { hasSome: siteCategoryIds } },
     orderBy: { position: "asc" },
   });
-  return folder?.id ?? null;
+  return category?.id ?? null;
 }
 
 /** Identifies a provider + stable external id for a model URL, when possible -- used to dedup
@@ -570,13 +570,13 @@ async function importThingiverseThing(
   const { meta, plateFiles, galleryImages } = resolved;
 
   const author = await upsertAuthorFromImport(meta.author ?? null);
-  const folderId =
-    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
+  const categoryId =
+    body.category_id ?? (await resolveCategoryIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
   const printMeta: PrintMetaInput = {
     title: body.title ?? meta.title ?? null,
     notes: body.notes ?? meta.description ?? null,
     tags: body.tags && body.tags.length ? body.tags : (meta.tags ?? []),
-    folderId,
+    categoryId,
     creator: meta.creator ?? null,
     authorId: author?.id ?? null,
     sourceProvider: source.provider,
@@ -662,13 +662,13 @@ async function importPrintablesModel(
   }
 
   const author = await upsertAuthorFromImport(meta.author ?? null);
-  const folderId =
-    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
+  const categoryId =
+    body.category_id ?? (await resolveCategoryIdByCategory(userId, meta.categorySite ?? null, meta.siteCategoryIds ?? []));
   const printMeta: PrintMetaInput = {
     title: body.title ?? meta.title ?? null,
     notes: body.notes ?? meta.description ?? null,
     tags: body.tags && body.tags.length ? body.tags : (meta.tags ?? []),
-    folderId,
+    categoryId,
     creator: meta.creator ?? null,
     authorId: author?.id ?? null,
     sourceProvider: source.provider,
@@ -728,13 +728,13 @@ export async function importPrintFromUrl(
 
   const { tempPath, filename, mime, meta } = await downloadImportToTemp(url, body);
   const author = await upsertAuthorFromImport(meta.author);
-  const folderId =
-    body.folder_id ?? (await resolveFolderIdByCategory(userId, meta.categorySite, meta.siteCategoryIds));
+  const categoryId =
+    body.category_id ?? (await resolveCategoryIdByCategory(userId, meta.categorySite, meta.siteCategoryIds));
   const printMeta: PrintMetaInput = {
     title: body.title ?? meta.title ?? null,
     notes: body.notes ?? meta.description ?? null,
     tags: body.tags && body.tags.length ? body.tags : meta.tags,
-    folderId,
+    categoryId,
     creator: meta.creator ?? null,
     authorId: author?.id ?? null,
     sourceProvider: source?.provider ?? null,

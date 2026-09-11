@@ -11,11 +11,13 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DownloadIcon from "@mui/icons-material/Download";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import PlaylistRemoveIcon from "@mui/icons-material/PlaylistRemove";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LaunchIcon from "@mui/icons-material/Launch";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
+import { collectionsApi } from "../../api/collections";
 import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { useConfirm } from "../../components/ConfirmProvider";
 import { importProviderInfo } from "../../constants/importProviders";
@@ -28,6 +30,11 @@ type Props = {
   print: Print;
   onUnauthorized?: () => void;
   onDeleted: () => void;
+  /** Set only while browsing an actual (non-system) collection -- shows "Remove from collection"
+   *  above Delete. Favourites/Browsing History have no real membership to drop (see
+   *  collectionsApi.removeItem's doc comment), so callers there simply don't pass this. */
+  collectionId?: string;
+  onRemovedFromCollection?: () => void;
   /** Lets callers restyle the trigger button -- e.g. the Models grid's hover overlay, which
    *  needs to read over an arbitrary thumbnail instead of the detail page header's plain icon. */
   triggerSx?: SxProps<Theme>;
@@ -39,16 +46,26 @@ type Props = {
 
 /** The "..." menu for a model: "Open in {Slicer}" (launches the user's preferred slicer via its
  *  own URL protocol -- disabled when no slicer is set, or it's set to "Other"), Download (single
- *  file, or a plate picker / zip-all for multi-plate models), Edit (disabled for now), Delete
- *  (confirm, then delete), and -- only for an imported print -- a divider then "Open in
- *  {Provider}" linking back to the original model page. Shared by the model detail page's header
- *  and the Models/Collection grids' per-card hover overlay. */
-export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, triggerSx, iconFontSize }: Props) {
+ *  file, or a plate picker / zip-all for multi-plate models), Edit (disabled for now), "Remove
+ *  from collection" (only while browsing one), Delete (confirm, then delete), and -- only for an
+ *  imported print -- a divider then "Open in {Provider}" linking back to the original model page.
+ *  Shared by the model detail page's header and the Models/Collection grids' per-card hover
+ *  overlay. */
+export default function ModelActionsMenu({
+  print,
+  onUnauthorized,
+  onDeleted,
+  collectionId,
+  onRemovedFromCollection,
+  triggerSx,
+  iconFontSize,
+}: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const slicerPreference = useSlicerPreference();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [removingFromCollection, setRemovingFromCollection] = useState(false);
   const { pickerOpen, setPickerOpen, downloading, handleDownload, downloadPlate, downloadAllZip, sortedPlates } =
     useDownloadPrint(print, onUnauthorized);
 
@@ -57,6 +74,25 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
   const onDownloadClick = () => {
     closeMenu();
     handleDownload();
+  };
+
+  const handleRemoveFromCollection = async () => {
+    closeMenu();
+    if (!collectionId) return;
+    setRemovingFromCollection(true);
+    try {
+      await collectionsApi.removeItem(collectionId, print.id);
+      onRemovedFromCollection?.();
+    } catch (err) {
+      if (err instanceof UnauthorizedError) {
+        onUnauthorized?.();
+        return;
+      }
+      console.error(err);
+      alert(t("models:detail.removeFromCollectionFailed"));
+    } finally {
+      setRemovingFromCollection(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -95,10 +131,10 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
         size="small"
         onClick={e => setAnchorEl(e.currentTarget)}
         aria-label={t("common:more") ?? undefined}
-        disabled={deleting}
+        disabled={deleting || removingFromCollection}
         sx={triggerSx}
       >
-        {deleting ? (
+        {deleting || removingFromCollection ? (
           <CircularProgress size={18} />
         ) : iconFontSize ? (
           <MoreVertIcon sx={{ fontSize: iconFontSize }} />
@@ -123,6 +159,12 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("common:edit")}</ListItemText>
         </MenuItem>
+        {collectionId && (
+          <MenuItem onClick={handleRemoveFromCollection}>
+            <ListItemIcon><PlaylistRemoveIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>{t("models:detail.removeFromCollection")}</ListItemText>
+          </MenuItem>
+        )}
         <MenuItem onClick={handleDelete}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>

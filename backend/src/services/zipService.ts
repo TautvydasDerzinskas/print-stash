@@ -6,7 +6,7 @@ import { prisma } from "../db";
 import { HttpError, sanitizeFilename, guessMimeFromPath } from "../utils/fileUtils";
 import { IMPORT_MAX_BYTES } from "../config";
 import { listZipEntries as listRawZipEntries, readZipEntry } from "../utils/zipReader";
-import { validateParentFolder } from "./folderService";
+import { validateParentCategory } from "./categoryService";
 import { attachImportedPreviewImages } from "./importService";
 import { createPrint, type PrintMetaInput } from "./printCreation";
 import type { Print, Plate, PreviewImage } from "@prisma/client";
@@ -25,9 +25,9 @@ export function normalizeZipEntryPath(name: string): string | null {
   return filtered.join("/");
 }
 
-function sanitizeFolderName(name: string): string {
+function sanitizeCategoryName(name: string): string {
   const cleaned = (name || "").replace(/\0/g, "").trim().replace(/\//g, "_").replace(/\\/g, "_");
-  return cleaned || "folder";
+  return cleaned || "category";
 }
 
 /** Lists every real (non-directory) entry in a zip archive, path-normalized and sorted. */
@@ -44,44 +44,44 @@ export async function listZipEntries(zipPath: string): Promise<ZipEntrySummary[]
   return entries;
 }
 
-type FolderCache = Map<string, string>;
+type CategoryCache = Map<string, string>;
 
-async function getOrCreateFolder(
+async function getOrCreateCategory(
   userId: string,
   parentId: string | null,
   parentKey: string,
   name: string,
-  cache: FolderCache,
+  cache: CategoryCache,
 ): Promise<string> {
   const key = `${parentKey}/${name}`;
   const cached = cache.get(key);
   if (cached) return cached;
-  const existing = await prisma.folder.findFirst({ where: { userId, parentId, name } });
+  const existing = await prisma.category.findFirst({ where: { userId, parentId, name } });
   if (existing) {
     cache.set(key, existing.id);
     return existing.id;
   }
-  const folder = await prisma.folder.create({ data: { userId, name, parentId, tags: [] } });
-  cache.set(key, folder.id);
-  return folder.id;
+  const category = await prisma.category.create({ data: { userId, name, parentId, tags: [] } });
+  cache.set(key, category.id);
+  return category.id;
 }
 
-/** Recreates the zip's directory structure as nested Folders, returning the leaf folder id
+/** Recreates the zip's directory structure as nested Categories, returning the leaf category id
  * for one entry's path. Mirrors MakersVault's resolve_zip_folder_id. */
-export async function resolveZipFolderId(
+export async function resolveZipCategoryId(
   userId: string,
-  baseFolderId: string | null,
+  baseCategoryId: string | null,
   entryPath: string,
-  cache: FolderCache,
+  cache: CategoryCache,
 ): Promise<string | null> {
   const segments = entryPath.split("/").slice(0, -1).filter(Boolean);
-  if (!segments.length) return baseFolderId;
-  let targetId = baseFolderId;
-  let parentKey = baseFolderId || "root";
+  if (!segments.length) return baseCategoryId;
+  let targetId = baseCategoryId;
+  let parentKey = baseCategoryId || "root";
   for (const segment of segments) {
-    const safe = sanitizeFolderName(segment);
+    const safe = sanitizeCategoryName(segment);
     if (!safe) continue;
-    targetId = await getOrCreateFolder(userId, targetId, parentKey, safe, cache);
+    targetId = await getOrCreateCategory(userId, targetId, parentKey, safe, cache);
     parentKey = `${parentKey}/${safe}`;
   }
   return targetId;
@@ -91,7 +91,7 @@ export type ZipExtractOptions = {
   title?: string | null;
   notes?: string | null;
   tags?: string[];
-  folderId?: string | null;
+  categoryId?: string | null;
   creator?: string | null;
   authorId?: string | null;
   previewImageUrl?: string | null;
@@ -100,8 +100,8 @@ export type ZipExtractOptions = {
 
 /**
  * Extracts selected zip entries into individual single-plate Prints (one per entry). Each
- * entry lands in a Folder tree recreated from its path within the zip (nested under
- * options.folderId, if any). Returns the created prints plus the list of entry names that
+ * entry lands in a Category tree recreated from its path within the zip (nested under
+ * options.categoryId, if any). Returns the created prints plus the list of entry names that
  * failed to extract (missing, a directory, or over the size cap).
  */
 export async function extractZipEntriesToPrints(
@@ -121,8 +121,8 @@ export async function extractZipEntriesToPrints(
   }
   if (!ordered.length) throw new HttpError(400, "No zip entries selected");
 
-  if (options.folderId) {
-    await validateParentFolder(userId, options.folderId);
+  if (options.categoryId) {
+    await validateParentCategory(userId, options.categoryId);
   }
 
   const raw = await listRawZipEntries(zipPath);
@@ -135,7 +135,7 @@ export async function extractZipEntriesToPrints(
 
   const prints: (Print & { plates: Plate[]; previewImages: PreviewImage[] })[] = [];
   const failed: string[] = [];
-  const folderCache: FolderCache = new Map();
+  const categoryCache: CategoryCache = new Map();
   let processedCount = 0;
 
   for (const entryName of ordered) {
@@ -146,7 +146,7 @@ export async function extractZipEntriesToPrints(
     }
     let tempPath: string | null = null;
     try {
-      const targetFolderId = await resolveZipFolderId(userId, options.folderId ?? null, entryName, folderCache);
+      const targetCategoryId = await resolveZipCategoryId(userId, options.categoryId ?? null, entryName, categoryCache);
       const filename = sanitizeFilename(path.basename(entryName));
       const buffer = await readZipEntry(zipPath, entryName, IMPORT_MAX_BYTES);
       if (!buffer) throw new Error("Extracted file exceeds size limit or could not be read");
@@ -164,7 +164,7 @@ export async function extractZipEntriesToPrints(
         title: resolvedTitle ?? null,
         notes: options.notes ?? null,
         tags: options.tags ?? [],
-        folderId: targetFolderId,
+        categoryId: targetCategoryId,
         creator: options.creator ?? null,
         authorId: options.authorId ?? null,
       };

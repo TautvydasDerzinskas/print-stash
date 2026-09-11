@@ -61,4 +61,15 @@ export const collectionsApi = {
     const res = await fetch(`${apiBase()}/collection/${id}`, { method: "DELETE", headers: authHeaders() });
     assertOk(res, "Delete collection failed");
   },
+
+  /** Drops one print's membership in a (real, non-system) collection -- the print itself is
+   *  untouched. Used by the model card's "Remove from collection" menu item, shown only while
+   *  browsing an actual collection. */
+  removeItem: async (collectionId: string, printId: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/collection/${collectionId}/items/${printId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    assertOk(res, "Remove from collection failed");
+  },
 };

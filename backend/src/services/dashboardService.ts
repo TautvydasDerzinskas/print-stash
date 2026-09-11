@@ -164,7 +164,7 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
       prisma.collection.count({ where: { userId } }),
       prisma.print.count({ where: { userId } }),
       prisma.print.groupBy({ by: ["authorId"], where: { userId, authorId: { not: null } } }),
-      prisma.folder.count({ where: { userId } }),
+      prisma.category.count({ where: { userId } }),
       fetchTopViewed(userId, TOP_MODELS_PREVIEW),
       fetchTopPrinted(userId, TOP_MODELS_PREVIEW),
       fetchTopAuthors(userId, TOP_AUTHORS_PREVIEW),

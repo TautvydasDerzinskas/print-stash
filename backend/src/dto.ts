@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import type { Author, Collection, Folder, ImportJob, Notification, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
+import type { Author, Collection, Category, ImportJob, Notification, Plate, PreviewImage, Print, PrintFile, User } from "@prisma/client";
 import { plateThumbExists, plateThumbPath } from "./services/printService";
 import { previewImageExists, previewImagePath } from "./services/previewImageService";
 import { preparedFilename } from "./services/preparedPrint";
@@ -101,11 +101,11 @@ export type PrintOut = {
   author: AuthorOut | null;
   collection: string | null;
   tags: string[];
-  folder_id: string | null;
-  // Only populated by the single-print detail fetch (printOutById) -- see toPrintOut's `folder`
-  // param. Null both when there's no folder and when the caller didn't load one (list endpoints
+  category_id: string | null;
+  // Only populated by the single-print detail fetch (printOutById) -- see toPrintOut's `category`
+  // param. Null both when there's no category and when the caller didn't load one (list endpoints
   // skip the extra join since nothing there renders it).
-  folder_name: string | null;
+  category_name: string | null;
   created_at: string;
   storage_path: string | null;
   plates: PlateOut[];
@@ -125,7 +125,7 @@ export type PrintOut = {
   source_url: string | null;
 };
 
-export type FolderOut = {
+export type CategoryOut = {
   id: string;
   name: string;
   tags: string[];
@@ -134,7 +134,7 @@ export type FolderOut = {
   meta_title: string | null;
   meta_description: string | null;
   // Semicolon-separated, e.g. "800;71;1001" -- same format the category manager dialog reads
-  // and writes (see routes/folders.ts's parseCatIdsInput), so the frontend can bind the field
+  // and writes (see routes/categories.ts's parseCatIdsInput), so the frontend can bind the field
   // straight to a text input with no extra parsing. Empty string when none are set.
   makerworld_cat_ids: string;
   thingiverse_cat_ids: string;
@@ -210,7 +210,7 @@ export function toPrintOut(
   preparedFile: PrintFile | null,
   author?: Author | null,
   previewImages: PreviewImage[] = [],
-  folder?: Folder | null,
+  category?: Category | null,
 ): PrintOut {
   const sortedPlates = plates.toSorted((a, b) => a.position - b.position);
   const plateOuts = sortedPlates.map((p) => toPlateOut(print.id, p));
@@ -264,8 +264,8 @@ export function toPrintOut(
     author: author ? toAuthorOut(author) : null,
     collection: print.collection,
     tags: print.tags,
-    folder_id: print.folderId,
-    folder_name: folder?.name ?? null,
+    category_id: print.categoryId,
+    category_name: category?.name ?? null,
     created_at: print.createdAt.toISOString(),
     storage_path: storageParentDir(sortedPlates),
     plates: plateOuts,
@@ -341,18 +341,18 @@ function formatCatIds(ids: number[]): string {
   return ids.join(";");
 }
 
-export function toFolderOut(folder: Folder): FolderOut {
+export function toCategoryOut(category: Category): CategoryOut {
   return {
-    id: folder.id,
-    name: folder.name,
-    tags: folder.tags,
-    parent_id: folder.parentId,
-    position: folder.position,
-    meta_title: folder.metaTitle,
-    meta_description: folder.metaDescription,
-    makerworld_cat_ids: formatCatIds(folder.makerworldCatIds),
-    thingiverse_cat_ids: formatCatIds(folder.thingiverseCatIds),
-    printables_cat_ids: formatCatIds(folder.printablesCatIds),
+    id: category.id,
+    name: category.name,
+    tags: category.tags,
+    parent_id: category.parentId,
+    position: category.position,
+    meta_title: category.metaTitle,
+    meta_description: category.metaDescription,
+    makerworld_cat_ids: formatCatIds(category.makerworldCatIds),
+    thingiverse_cat_ids: formatCatIds(category.thingiverseCatIds),
+    printables_cat_ids: formatCatIds(category.printablesCatIds),
   };
 }
 

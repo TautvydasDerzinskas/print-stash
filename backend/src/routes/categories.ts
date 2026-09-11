@@ -5,94 +5,94 @@ import { requireAuth } from "../auth";
 import { HttpError } from "../utils/fileUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { validateParentFolder } from "../services/folderService";
+import { validateParentCategory } from "../services/categoryService";
 import { availableModelName, reorganizeManagedPrints } from "../services/printService";
-import { toFolderOut } from "../dto";
+import { toCategoryOut } from "../dto";
 import { sendPrintsZip } from "../services/downloadZip";
 import type { Prisma } from "@prisma/client";
 
 const router = Router();
 router.use(requireAuth);
 
-const folderSchema = z.object({
+const categorySchema = z.object({
   name: z.string().min(1),
   tags: z.array(z.string()).default([]),
   parent_id: z.string().nullable().optional(),
 });
 
 router.get(
-  "/folders",
+  "/categories",
   asyncHandler(async (req, res) => {
-    const folders = await prisma.folder.findMany({
+    const categories = await prisma.category.findMany({
       where: { userId: req.userId },
       orderBy: [{ position: "asc" }, { name: "asc" }],
     });
-    res.json(folders.map(toFolderOut));
+    res.json(categories.map(toCategoryOut));
   }),
 );
 
-const reorderSchema = z.object({ folder_ids: z.array(z.string()).min(1) });
+const reorderSchema = z.object({ category_ids: z.array(z.string()).min(1) });
 
 router.post(
-  "/folders/reorder",
+  "/categories/reorder",
   asyncHandler(async (req, res) => {
     const body = parseBody(reorderSchema, req.body);
-    const folders = await prisma.folder.findMany({
-      where: { id: { in: body.folder_ids }, userId: req.userId },
+    const categories = await prisma.category.findMany({
+      where: { id: { in: body.category_ids }, userId: req.userId },
     });
-    if (folders.length !== body.folder_ids.length) {
-      throw new HttpError(400, "folder_ids must reference existing categories");
+    if (categories.length !== body.category_ids.length) {
+      throw new HttpError(400, "category_ids must reference existing categories");
     }
-    const parentIds = new Set(folders.map((f) => f.parentId ?? null));
+    const parentIds = new Set(categories.map((f) => f.parentId ?? null));
     if (parentIds.size > 1) {
-      throw new HttpError(400, "folder_ids must all share the same parent category");
+      throw new HttpError(400, "category_ids must all share the same parent category");
     }
     const [parentId] = parentIds;
-    const siblings = await prisma.folder.findMany({ where: { userId: req.userId, parentId } });
-    if (siblings.length !== body.folder_ids.length) {
-      throw new HttpError(400, "folder_ids must contain exactly this category's current siblings");
+    const siblings = await prisma.category.findMany({ where: { userId: req.userId, parentId } });
+    if (siblings.length !== body.category_ids.length) {
+      throw new HttpError(400, "category_ids must contain exactly this category's current siblings");
     }
     await prisma.$transaction(
-      body.folder_ids.map((id, idx) => prisma.folder.update({ where: { id }, data: { position: idx } })),
+      body.category_ids.map((id, idx) => prisma.category.update({ where: { id }, data: { position: idx } })),
     );
     res.json({ ok: true });
   }),
 );
 
 router.post(
-  "/folders",
+  "/categories",
   asyncHandler(async (req, res) => {
-    const body = parseBody(folderSchema, req.body);
-    const parentId = await validateParentFolder(req.userId!, body.parent_id ?? null);
-    const folder = await prisma.folder.create({
+    const body = parseBody(categorySchema, req.body);
+    const parentId = await validateParentCategory(req.userId!, body.parent_id ?? null);
+    const category = await prisma.category.create({
       data: { userId: req.userId!, name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
     });
-    res.json(toFolderOut(folder));
+    res.json(toCategoryOut(category));
   }),
 );
 
 router.patch(
-  "/folder/:id",
+  "/category/:id",
   asyncHandler(async (req, res) => {
-    const body = parseBody(folderSchema, req.body);
-    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!folder) throw new HttpError(404, "Not found");
-    const parentId = await validateParentFolder(req.userId!, body.parent_id ?? null, folder.id);
-    const updated = await prisma.folder.update({
-      where: { id: folder.id },
+    const body = parseBody(categorySchema, req.body);
+    const category = await prisma.category.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!category) throw new HttpError(404, "Not found");
+    const parentId = await validateParentCategory(req.userId!, body.parent_id ?? null, category.id);
+    const updated = await prisma.category.update({
+      where: { id: category.id },
       data: { name: body.name, tags: body.tags.map((t) => t.trim()).filter(Boolean), parentId },
     });
     await reorganizeManagedPrints(undefined, req.userId);
-    res.json(toFolderOut(updated));
+    res.json(toCategoryOut(updated));
   }),
 );
 
 const MAX_CAT_IDS = 50;
 
 /** Parses the category manager's "800;71;1001"-style text field into the int array actually
- * stored on Folder.*CatIds -- a folder can list several ids per site (e.g. a parent category
+ * stored on Category.*CatIds -- a category can list several ids per site (e.g. a parent category
  * plus a couple of its subcategories), matched by overlap at import time (see importService.ts's
- * resolveFolderIdByCategory). Blank/whitespace-only input clears the field. Stray/duplicate
+ * resolveCategoryIdByCategory). Blank/whitespace-only input clears the field. Stray/duplicate
  * separators are tolerated (e.g. "800;;71;" or "800;800;71") since that's an easy typo to make
  * in a free-text field and there's nothing genuinely ambiguous about it; anything that isn't a
  * positive whole number is rejected with a message naming the exact bad token, so a typo doesn't
@@ -123,7 +123,7 @@ function parseCatIdsInput(raw: string | null | undefined): number[] {
 }
 
 const catIdsField = z.string().trim().max(1000).nullable().optional();
-const folderMetaSchema = z.object({
+const categoryMetaSchema = z.object({
   meta_title: z.string().trim().max(200).nullable().optional(),
   meta_description: z.string().trim().max(2000).nullable().optional(),
   makerworld_cat_ids: catIdsField,
@@ -132,13 +132,13 @@ const folderMetaSchema = z.object({
 });
 
 router.patch(
-  "/folder/:id/meta",
+  "/category/:id/meta",
   asyncHandler(async (req, res) => {
-    const body = parseBody(folderMetaSchema, req.body);
-    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!folder) throw new HttpError(404, "Not found");
-    const updated = await prisma.folder.update({
-      where: { id: folder.id },
+    const body = parseBody(categoryMetaSchema, req.body);
+    const category = await prisma.category.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!category) throw new HttpError(404, "Not found");
+    const updated = await prisma.category.update({
+      where: { id: category.id },
       data: {
         metaTitle: body.meta_title || null,
         metaDescription: body.meta_description || null,
@@ -147,25 +147,25 @@ router.patch(
         printablesCatIds: parseCatIdsInput(body.printables_cat_ids),
       },
     });
-    res.json(toFolderOut(updated));
+    res.json(toCategoryOut(updated));
   }),
 );
 
 router.delete(
-  "/folder/:id",
+  "/category/:id",
   asyncHandler(async (req, res) => {
-    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!folder) throw new HttpError(404, "Not found");
+    const category = await prisma.category.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!category) throw new HttpError(404, "Not found");
 
-    await prisma.folder.updateMany({
-      where: { parentId: folder.id, userId: req.userId },
+    await prisma.category.updateMany({
+      where: { parentId: category.id, userId: req.userId },
       data: { parentId: null },
     });
 
-    const prints = await prisma.print.findMany({ where: { folderId: folder.id, userId: req.userId } });
+    const prints = await prisma.print.findMany({ where: { categoryId: category.id, userId: req.userId } });
     for (const print of prints) {
       const nextName = await availableModelName(req.userId!, print.name, null, print.id);
-      const data: Prisma.PrintUpdateInput = { folder: { disconnect: true } };
+      const data: Prisma.PrintUpdateInput = { category: { disconnect: true } };
       if (nextName !== print.name) {
         data.name = nextName;
         data.nameNormalized = nextName.trim().toLowerCase();
@@ -174,22 +174,22 @@ router.delete(
       await prisma.print.update({ where: { id: print.id }, data });
     }
 
-    await prisma.folder.delete({ where: { id: folder.id } });
+    await prisma.category.delete({ where: { id: category.id } });
     await reorganizeManagedPrints(undefined, req.userId);
     res.json({ ok: true });
   }),
 );
 
 router.get(
-  "/folder/:id/download",
+  "/category/:id/download",
   asyncHandler(async (req, res) => {
-    const folder = await prisma.folder.findFirst({ where: { id: req.params.id, userId: req.userId } });
-    if (!folder) throw new HttpError(404, "Folder not found");
+    const category = await prisma.category.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!category) throw new HttpError(404, "Category not found");
     const prints = await prisma.print.findMany({
-      where: { folderId: folder.id, userId: req.userId },
-      include: { plates: { orderBy: { position: "asc" } }, folder: true },
+      where: { categoryId: category.id, userId: req.userId },
+      include: { plates: { orderBy: { position: "asc" } }, category: true },
     });
-    const downloadName = `${(folder.name || "folder").replace(/ /g, "_").slice(0, 50) || "folder"}.zip`;
+    const downloadName = `${(category.name || "category").replace(/ /g, "_").slice(0, 50) || "category"}.zip`;
     await sendPrintsZip(res, prints, downloadName);
   }),
 );
