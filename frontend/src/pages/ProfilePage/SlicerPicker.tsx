@@ -15,6 +15,7 @@ import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import { UnauthorizedError } from "../../api/client";
 import { settingsApi } from "../../api/settings";
 import { setCachedSlicerPreference } from "../../hooks/useSlicerPreference";
+import { isBridgedSlicer } from "../../utils/slicerLaunch";
 
 type Props = {
   onUnauthorized?: () => void;
@@ -88,9 +89,11 @@ export default function SlicerPicker({ onUnauthorized }: Props) {
           </FormControl>
           {saving && <CircularProgress size={16} />}
         </Stack>
-        {value === "bambustudio" && (
+        {isBridgedSlicer(value) && (
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 1 }}>
-            {t("profile.slicer.bridgeRequiredPrefix")}{" "}
+            {t("profile.slicer.bridgeRequiredPrefix", {
+              slicer: SLICER_OPTIONS.find(opt => opt.id === value)?.label ?? value,
+            })}{" "}
             <Link component={RouterLink} to="/downloads">{t("profile.slicer.bridgeRequiredLink")}</Link>
           </Typography>
         )}

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -27,6 +29,33 @@ func TestRedactURLHidesTokenQueryValue(t *testing.T) {
 	}
 	if !strings.Contains(redacted, "token=REDACTED") {
 		t.Fatalf("redacted URL does not contain the marker: %s", redacted)
+	}
+}
+
+func TestFindWindowsCommandResolvesVersionedCuraInstall(t *testing.T) {
+	base := t.TempDir()
+	t.Setenv("LOCALAPPDATA", base)
+	t.Setenv("ProgramFiles", "")
+	t.Setenv("ProgramFiles(x86)", "")
+
+	// Cura's install dir embeds its version, so only a glob (see findWindowsCommand) resolves it.
+	// The older version's dir has no exe in it, to confirm an empty match is skipped rather than
+	// returned as a false positive.
+	older := filepath.Join(base, "UltiMaker Cura 5.7")
+	newer := filepath.Join(base, "UltiMaker Cura 5.8")
+	if err := os.MkdirAll(older, 0755); err != nil {
+		t.Fatalf("mkdir older: %v", err)
+	}
+	if err := os.MkdirAll(newer, 0755); err != nil {
+		t.Fatalf("mkdir newer: %v", err)
+	}
+	exePath := filepath.Join(newer, "UltiMaker-Cura.exe")
+	if err := os.WriteFile(exePath, nil, 0644); err != nil {
+		t.Fatalf("write exe: %v", err)
+	}
+
+	if got := findWindowsCommand("cura", windowsCandidates()); got != exePath {
+		t.Fatalf("findWindowsCommand(\"cura\", ...) = %q, expected %q", got, exePath)
 	}
 }
 

@@ -190,7 +190,7 @@
         "description": "Your preferred slicer, used by a model's \"Open in Slicer\" action to launch it directly via that slicer's own link (e.g. bambustudio://).",
         "label": "Slicer",
         "failed": "Failed to save -- try again.",
-        "bridgeRequiredPrefix": "Bambu Studio needs the Thingport Bridge helper app installed to open files from here --",
+        "bridgeRequiredPrefix": "{{slicer}} needs the Thingport Bridge helper app installed to open files from here --",
         "bridgeRequiredLink": "get it from the Download page."
       }
     },

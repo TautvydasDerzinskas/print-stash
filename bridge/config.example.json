@@ -8,6 +8,12 @@
     "orcaslicer": {
       "command": "/usr/bin/orca-slicer",
       "args": []
+    },
+    "prusaslicer": {
+      "command": "/usr/bin/prusa-slicer"
+    },
+    "cura": {
+      "command": "/usr/bin/cura"
     }
   }
 }

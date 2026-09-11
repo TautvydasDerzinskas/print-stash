@@ -4,11 +4,13 @@ export type SlicerOption = { id: string; label: string };
 // (e.g. bambustudio://) -- the only ones a future "open in {slicer}" launch could actually use.
 // IDs must match backend's services/slicerPreferenceService.ts SLICER_IDS, and (id !== "other")
 // must equal the exact scheme the slicer registers -- e.g. Creality Print's is "crealityprintlink"
-// (crealityprintlink://open?file=...), not "creality", per its libslic3r/Utils.hpp.
+// (crealityprintlink://open?file=...), not "creality", per its libslic3r/Utils.hpp. Some of these
+// ids don't route through their own scheme at all -- see utils/slicerLaunch.ts's BRIDGED_SLICERS.
 export const SLICER_OPTIONS: SlicerOption[] = [
   { id: "bambustudio", label: "Bambu Studio" },
   { id: "orcaslicer", label: "OrcaSlicer" },
   { id: "prusaslicer", label: "PrusaSlicer" },
+  { id: "cura", label: "Cura" },
   { id: "crealityprintlink", label: "Creality Print" },
   { id: "other", label: "Other / Manual" },
 ];

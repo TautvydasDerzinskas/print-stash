@@ -1,9 +1,10 @@
 import { prisma } from "../db";
 
-// Slicers that register their own URL protocol for opening a remote model directly (e.g.
-// bambustudio://) -- the only ones worth offering here, since the whole point of this preference
-// is a future "open in {slicer}" launch via that protocol. Anything else falls under "other".
-export const SLICER_IDS = ["bambustudio", "orcaslicer", "prusaslicer", "crealityprintlink", "other"] as const;
+// Slicers offered for a future "open in {slicer}" launch. Most register their own URL protocol
+// (e.g. bambustudio://); a couple (bambustudio, prusaslicer, cura) instead route through the
+// Thingport Bridge helper -- see frontend's utils/slicerLaunch.ts BRIDGED_SLICERS for why.
+// Anything else falls under "other".
+export const SLICER_IDS = ["bambustudio", "orcaslicer", "prusaslicer", "cura", "crealityprintlink", "other"] as const;
 export type SlicerId = (typeof SLICER_IDS)[number];
 
 function isSlicerId(value: string): value is SlicerId {

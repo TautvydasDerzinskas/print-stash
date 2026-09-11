@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 )
@@ -28,10 +29,13 @@ type Config struct {
 	Slicers     map[string]SlicerConfig `json:"slicers,omitempty"`
 }
 
-// scheme is only for protocols Thingport can't hand off directly to a slicer's own URL handler
-// (Bambu Studio's bambustudio:// only accepts links from an allowlist of domains it trusts, which
-// thingport's own download URLs aren't on). OrcaSlicer and PrusaSlicer accept any HTTP(S) URL
-// through their own protocol, so they're launched straight from the browser and never reach here.
+// scheme is only for protocols Thingport can't hand off directly to a slicer's own URL handler:
+// Bambu Studio's bambustudio:// and PrusaSlicer's prusaslicer:// both only accept links from a
+// domain allowlist (Bambu Lab's storefronts; printables.com plus sites Prusa has manually
+// whitelisted) that a self-hosted Thingport instance is never on, and Cura's cura://open only
+// works when its OS protocol registration actually took (unreliable across its
+// AppImage/Flatpak/Microsoft Store builds). OrcaSlicer accepts any HTTP(S) URL through its own
+// protocol, so it's launched straight from the browser and never reaches here.
 const scheme = "thingport"
 
 func main() {
@@ -309,6 +313,16 @@ func findWindowsCommand(id string, candidates map[string][]string) string {
 		}
 		for _, base := range bases {
 			full := filepath.Join(base, rel)
+			// Cura's install directory embeds its version (e.g. "UltiMaker Cura 5.8"), so its
+			// candidate is a glob pattern rather than a fixed path -- everyone else's is a plain
+			// path and fileExists() is enough.
+			if strings.Contains(rel, "*") {
+				if matches, err := filepath.Glob(full); err == nil && len(matches) > 0 {
+					sort.Strings(matches)
+					return matches[len(matches)-1]
+				}
+				continue
+			}
 			if fileExists(full) {
 				return full
 			}
@@ -340,6 +354,14 @@ func windowsCandidates() map[string][]string {
 		"bambustudio": {"Bambu Studio\\BambuStudio.exe"},
 		"orcaslicer":  {"OrcaSlicer\\OrcaSlicer.exe"},
 		"prusaslicer": {"PrusaSlicer\\PrusaSlicer.exe"},
+		// UltiMaker/Ultimaker Cura's install dir embeds its version number, so these are globs
+		// (see findWindowsCommand) rather than fixed paths; the rebrand from "Ultimaker" to
+		// "UltiMaker" happened around 5.7, so both spellings are worth trying.
+		"cura": {
+			"UltiMaker Cura */UltiMaker-Cura.exe",
+			"Ultimaker Cura */UltiMaker-Cura.exe",
+			"Ultimaker Cura */Cura.exe",
+		},
 	}
 }
 
@@ -348,6 +370,10 @@ func linuxCandidates() map[string][]string {
 		"bambustudio": {"bambu-studio", "BambuStudio"},
 		"orcaslicer":  {"orca-slicer", "OrcaSlicer"},
 		"prusaslicer": {"prusa-slicer", "PrusaSlicer"},
+		// Only catches a PATH-visible install (e.g. via snap, which symlinks into /snap/bin) --
+		// AppImage and Flatpak builds aren't discoverable this way and need a config.json entry
+		// or THINGPORT_SLICER_CURA override instead (see bridge/README.md).
+		"cura": {"cura", "UltiMaker-Cura"},
 	}
 }
 
@@ -356,6 +382,8 @@ func macCandidates() map[string][]string {
 		"bambustudio": {"/Applications/BambuStudio.app"},
 		"orcaslicer":  {"/Applications/OrcaSlicer.app"},
 		"prusaslicer": {"/Applications/PrusaSlicer.app", "/Applications/Original Prusa Drivers/PrusaSlicer.app"},
+		// Rebranded from "Ultimaker Cura" to "UltiMaker Cura" around version 5.7.
+		"cura": {"/Applications/UltiMaker Cura.app", "/Applications/Ultimaker Cura.app"},
 	}
 }
 

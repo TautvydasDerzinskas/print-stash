@@ -1,12 +1,19 @@
 # Thingport Bridge
 
 This helper registers the custom protocol `thingport://`, downloads the requested file, and
-launches it in the slicer Thingport asked for. It exists because Bambu Studio's own
-`bambustudio://` handler only accepts links from a small allowlist of domains it trusts (Bambu
-Lab's own storefronts, mainly) -- a self-hosted Thingport instance is never on that list, so
-"Open in Bambu Studio" silently does nothing without this bridge in between. OrcaSlicer and
-PrusaSlicer's protocol handlers accept any HTTP(S) URL directly, so they're launched straight
-from the browser and never need it.
+launches it in the slicer Thingport asked for. It exists because some slicers' own URL protocol
+handlers won't take a link straight from a self-hosted Thingport instance:
+
+- Bambu Studio's `bambustudio://` and PrusaSlicer's `prusaslicer://` both only accept links from a
+  domain allowlist (Bambu Lab's own storefronts; printables.com plus a handful of sites Prusa has
+  manually whitelisted, respectively) that a self-hosted instance is never on, so "Open in
+  {Slicer}" would otherwise silently do nothing.
+- Cura's `cura://open` handler isn't domain-restricted, but its OS protocol registration is
+  unreliable across its AppImage/Flatpak/Microsoft Store builds, so it's routed the same way for
+  consistency.
+
+OrcaSlicer's protocol handler accepts any HTTP(S) URL directly with no such restriction, so it's
+launched straight from the browser and never needs this bridge.
 
 Protocol format:
 `thingport://open?url=<download-url>&slicer=<id>&filename=<name>`
@@ -158,9 +165,15 @@ Environment override (per slicer): `THINGPORT_SLICER_BAMBUSTUDIO=/path/to/BambuS
 ## Slicer IDs
 
 - bambustudio
-- orcaslicer
+- orcaslicer (not actually routed through the Bridge -- see above -- but still a valid `slicer=`
+  value and `config.json`/env-var override key)
 - prusaslicer
+- cura
 - other (opens with the OS default app)
+
+Cura's AppImage and Flatpak builds aren't on `PATH` and won't be auto-detected. If "Open in Cura"
+falls back to opening with your OS default app, add a `cura` entry to `config.json` (see
+`config.example.json`) or set `THINGPORT_SLICER_CURA=/path/to/cura`.
 
 ## Testing
 

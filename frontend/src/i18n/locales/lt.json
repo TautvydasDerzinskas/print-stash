@@ -190,7 +190,7 @@
         "description": "Jūsų pageidaujama pjaustyklė, naudojama modelio veiksmo „Atverti pjaustyklėje“, kad modelis būtų atidarytas tiesiogiai per tos pjaustyklės nuorodą (pvz. bambustudio://).",
         "label": "Pjaustyklė",
         "failed": "Nepavyko išsaugoti -- bandykite dar kartą.",
-        "bridgeRequiredPrefix": "Bambu Studio failams atverti iš čia reikalinga įdiegta Thingport Bridge pagalbinė programa --",
+        "bridgeRequiredPrefix": "{{slicer}} failams atverti iš čia reikalinga įdiegta Thingport Bridge pagalbinė programa --",
         "bridgeRequiredLink": "atsisiųskite ją atsisiuntimo puslapyje."
       }
     },
