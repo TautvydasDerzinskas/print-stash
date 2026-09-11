@@ -59,7 +59,19 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
   const authorName = print.author?.name || print.author?.handle || print.creator || null;
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "12px", position: { xs: "static", md: "sticky" }, top: 16 }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        borderRadius: "12px",
+        position: { xs: "static", md: "sticky" },
+        // TopBar is sticky too (see its own doc comment) and sits above this in stacking order --
+        // sticking at a fixed 16px from the viewport top would land this panel right underneath
+        // it once both are pinned simultaneously. --topbar-height (set by TopBar itself, since it
+        // can wrap taller on narrow widths) keeps this just below it instead.
+        top: "calc(var(--topbar-height, 64px) + 16px)",
+      }}
+    >
       <Stack spacing={2}>
         <Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
@@ -47,8 +47,44 @@ export default function TopBar({
   onLogout,
 }: Props) {
   const { t } = useTranslation("app");
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Publishes this bar's real rendered height (it can wrap to two lines on narrow widths, so a
+  // guessed constant would drift) as a CSS var on the document root -- any sticky element further
+  // down the page (currently just ModelSidePanel) reads it to stick just below the bar instead of
+  // guessing a fixed offset and ending up stuck underneath it once both are pinned at once.
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const update = () => document.documentElement.style.setProperty("--topbar-height", `${el.offsetHeight}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1.5, flexWrap: "wrap", mb: 2 }}>
+    <Box
+      ref={rootRef}
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 1.5,
+        flexWrap: "wrap",
+        mb: 2,
+        // Pinned to the top of the window (the app scrolls at that level, not inside `main` --
+        // see AppLayout's own comment on why overflow was removed from main) so the title, back
+        // button, and the Add/Notifications/User cluster stay reachable no matter how far a long
+        // page (e.g. the model detail page's sticky side panel) gets scrolled. Needs its own
+        // opaque background, exactly matching the shell's, or scrolled content would show through
+        // behind it instead of being covered.
+        position: "sticky",
+        top: 0,
+        zIndex: (muiTheme) => muiTheme.zIndex.appBar,
+        bgcolor: (muiTheme) => muiTheme.thingport.pageBackground,
+      }}
+    >
       <Stack direction="row" alignItems="center" spacing={1} minWidth={0}>
         {onBack && (
           <Tooltip title={t("shell.backToLibrary")}>
