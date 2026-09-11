@@ -66,10 +66,12 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
         borderRadius: "12px",
         position: { xs: "static", md: "sticky" },
         // TopBar is sticky too (see its own doc comment) and sits above this in stacking order --
-        // sticking at a fixed 16px from the viewport top would land this panel right underneath
+        // sticking at a fixed offset from the viewport top would land this panel right underneath
         // it once both are pinned simultaneously. --topbar-height (set by TopBar itself, since it
-        // can wrap taller on narrow widths) keeps this just below it instead.
-        top: "calc(var(--topbar-height, 64px) + 16px)",
+        // can wrap taller on narrow widths) keeps this just below it instead -- no extra gap added
+        // on top, since TopBar's own pb: 2 already is that gap, now that it's real padding on the
+        // sticky element itself rather than a separate margin outside it.
+        top: "var(--topbar-height, 80px)",
       }}
     >
       <Stack spacing={2}>

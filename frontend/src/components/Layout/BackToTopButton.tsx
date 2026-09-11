@@ -9,7 +9,7 @@ import { useImportJob } from "./ImportJobContext";
 
 // Appears once enough of the page has scrolled past that "a bit down" reads as true, not on the
 // first pixel of scroll -- matches the threshold feel of most scroll-to-top buttons.
-const SCROLL_SHOW_THRESHOLD = 300;
+const SCROLL_SHOW_THRESHOLD = 200;
 
 function scrollToTop() {
   window.scrollTo({ top: 0, behavior: "smooth" });

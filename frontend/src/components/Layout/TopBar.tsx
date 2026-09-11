@@ -72,7 +72,14 @@ export default function TopBar({
         alignItems: "center",
         gap: 1.5,
         flexWrap: "wrap",
-        mb: 2,
+        // Both of these used to live on `main` (pt) / as this bar's own margin (mb) -- moved to
+        // padding on this box itself so they're part of what's actually pinned. As margin/an
+        // ancestor's padding, that space isn't covered by this bar's own background, so it either
+        // visibly disappeared once scrolling clipped it out from under `main`'s padding (the top
+        // one) or left a seam between this bar and the content below it that isn't really "this
+        // bar" (the bottom one) -- padding keeps both included in its own painted, sticky box.
+        pt: 2,
+        pb: 2,
         // Pinned to the top of the window (the app scrolls at that level, not inside `main` --
         // see AppLayout's own comment on why overflow was removed from main) so the title, back
         // button, and the Add/Notifications/User cluster stay reachable no matter how far a long
