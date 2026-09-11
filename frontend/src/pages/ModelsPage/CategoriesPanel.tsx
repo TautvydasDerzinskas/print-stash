@@ -13,6 +13,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import type { Folder, FolderMetaInput } from "../../api/folders";
+import { translateFolderDisplay } from "../../utils/translateFolderDisplay";
 import CategoryManagerModal from "./CategoryManagerModal";
 
 type Props = {
@@ -34,9 +35,10 @@ type Props = {
  *  when another one is clicked. Creating, renaming, and deleting categories all happen in the
  *  cog-triggered CategoryManagerModal, not inline here. */
 export default function CategoriesPanel({ folders, loading, selectedId, onSelect, onCreate, onRename, onDelete, onReorder, onUpdateMeta }: Props) {
-  const { t } = useTranslation(["models", "common"]);
+  const { t, i18n } = useTranslation(["models", "common"]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [managerOpen, setManagerOpen] = useState(false);
+  const displayName = (folder: Folder) => translateFolderDisplay(folder, i18n).name;
 
   const untitledLabel = t("models:categories.untitled");
 
@@ -123,7 +125,7 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
                   }}
                 >
                   <ListItemText
-                    primary={root.name || untitledLabel}
+                    primary={displayName(root) || untitledLabel}
                     primaryTypographyProps={{
                       noWrap: true,
                       variant: "body2",
@@ -159,7 +161,7 @@ export default function CategoriesPanel({ folders, loading, selectedId, onSelect
                           }}
                         >
                           <ListItemText
-                            primary={child.name || untitledLabel}
+                            primary={displayName(child) || untitledLabel}
                             primaryTypographyProps={{
                               noWrap: true,
                               variant: "body2",

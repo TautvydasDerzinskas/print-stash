@@ -634,6 +634,413 @@
   },
   "models": {
     "pageTitle": "Modeliai",
+    "defaultCategories": {
+      "100": {
+        "name": "Menas",
+        "metaTitle": "3D spausdinti meno modeliai",
+        "metaDescription": "Atraskite 3D spausdinimo modelių kategoriją „Menas“ ir raskite platų pasirinkimą stulbinančių dizainų, kuriuos galima atspausdinti ir eksponuoti bet kurioje aplinkoje. Nuo 2D meno iki skulptūrų -- atsisiųskite aukščiausios kokybės modelių failus ir suteikite savo erdvei grožio bei kūrybiškumo su šiais unikaliais dizainais."
+      },
+      "101": {
+        "name": "2D menas",
+        "metaTitle": "2D meno modeliai",
+        "metaDescription": "Atgaivinkite mėgstamiausius paveikslus, piešinius ir iliustracijas su mūsų novatorišku 3D spausdintų 2D meno modelių rinkiniu. Pajuskite meno grožį naujoje dimensijoje, kai paverčiame mylimus 2D kūrinius stulbinančiais 3D spaudiniais."
+      },
+      "102": {
+        "name": "Iškabos ir logotipai",
+        "metaTitle": "3D spausdintos iškabos ir logotipai",
+        "metaDescription": "Sustiprinkite savo prekės ženklą ir iškabas su mūsų įspūdingų 3D spausdintų iškabų ir logotipų rinkiniu. Sukurkite individualias iškabas verslui, renginiams ar namų interjerui, kurios išsiskirs iš minios."
+      },
+      "103": {
+        "name": "Monetos ir ženkleliai",
+        "metaTitle": "3D spausdintos monetos ir ženkleliai",
+        "metaDescription": "Sukurkite unikalius ir įsimintinus suvenyrus su mūsų pritaikomų 3D spausdintų monetų ir ženklelių rinkiniu. Įamžinkite ypatingus įvykius, įvertinkite pasiekimus arba tiesiog išreikškite savo individualumą personalizuotais dizainais, kurie tikrai sudomins."
+      },
+      "104": {
+        "name": "Skulptūros",
+        "metaTitle": "3D spausdintos skulptūros",
+        "metaDescription": "Atraskite žavingų 3D spausdintų skulptūrų pasaulį, atskleidžiantį šios pažangios technologijos meistriškumą ir naujoviškumą. Nuo tikroviškų figūrų ir abstrakčių formų iki subtilių detalių ir hipnotizuojančių tekstūrų -- mūsų kruopščiai atrinkta 3D spausdintų skulptūrų kolekcija siūlo įvairiapusę meninę raišką, kuri įkvėps ir sužavės."
+      },
+      "105": {
+        "name": "Kiti meno modeliai",
+        "metaTitle": "Kiti meno modeliai",
+        "metaDescription": "Pakeiskite savo namų interjerą unikaliais 3D spausdintais meno modeliais. Atraskite vazas, lempas, dėžutes, skulptūras ir dar daugiau!"
+      },
+      "200": {
+        "name": "Mada",
+        "metaTitle": "3D spausdinti mados modeliai",
+        "metaDescription": "Atraskite šiuolaikiškus ir stilingus 3D spausdinamus mados aksesuarus kategorijoje „Mada“. Sukurkite savo unikalius 3D spausdintus daiktus -- nuo papuošalų iki rankinių, piniginių ir diržų -- ir išreikškite savo asmeninį stilių su šiais aukščiausios kokybės modelių failais."
+      },
+      "201": {
+        "name": "Krepšiai",
+        "metaTitle": "3D spausdinti krepšiai",
+        "metaDescription": "Pajuskite unikalų funkcionalumo ir madingo dizaino derinį su mūsų patvariais ir aplinkai draugiškais 3D spausdintais krepšiais -- nuo madingų rankinių iki praktiškų kuprinių."
+      },
+      "202": {
+        "name": "Drabužiai",
+        "metaTitle": "3D spausdinti drabužių aksesuarai",
+        "metaDescription": "Pakelkite savo stilių su mūsų dėmesį patraukiančiais ir individualizuotais 3D spausdintais drabužių aksesuarais -- nuo įspūdingų vėrinių ir apyrankių iki drąsių auskarų ir šalikų."
+      },
+      "203": {
+        "name": "Akiniai",
+        "metaTitle": "3D spausdinti akiniai",
+        "metaDescription": "Pažvelkite į pasaulį kitaip su mūsų stilingais ir funkcionaliais 3D spausdintais akiniais, siūlančiais įvairius rėmelius ir lęšius madingiems bei praktiškiems akiniams sukurti."
+      },
+      "204": {
+        "name": "Avalynė",
+        "metaTitle": "3D spausdinta avalynė",
+        "metaDescription": "Pajuskite patogumo ir stiliaus viršūnę su mūsų novatoriška ir pritaikoma 3D spausdinta avalyne, sukurta suteikti puikų palaikymą ir išryškinti madingą įvaizdį."
+      },
+      "205": {
+        "name": "Žiedai",
+        "metaTitle": "3D spausdinti žiedai",
+        "metaDescription": "Raskite tobulą žiedą, simbolizuojantį jūsų meilę ar įsipareigojimą, su mūsų unikaliais ir personalizuotais 3D spausdintais žiedais, įskaitant klasikinius vestuvinius žiedus, modernius akcentinius žiedus ir žiedus su individualiomis graviūromis."
+      },
+      "206": {
+        "name": "Auskarai",
+        "metaTitle": "3D spausdinti auskarai",
+        "metaDescription": "Sukurkite įspūdį su mūsų išskirtinių ir unikalių 3D spausdintų auskarų kolekcija, kurioje rasite įvairiausių dizainų -- nuo subtilių ir moteriškų iki drąsių ir geometrinių."
+      },
+      "207": {
+        "name": "Kiti mados modeliai",
+        "metaTitle": "Kiti mados modeliai",
+        "metaDescription": "Atraskite neribotas mados galimybes su mūsų įvairiapuse 3D spausdintų mados modelių kolekcija, įskaitant kepures, diržus ir plaukų aksesuarus."
+      },
+      "208": {
+        "name": "Papuošalai",
+        "metaTitle": "3D spausdinti papuošalai",
+        "metaDescription": "Sukurkite unikalius papuošalus su mūsų nuostabiais 3D spausdintais papuošalais, siūlančiais platų dizainų pasirinkimą -- nuo subtilių ir sudėtingų iki drąsių ir ryškių."
+      },
+      "300": {
+        "name": "Hobis ir „Padaryk pats“",
+        "metaTitle": "3D spausdinti hobio ir „Padaryk pats“ modeliai",
+        "metaDescription": "3D spausdintuvai yra puikus dalykas, jei mėgstate „Padaryk pats“ veiklą. O ši kategorija -- tikras lobynas jūsų 3D spausdinimo poreikiams, susijusiems su hobiu. Nuo elektronikos iki nuotoliniu būdu valdomų transporto priemonių ar robotikos -- čia tikrai rasite ką veikti."
+      },
+      "301": {
+        "name": "Elektronika",
+        "metaTitle": "3D spausdinta įranga elektronikai",
+        "metaDescription": "Patobulinkite savo elektronikos projektus su tiksliai pagamintais 3D spausdintais elektronikos komponentais, korpusais ir priedais."
+      },
+      "302": {
+        "name": "Transporto priemonės",
+        "metaTitle": "3D spausdintos transporto priemonės",
+        "metaDescription": "Suprojektuokite ir sukurkite savo svajonių 3D spausdintas transporto priemones -- nuo automobilių ir motociklų iki kosminių laivų ir povandeninių laivų."
+      },
+      "303": {
+        "name": "Muzika",
+        "metaTitle": "3D spausdinti muzikos instrumentai",
+        "metaDescription": "Sukurkite unikalius ir personalizuotus 3D spausdintus muzikos instrumentus -- nuo fleitų ir būgnų iki gitarų ir sintezatorių."
+      },
+      "304": {
+        "name": "Nuotoliniu būdu valdomos",
+        "metaTitle": "3D spausdinti nuotoliniu būdu valdomi modeliai",
+        "metaDescription": "Pajuskite malonumą kuriant ir valdant savo pačių 3D spausdintas nuotoliniu būdu valdomas transporto priemones, dronus ir lėktuvus."
+      },
+      "305": {
+        "name": "Robotika",
+        "metaTitle": "3D spausdinta robotika",
+        "metaDescription": "Atraskite robotikos pasaulį su mūsų nuostabiomis 3D spausdintomis robotų dalimis, rėmais ir pavaromis."
+      },
+      "306": {
+        "name": "Sportas ir laisvalaikis gamtoje",
+        "metaTitle": "3D spausdinti sporto ir lauko modeliai",
+        "metaDescription": "Atskleiskite savo sportinę dvasią ir tyrinėkite gamtą su „Sportas ir laisvalaikis gamtoje“! Kurkite individualią įrangą, projektuokite personalizuotus aksesuarus ir atraskite 3D spausdintų modelių pasaulį, kuris paskatins aktyvų gyvenimo būdą. Pradėkite savo sporto ir lauko veiklos 3D spausdinimą jau šiandien!"
+      },
+      "307": {
+        "name": "Kiti hobio ir „Padaryk pats“ modeliai",
+        "metaTitle": "Kiti hobio ir „Padaryk pats“ modeliai",
+        "metaDescription": "Atraskite neribotas galimybes kūrybiškumui ir saviraiškai su mūsų įvairiapuse 3D spausdintų hobio ir „Padaryk pats“ modelių kolekcija."
+      },
+      "400": {
+        "name": "Namų ūkis",
+        "metaTitle": "3D spausdinti namų ūkio modeliai",
+        "metaDescription": "Jei tai skaitote, greičiausiai jums reikia kažką namuose pataisyti ar patobulinti atspausdinant vieną iš daugelio prieinamų modelių. Nuo įprastų durų rankenų iki sudėtingų interjero dizainų ar naudingų sodo patobulinimų -- esame tikri, kad čia rasite kažką naudingo. Taigi, pirmyn spausdinti!"
+      },
+      "401": {
+        "name": "Interjero dekoras",
+        "metaTitle": "3D spausdintas namų dekoras",
+        "metaDescription": "Pagyvinkite savo namų interjerą unikaliomis ir į akis krintančiomis 3D spausdintomis vazomis, skulptūromis, sieninėmis dekoracijomis ir kitais dekoro elementais."
+      },
+      "402": {
+        "name": "Sodas",
+        "metaTitle": "3D spausdinti sodo modeliai",
+        "metaDescription": "Paverskite savo lauko erdves nuostabia pasaka su mūsų žaviais ir pritaikomais 3D spausdintais sodo dekoracijomis, vazonais ir skulptūromis."
+      },
+      "403": {
+        "name": "Šventės",
+        "metaTitle": "3D spausdinti šventiniai modeliai",
+        "metaDescription": "Švęskite ypatingas progas ir šventes su mūsų šventinėmis 3D spausdintomis dekoracijomis, žaisliukais ir figūrėlėmis."
+      },
+      "404": {
+        "name": "Biuras",
+        "metaTitle": "3D spausdinti biuro modeliai",
+        "metaDescription": "Patobulinkite savo darbo vietą su mūsų funkcionaliais ir stilingais 3D spausdintais biuro organizatoriais, rašiklių laikikliais ir stalo aksesuarais."
+      },
+      "405": {
+        "name": "Naminiai gyvūnai",
+        "metaTitle": "3D spausdinti gyvūnų modeliai",
+        "metaDescription": "Sukurkite personalizuotus naminių gyvūnų aksesuarus ir žaislus su mūsų pritaikomais 3D spausdintais gyvūnų žetonais, dubenėliais ir žaislais."
+      },
+      "406": {
+        "name": "Kiti namų ūkio modeliai",
+        "metaTitle": "Kiti namų ūkio modeliai",
+        "metaDescription": "Atraskite neribotas galimybes namų organizavimui, personalizavimui ir pramogoms su mūsų įvairiapuse 3D spausdintų namų ūkio modelių kolekcija."
+      },
+      "500": {
+        "name": "Švietimas",
+        "metaTitle": "3D spausdinti švietimo modeliai",
+        "metaDescription": "Atraskite 3D spausdinimo dizainus, skirtus mokymuisi praturtinti ir interaktyvioms mokymo priemonėms kurti. Raskite platų 3D spausdinamų modelių pasirinkimą, apimantį tokius dalykus kaip gamtos mokslai, geografija, istorija, matematika ir kt. Puikiai tinka pedagogams ir bet kokio amžiaus besimokantiesiems."
+      },
+      "501": {
+        "name": "Inžinerija",
+        "metaTitle": "3D spausdinti inžinerijos modeliai",
+        "metaDescription": "Paverskite abstrakčias inžinerijos koncepcijas apčiuopiama tikrove su mūsų novatoriškais 3D spausdintais modeliais, tyrinėjančiais mechaninius komponentus, architektūrines struktūras ir elektronines grandines."
+      },
+      "502": {
+        "name": "Matematika",
+        "metaTitle": "3D spausdinti matematikos modeliai",
+        "metaDescription": "Paverskite abstrakčias matematines sąvokas apčiuopiamais vaizdais su mūsų įtraukiančiais 3D spausdintais modeliais, vizualizuojančiais geometrines formas, matematines funkcijas ir sudėtingas matematines koncepcijas."
+      },
+      "503": {
+        "name": "Biologija",
+        "metaTitle": "3D spausdinti biologijos modeliai",
+        "metaDescription": "Atraskite sudėtingą gyvybės pasaulį su mūsų kruopščiai sukurtais 3D spausdintais biologijos modeliais, vizualizuojančiais ir padedančiais suprasti anatomiją, molekulines struktūras ir biologinius procesus."
+      },
+      "504": {
+        "name": "Fizika ir astronomija",
+        "metaTitle": "3D spausdinti fizikos ir astronomijos modeliai",
+        "metaDescription": "Atskleiskite visatos paslaptis su mūsų įtraukiančiais 3D spausdintais fizikos ir astronomijos modeliais, vizualizuojančiais fizines jėgas, astronomijos reiškinius ir sudėtingas mokslo teorijas."
+      },
+      "505": {
+        "name": "Chemija",
+        "metaTitle": "3D spausdinti chemijos modeliai",
+        "metaDescription": "Atskleiskite materijos paslaptis su mūsų įtraukiančiais 3D spausdintais chemijos modeliais, vizualizuojančiais ir padedančiais suprasti molekulines struktūras, cheminius junginius ir sudėtingas reakcijas."
+      },
+      "506": {
+        "name": "Geografija",
+        "metaTitle": "3D spausdinti geografijos modeliai",
+        "metaDescription": "Leiskitės į geografinę kelionę po pasaulį su mūsų įtraukiančiais 3D spausdintais modeliais, vizualizuojančiais kalnų grandines, žemynus, vandenynus, upes ir klimato reiškinius."
+      },
+      "507": {
+        "name": "Kiti švietimo modeliai",
+        "metaTitle": "Kiti švietimo modeliai",
+        "metaDescription": "Atraskite neribotas mokymosi galimybes su mūsų įvairiapuse 3D spausdintų švietimo modelių kolekcija, apimančia istoriją, socialinius mokslus, meną, dizainą, kalbas ir literatūrą."
+      },
+      "600": {
+        "name": "Miniatiūros",
+        "metaTitle": "3D spausdintos miniatiūros",
+        "metaDescription": "Jei mėgstate miniatiūras, esate tinkamoje vietoje. Nuo mistinių padarų ir gyvūnų iki architektūrinių dizainų -- tikrai rasite kuo paįvairinti savo žaidimų vakarą!"
+      },
+      "601": {
+        "name": "Gyvūnai",
+        "metaTitle": "3D spausdinti gyvūnai",
+        "metaDescription": "Apgyvendinkite savo žaidimų pasaulius mūsų tikroviškais ir detaliais 3D spausdintais gyvūnais -- nuo didingų drakonų iki žaismingų augintinių."
+      },
+      "602": {
+        "name": "Architektūra",
+        "metaTitle": "3D spausdinta architektūra",
+        "metaDescription": "Sukurkite įspūdingus ir tikroviškus 3D spausdintus pastatus, pilis ir kitus architektūros stebuklus savo miniatiūriniams kraštovaizdžiams."
+      },
+      "603": {
+        "name": "Padarai",
+        "metaTitle": "3D spausdinti padarai",
+        "metaDescription": "Paleiskite savo vaizduotę su mūsų fantastiškų 3D spausdintų padarų kolekcija -- nuo mitinių pabaisų iki išdykusių fėjų."
+      },
+      "604": {
+        "name": "Žmonės",
+        "metaTitle": "3D spausdinti žmonių modeliai",
+        "metaDescription": "Sukurkite įvairius ir tikroviškus 3D spausdintus personažus savo stalo žaidimams, vaidmenų žaidimų nuotykiams ir dioramoms."
+      },
+      "605": {
+        "name": "Kitos miniatiūros",
+        "metaTitle": "Kitos miniatiūros",
+        "metaDescription": "Atraskite platų unikalių ir personalizuotų 3D spausdintų miniatiūrų pasirinkimą, kuris praturtins jūsų žaidimų patirtį ir kolekcijas."
+      },
+      "700": {
+        "name": "Įrankiai",
+        "metaTitle": "3D spausdinti įrankiai",
+        "metaDescription": "Įrankių niekada nebūna per daug, kaip ir efektyvaus būdo juos susitvarkyti. Tačiau šis skyrius yra puiki vieta rasti failus, reikalingus konkrečiam fiksatoriui ar naujausio prietaiso organizatoriui atspausdinti."
+      },
+      "701": {
+        "name": "Organizatoriai",
+        "metaTitle": "3D spausdinti organizatoriai",
+        "metaDescription": "Išlaikykite savo darbo vietą ir daiktus tvarkingus su mūsų funkcionaliais ir pritaikomais 3D spausdintais organizatoriais, dėklais ir talpyklomis."
+      },
+      "702": {
+        "name": "Matavimo įrankiai",
+        "metaTitle": "3D spausdinti matavimo įrankiai",
+        "metaDescription": "Užtikrinkite tikslius matavimus su mūsų tiksliais ir universaliais 3D spausdintais matavimo įrankiais, liniuotėmis ir slankmačiais."
+      },
+      "703": {
+        "name": "Rankiniai įrankiai",
+        "metaTitle": "3D spausdinti rankiniai įrankiai",
+        "metaDescription": "Papildykite savo įrankių dėžę patvariais ir pritaikomais 3D spausdintais rankiniais įrankiais, veržliarakčiais ir atsuktuvais."
+      },
+      "704": {
+        "name": "Staklės",
+        "metaTitle": "3D spausdintos staklės",
+        "metaDescription": "Atnaujinkite savo dirbtuves tiksliai pagamintomis 3D spausdintomis staklėmis, šablonais ir tvirtinimo detalėmis."
+      },
+      "705": {
+        "name": "Įrenginiai",
+        "metaTitle": "3D spausdinti įrenginiai",
+        "metaDescription": "Atraskite unikalių ir praktiškų 3D spausdintų įrenginių pasaulį -- nuo telefonų laikiklių iki stalo organizatorių."
+      },
+      "706": {
+        "name": "Kiti įrankiai",
+        "metaTitle": "Kiti įrankiai",
+        "metaDescription": "Atraskite platų specializuotų ir nišinių 3D spausdintų įrankių pasirinkimą, atitinkantį jūsų specifinius poreikius ir interesus."
+      },
+      "707": {
+        "name": "Medicinos įrankiai",
+        "metaTitle": "3D spausdinti medicinos įrankiai",
+        "metaDescription": "Pajuskite medicinos ateitį su mūsų novatoriškais 3D spausdintais medicinos įrankiais, chirurginiais šablonais ir implantais."
+      },
+      "800": {
+        "name": "Žaislai ir žaidimai",
+        "metaTitle": "3D spausdinti žaislai ir žaidimai",
+        "metaDescription": "Šis skyrius skirtas spausdinamai pramogai! Čia rasite įvairių stalo žaidimų, žaislų, dėlionių ir žaidimų, kurie paruošti spausdinti ir mėgautis iškart po greito spausdinimo."
+      },
+      "801": {
+        "name": "Personažai",
+        "metaTitle": "3D spausdinti personažai",
+        "metaDescription": "Sukurkite savo personalizuotus 3D spausdintus personažus, veiksmo figūrėles ir lėles kūrybiniams žaidimams ir pasakojimams."
+      },
+      "802": {
+        "name": "Stalo žaidimai",
+        "metaTitle": "3D spausdinti stalo žaidimai",
+        "metaDescription": "Praturtinkite savo žaidimų vakarus mūsų unikaliais ir pritaikomais 3D spausdintais stalo žaidimais, šachmatų komplektais ir žaidimo figūromis."
+      },
+      "803": {
+        "name": "Lauko žaislai",
+        "metaTitle": "3D spausdinti lauko žaislai",
+        "metaDescription": "Skatinkite aktyvų žaidimą ir nuotykius lauke su mūsų patvariais ir įtraukiančiais 3D spausdintais lauko žaislais, skraidančiomis lėkštėmis ir sporto įranga."
+      },
+      "804": {
+        "name": "Dėlionės",
+        "metaTitle": "3D spausdintos dėlionės",
+        "metaDescription": "Iššūkis jūsų protui ir problemų sprendimo įgūdžiams su mūsų sudėtingomis ir įtraukiančiomis 3D spausdintomis dėlionėmis."
+      },
+      "805": {
+        "name": "Kiti žaislai ir žaidimai",
+        "metaTitle": "Kiti žaislai ir žaidimai",
+        "metaDescription": "Atraskite neribotas žaidimo, mokymosi ir kūrybiškumo galimybes su mūsų įvairiapuse 3D spausdintų žaislų ir žaidimų kolekcija."
+      },
+      "806": {
+        "name": "Konstravimo rinkiniai",
+        "metaTitle": "3D spausdinti konstravimo rinkiniai",
+        "metaDescription": "Statykite ir kurkite neįtikėtinas struktūras su mūsų universaliais ir edukaciniais 3D spausdintais konstravimo rinkiniais -- nuo klasikinių kaladėlių iki STEM įkvėptų dizainų."
+      },
+      "900": {
+        "name": "3D spausdintuvas",
+        "metaTitle": "3D spausdintuvas",
+        "metaDescription": "Nesvarbu, ar norite patobulinti savo 3D spausdinimo patirtį priedais, ar reikia pakeisti spausdintuvo dalį atspausdinta versija -- čia rasite viską. Galite atsisiųsti ir spausdinti modelius iš plataus pasirinkimo vos vienu paspaudimu."
+      },
+      "901": {
+        "name": "3D spausdintuvo priedai",
+        "metaTitle": "3D spausdintuvo priedai",
+        "metaDescription": "Patobulinkite savo 3D spausdinimo patirtį rinkdamiesi iš mūsų atrinktų aukščiausios kokybės priedų. Atraskite platų pasirinkimą būtinų įrankių ir komponentų, skirtų spaudinio kokybei pagerinti, našumui padidinti ir jūsų 3D spausdintuvo galimybėms išplėsti."
+      },
+      "902": {
+        "name": "3D spausdintuvo dalys",
+        "metaTitle": "3D spausdintuvo dalys ir patobulinimai",
+        "metaDescription": "Paverskite savo 3D spausdintuvą tikslumo ir našumo galiūnu naudodami platų aukštos kokybės dalių ir patobulinimų pasirinkimą. Nesvarbu, ar siekiate pagerinti spausdinimo tikslumą, padidinti greitį, ar išplėsti spausdintuvo funkcionalumą, mūsų kruopščiai atrinktos atsarginės dalys ir naujoviški patobulinimai patenkins kiekvieną poreikį."
+      },
+      "903": {
+        "name": "Testiniai modeliai",
+        "metaTitle": "3D spausdintuvo testiniai modeliai",
+        "metaDescription": "Užtikrinkite nepriekaištingus spaudinius ir optimalų veikimą naudodami mūsų būtiniausių 3D spausdintuvo testinių modelių rinkinį. Šie kruopščiai sukurti modeliai suteikia patogią platformą spausdintuvo nustatymams įvertinti, galimoms problemoms diagnozuoti ir spaudinio kokybei patikrinti."
+      },
+      "1000": {
+        "name": "Rekvizitai ir kostiumai",
+        "metaTitle": "3D spausdinti rekvizitai ir kostiumai",
+        "metaDescription": "Net jei dabar ne Helovinas, visada yra laikas atspausdinti šaunią kaukę, šalmą ar kitą su kosplėjumi susijusį spaudinį. Nelaukite, kol bus per vėlu -- pradėkite spausdinti savo naują įspūdingą aprangą!"
+      },
+      "1001": {
+        "name": "Kaukės ir šalmai",
+        "metaTitle": "3D spausdintos kaukės ir šalmai",
+        "metaDescription": "Papildykite savo kosplėjų detaliomis ir tikroviškomis 3D spausdintomis kaukėmis, šalmais ir kitais veido aksesuarais."
+      },
+      "1002": {
+        "name": "Kosplėjaus ginklai",
+        "metaTitle": "3D spausdinti rekvizitai kosplėjaus ginklams",
+        "metaDescription": "Pasinerkite į nuostabų kosplėjaus pasaulį su mūsų 3D spausdintais rekvizitais! Turime puikiai sukurtus kardus ir skydus, tobulai tinkančius įsikūnyti į mėgstamus personažus. Atskleiskite jų galią ir mėgaukitės įtraukiančiu vaidmenų žaidimu!"
+      },
+      "1003": {
+        "name": "Kostiumai",
+        "metaTitle": "3D spausdinti kostiumai",
+        "metaDescription": "Sukurkite įspūdingus ir autentiškus 3D spausdintus kostiumus -- nuo supermenų kostiumų iki fantastinių šarvų -- kitam kosplėjaus renginiui ar Helovinui."
+      },
+      "1004": {
+        "name": "Kiti rekvizitai ir kostiumai",
+        "metaTitle": "Kiti rekvizitai ir kostiumai",
+        "metaDescription": "Papildykite savo kosplėjų įvairiais 3D spausdintais rekvizitais, aksesuarais ir prietaisais, kad užbaigtumėte savo pasikeitimą."
+      },
+      "2000": {
+        "name": "Generatyvinis 3D modelis",
+        "metaTitle": "Generatyvinis 3D modelis",
+        "metaDescription": "Čia rasite kūrybiškus modelius, sukurtus naudojant 3D modelių generatorius. Jie gražiai sukurti ir gali įkvėpti, kaip panaudoti šiuos generatorius."
+      },
+      "2001": {
+        "name": "Hueforge ir litofanijos",
+        "metaTitle": "Hueforge ir litofanijos",
+        "metaDescription": "Paverskite mėgstamas nuotraukas įspūdingais 3D meno kūriniais su Hueforge ir sukurkite hipnotizuojančias, šviesą spinduliuojančias litofanijas."
+      },
+      "2002": {
+        "name": "Sukurk mano iškabą",
+        "metaTitle": "Sukurk mano iškabą",
+        "metaDescription": "Kurkite personalizuotas ir į akis krintančias iškabas naudodami mūsų paprastą įrankį „Sukurk mano iškabą“, puikiai tinkantį namų dekorui, verslui ir ypatingoms progoms."
+      },
+      "2003": {
+        "name": "Sukurk mano vazą",
+        "metaTitle": "Sukurk mano vazą",
+        "metaDescription": "Kurkite ir pritaikykite unikalias bei gražias vazas su mūsų intuityviu įrankiu „Sukurk mano vazą“ -- nuo paprastų formų iki sudėtingų raštų, vientisas ar tuščiavidures."
+      },
+      "2004": {
+        "name": "Pikselių dėlionių kūrėjas",
+        "metaTitle": "Pikselių dėlionių kūrėjas",
+        "metaDescription": "Paverskite mėgstamas nuotraukas įtraukiančiomis pikselinio meno dėlionėmis naudodami mūsų įrankį „Pikselių dėlionių kūrėjas“ -- puikiai tinka smagiems iššūkiams ir kūrybiniams eksponatams."
+      },
+      "2005": {
+        "name": "Reljefinių skulptūrų kūrėjas",
+        "metaTitle": "Reljefinių skulptūrų kūrėjas",
+        "metaDescription": "Papildykite savo kūrybą mūsų įrankiu „3D į reljefinę skulptūrą“, sklandžiai paverčiančiu 3D modelius ar nuotraukas įspūdingomis bareljefo skulptūromis."
+      },
+      "2006": {
+        "name": "DI skeneris",
+        "metaTitle": "DI skeneris",
+        "metaDescription": "Atkurkite 3D objektus nepaprastai tiksliai naudodami mūsų įrankį „DI skeneris“ -- tiesiog nufilmuokite nenutrūkstamą vaizdo įrašą ir leiskite dirbtiniam intelektui atlikti likusią darbo dalį."
+      },
+      "2007": {
+        "name": "Nuotrauka į raktų pakabuką",
+        "metaTitle": "Nuotrauka į raktų pakabuką",
+        "metaDescription": "Paverčia nuotraukas raktų pakabukais, žymekliais ir kitais 2D meno modeliais."
+      },
+      "2008": {
+        "name": "Sukurk mano stalo organizatorių",
+        "metaTitle": "Sukurk mano stalo organizatorių",
+        "metaDescription": "Suprojektuokite tobulą stalo organizatorių. Pritaikykite kiekvieną detalę taip, kaip jums tiksliai reikia."
+      },
+      "2009": {
+        "name": "PrintMon kūrėjas",
+        "metaTitle": "PrintMon kūrėjas",
+        "metaDescription": "Sukurkite žavius padarėlius iš teksto ar nuotraukų, paruoštus 3D spausdinimui."
+      },
+      "2010": {
+        "name": "Statulų kūrėjas",
+        "metaTitle": "Statulų kūrėjas",
+        "metaDescription": "Paverskite savo portretą tikrovišku 3D šedevru."
+      },
+      "2011": {
+        "name": "Kalėdinių žaisliukų kūrėjas",
+        "metaTitle": "Kalėdinių žaisliukų kūrėjas",
+        "metaDescription": "Kurkite personalizuotus, besisukančius 2D Kalėdų žaisliukus su įrankiu „Kalėdinių žaisliukų kūrėjas“ -- puikiai tinka dekoracijoms ar dovanoms."
+      },
+      "2012": {
+        "name": "Sukurk mano žibintą",
+        "metaTitle": "Sukurk mano žibintą",
+        "metaDescription": "Sukurkite tuščiavidurį žibintą iš nuotraukos."
+      }
+    },
     "grid": {
       "empty": "Kol kas nėra modelių.",
       "loadingMore": "Įkeliama…"

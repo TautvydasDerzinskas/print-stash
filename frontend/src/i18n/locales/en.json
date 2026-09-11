@@ -634,6 +634,413 @@
   },
   "models": {
     "pageTitle": "Models",
+    "defaultCategories": {
+      "100": {
+        "name": "Art",
+        "metaTitle": "3D Printed Art Models",
+        "metaDescription": "Explore the \"Art\" category of 3D printing models and discover a wide range of stunning designs that can be printed and displayed in any environment. From 2D art to sculptures, download premium model files and add a touch of beauty and creativity to your space with these unique designs."
+      },
+      "101": {
+        "name": "2D Art",
+        "metaTitle": "2D Art Models",
+        "metaDescription": "Bring your favorite paintings, drawings, and illustrations to life with our innovative collection of 3D printed 2D art models. Experience the beauty of art in a new dimension as we transform cherished 2D artworks into stunning 3D printed creations."
+      },
+      "102": {
+        "name": "Signs & Logos",
+        "metaTitle": "3D Printed Signs & Logos",
+        "metaDescription": "Elevate your branding and signage with our collection of impactful 3D printed signs and logos. Create custom signage for businesses, events, or home décor that stands out from the crowd."
+      },
+      "103": {
+        "name": "Coin & Badges",
+        "metaTitle": "3D Printed Coin & Badges",
+        "metaDescription": "Create unique and memorable keepsakes with our collection of customizable 3D printed coins and badges. Commemorate special events, recognize achievements, or simply express your individuality with personalized designs that are sure to impress."
+      },
+      "104": {
+        "name": "Sculptures",
+        "metaTitle": "3D Printed Sculptures",
+        "metaDescription": "Explore a world of captivating 3D printed sculptures that showcase the artistry and innovation of this transformative technology. From lifelike figures and abstract forms to intricate details and mesmerizing textures, our curated collection of 3D printed sculptures offers a diverse range of artistic expressions that will inspire and amaze."
+      },
+      "105": {
+        "name": "Other Art Models",
+        "metaTitle": "Other Art Models",
+        "metaDescription": "Transform your home décor with unique 3D printed art models. Discover vases, lamps, boxes, sculptures, and more!"
+      },
+      "200": {
+        "name": "Fashion",
+        "metaTitle": "3D Printed Fashion Models",
+        "metaDescription": "Discover contemporary and stylish 3D printable fashion accessories in the \"Fashion\" category. Create your own unique 3D printed items, from jewelry to purses, wallets, and belts, and express your personal fashion sense with these premium model files."
+      },
+      "201": {
+        "name": "Bags",
+        "metaTitle": "3D Printed Bags",
+        "metaDescription": "Embrace a unique blend of functionality and fashion-forward design with our durable and eco-friendly 3D printed bags, ranging from trendy handbags to practical backpacks."
+      },
+      "202": {
+        "name": "Clothes",
+        "metaTitle": "3D Printed Clothes Accessories",
+        "metaDescription": "Elevate your style with our eye-catching and personalized 3D printed clothes accessories, from statement-making necklaces and bracelets to bold earrings and scarves."
+      },
+      "203": {
+        "name": "Glasses",
+        "metaTitle": "3D Printed Glasses",
+        "metaDescription": "See the world in a new light with our stylish and functional 3D printed glasses, offering a variety of frames and lenses to create both fashionable and practical eyewear."
+      },
+      "204": {
+        "name": "Footwear",
+        "metaTitle": "3D Printed Footwear",
+        "metaDescription": "Experience the ultimate in comfort and style with our innovative and customizable 3D printed footwear, designed to provide exceptional support and make a fashion statement."
+      },
+      "205": {
+        "name": "Rings",
+        "metaTitle": "3D Printed Rings",
+        "metaDescription": "Find the perfect ring to symbolize your love or commitment with our unique and personalized 3D printed rings, including classic wedding bands, modern statement rings, and personalized rings with custom engravings."
+      },
+      "206": {
+        "name": "Earrings",
+        "metaTitle": "3D Printed Earrings",
+        "metaDescription": "Make a statement with our collection of exquisite and unique 3D printed earrings, featuring a wide variety of designs from delicate and feminine to bold and geometric."
+      },
+      "207": {
+        "name": "Other Fashion Models",
+        "metaTitle": "Other Fashion Models",
+        "metaDescription": "Discover a world of endless fashion possibilities with our diverse collection of 3D printed fashion models, including hats, belts, and hair accessories."
+      },
+      "208": {
+        "name": "Jewelry",
+        "metaTitle": "3D Printed Jewelry",
+        "metaDescription": "Make one-of-a-kind pieces of jewelry with our amazing 3D printed jewelry, featuring a wide range of designs from delicate and intricate to bold and statement-making."
+      },
+      "300": {
+        "name": "Hobby & DIY",
+        "metaTitle": "3D Printed Hobby & DIY Models",
+        "metaDescription": "3D Printers are awesome if you are into DIY activities. And this category is just as awesome as a resource for your 3D printing needs related to your DIY hobby. From electronics to RC vehicles or Robotics, you'll find something to get busy with."
+      },
+      "301": {
+        "name": "Electronics",
+        "metaTitle": "3D Printed Equipments for Electronics",
+        "metaDescription": "Elevate your electronics projects with our precision-crafted 3D printed electronic components, enclosures, and accessories."
+      },
+      "302": {
+        "name": "Vehicles",
+        "metaTitle": "3D Printed Vehicles",
+        "metaDescription": "Design and build your dream 3D printed vehicles, from cars and motorcycles to spaceships and submarines."
+      },
+      "303": {
+        "name": "Music",
+        "metaTitle": "3D Printed Musical Instruments",
+        "metaDescription": "Create unique and personalized 3D printed musical instruments, from flutes and drums to guitars and synthesizers."
+      },
+      "304": {
+        "name": "RC",
+        "metaTitle": "3D Printed RC Models",
+        "metaDescription": "Experience the thrill of crafting and controlling your own 3D printed RC vehicles, drones, and airplanes."
+      },
+      "305": {
+        "name": "Robotics",
+        "metaTitle": "3D Printed Robotics",
+        "metaDescription": "Explore the world of robotics with our amazing 3D printed robot parts, frames, and actuators."
+      },
+      "306": {
+        "name": "Sport & Outdoors",
+        "metaTitle": "3D Printed Sport & Outdoor Models",
+        "metaDescription": "Unleash your athletic spirit and explore the outdoors with Sport & Outdoor! Craft custom gear, design personalized accessories, and discover a world of 3D printed models to fuel your active lifestyle. Start your Sport & Outdoor 3D printing today!"
+      },
+      "307": {
+        "name": "Other Hobby & DIY",
+        "metaTitle": "Other Hobby & DIY Models",
+        "metaDescription": "Discover endless possibilities for creativity and self-expression with our diverse collection of 3D printed hobby and DIY models."
+      },
+      "400": {
+        "name": "Household",
+        "metaTitle": "3D Printed Household Models",
+        "metaDescription": "If you're reading this, then you probably need to fix or upgrade something in your household by printing one of the various models available. From regular door handles to complex decor designs or useful upgrades for your garden, we're sure there's something useful for you. So get printing!"
+      },
+      "401": {
+        "name": "Decor",
+        "metaTitle": "3D Printed Home Decor",
+        "metaDescription": "Elevate your home décor with our unique and eye-catching 3D printed vases, sculptures, wall hangings, and other decorative items."
+      },
+      "402": {
+        "name": "Garden",
+        "metaTitle": "3D Printed Garden Models",
+        "metaDescription": "Transform your outdoor spaces into a whimsical wonderland with our charming and customizable 3D printed garden ornaments, planters, and sculptures."
+      },
+      "403": {
+        "name": "Festivities",
+        "metaTitle": "3D Printed Festival Models",
+        "metaDescription": "Celebrate special occasions and holidays with our festive 3D printed decorations, ornaments, and figurines."
+      },
+      "404": {
+        "name": "Office",
+        "metaTitle": "3D Printed Office Models",
+        "metaDescription": "Enhance your workspace with our functional and stylish 3D printed office organizers, pen holders, and desk accessories."
+      },
+      "405": {
+        "name": "Pets",
+        "metaTitle": "3D Printed Pet Models",
+        "metaDescription": "Create personalized pet accessories and toys with our customizable 3D printed pet tags, bowls, and toys."
+      },
+      "406": {
+        "name": "Other Household Models",
+        "metaTitle": "Other Household Models",
+        "metaDescription": "Discover a world of endless possibilities for home organization, personalization, and fun with our diverse collection of 3D printed household models."
+      },
+      "500": {
+        "name": "Education",
+        "metaTitle": "3D Printed Educational Models",
+        "metaDescription": "Explore 3D printing designs to enhance learning and create interactive educational tools. Discover a wide range of 3D printable models covering subjects such as science, geography, history, mathematics, and more. Ideal for educators and learners of all ages."
+      },
+      "501": {
+        "name": "Engineering",
+        "metaTitle": "3D Printed Engineering Models",
+        "metaDescription": "Transform abstract engineering concepts into tangible realities with our innovative 3D printed models, exploring mechanical components, architectural structures, and electronic circuits."
+      },
+      "502": {
+        "name": "Mathematics",
+        "metaTitle": "3D Printed Mathematics Models",
+        "metaDescription": "Transform abstract mathematical concepts into tangible representations with our engaging 3D printed models, visualizing geometric shapes, mathematical functions, and complex mathematical concepts."
+      },
+      "503": {
+        "name": "Biology",
+        "metaTitle": "3D Printed Biology Models",
+        "metaDescription": "Explore the intricate world of life with our meticulously crafted 3D printed biology models, visualizing and understanding anatomy, molecular structures, and biological processes."
+      },
+      "504": {
+        "name": "Physics & Astronomy",
+        "metaTitle": "3D Printed Physics & Astronomy Models",
+        "metaDescription": "Unravel the mysteries of the universe with our captivating 3D printed physics and astronomy models, visualizing physical forces, astronomical phenomena, and complex scientific theories."
+      },
+      "505": {
+        "name": "Chemistry",
+        "metaTitle": "3D Printed Chemistry Models",
+        "metaDescription": "Unravel the mysteries of matter with our captivating 3D printed chemistry models, visualizing and understanding molecular structures, chemical compounds, and complex reactions."
+      },
+      "506": {
+        "name": "Geography",
+        "metaTitle": "3D Printed Geography Models",
+        "metaDescription": "Embark on a geographical journey around the world with our captivating 3D printed models, visualizing mountain ranges, continents, oceans, rivers, and climate patterns."
+      },
+      "507": {
+        "name": "Other Education Models",
+        "metaTitle": "Other Education Models",
+        "metaDescription": "Discover a world of endless learning possibilities with our diverse collection of 3D printed educational models, exploring history, social studies, art, design, language, and literature."
+      },
+      "600": {
+        "name": "Miniatures",
+        "metaTitle": "3D Printed Miniatures",
+        "metaDescription": "If you like miniatures, then you've come to the right place. From mystical creatures and animals to architectural designs, we're sure you will find something to spice up your game night!"
+      },
+      "601": {
+        "name": "Animals",
+        "metaTitle": "3D Printed Animals",
+        "metaDescription": "Populate your gaming worlds with our realistic and detailed 3D printed animals, from majestic dragons to playful pets."
+      },
+      "602": {
+        "name": "Architecture",
+        "metaTitle": "3D Printed Architectures",
+        "metaDescription": "Construct stunning and realistic 3D printed buildings, castles, and other architectural wonders for your miniature landscapes."
+      },
+      "603": {
+        "name": "Creatures",
+        "metaTitle": "3D Printed Creatures",
+        "metaDescription": "Unleash your imagination with our collection of fantastical 3D printed creatures, from mythical monsters to mischievous fairies."
+      },
+      "604": {
+        "name": "People",
+        "metaTitle": "3D Printed People",
+        "metaDescription": "Create diverse and realistic 3D printed characters for your tabletop games, role-playing adventures, and dioramas."
+      },
+      "605": {
+        "name": "Other Miniatures",
+        "metaTitle": "Other Miniatures",
+        "metaDescription": "Discover a vast array of unique and personalized 3D printed miniatures to enhance your gaming experiences and collections."
+      },
+      "700": {
+        "name": "Tools",
+        "metaTitle": "3D Printed Tools",
+        "metaDescription": "There's never enough tools to have, or a way to organize those tools in an efficient manner. But this section is the perfect location to find the files you need to print a specific jig or an organizer for your latest gadget."
+      },
+      "701": {
+        "name": "Organizers",
+        "metaTitle": "3D Printed Organizers",
+        "metaDescription": "Keep your workspace and belongings tidy with our functional and customizable 3D printed organizers, trays, and containers."
+      },
+      "702": {
+        "name": "Measure Tools",
+        "metaTitle": "3D Printed Measure Tools",
+        "metaDescription": "Ensure precise measurements with our accurate and versatile 3D printed measuring tools, rulers, and calipers."
+      },
+      "703": {
+        "name": "Hand Tools",
+        "metaTitle": "3D Printed Hand Tools",
+        "metaDescription": "Enhance your toolbox with our durable and customizable 3D printed hand tools, wrenches, and screwdrivers."
+      },
+      "704": {
+        "name": "Machine Tools",
+        "metaTitle": "3D Printed Machine Tools",
+        "metaDescription": "Upgrade your workshop with our precision-crafted 3D printed machine tools, jigs, and fixtures."
+      },
+      "705": {
+        "name": "Gadgets",
+        "metaTitle": "3D Printed Gadgets",
+        "metaDescription": "Uncover a world of possibilities with our collection of unique and practical 3D printed gadgets, from phone holders to desk organizers."
+      },
+      "706": {
+        "name": "Other Tools",
+        "metaTitle": "Other Tools",
+        "metaDescription": "Discover a vast array of specialized and niche 3D printed tools to meet your specific needs and interests."
+      },
+      "707": {
+        "name": "Medical Tools",
+        "metaTitle": "3D Printed Medical Tools",
+        "metaDescription": "Experience the future of medicine with our innovative 3D printed medical tools, surgical guides, and implants."
+      },
+      "800": {
+        "name": "Toys & Games",
+        "metaTitle": "3D Printed Toys & Games",
+        "metaDescription": "This section is dedicated to printable fun! You will find various board games, toys, puzzles and games which are all ready to be printed and enjoyed after a quick print."
+      },
+      "801": {
+        "name": "Characters",
+        "metaTitle": "3D Printed Characters",
+        "metaDescription": "Create your own personalized 3D printed characters, action figures, and dolls for imaginative play and storytelling."
+      },
+      "802": {
+        "name": "Board Games",
+        "metaTitle": "3D Printed Board Games",
+        "metaDescription": "Elevate your game nights with our unique and customizable 3D printed board games, chess sets, and game pieces."
+      },
+      "803": {
+        "name": "Outdoor Toys",
+        "metaTitle": "3D Printed Outdoor Toys",
+        "metaDescription": "Encourage active play and outdoor adventures with our durable and engaging 3D printed outdoor toys, frisbees, and sports equipment."
+      },
+      "804": {
+        "name": "Puzzles",
+        "metaTitle": "3D Printed Puzzles",
+        "metaDescription": "Challenge your mind and test your problem-solving skills with our intricate and captivating 3D printed puzzles."
+      },
+      "805": {
+        "name": "Other Toys & Games",
+        "metaTitle": "Other Toys & Games",
+        "metaDescription": "Discover a world of endless possibilities for play, learning, and creativity with our diverse collection of 3D printed toys and games."
+      },
+      "806": {
+        "name": "Construction Sets",
+        "metaTitle": "3D Printed Construction Sets",
+        "metaDescription": "Build and create incredible structures with our versatile and educational 3D printed construction sets, from classic building blocks to STEM-inspired designs."
+      },
+      "900": {
+        "name": "3D Printer",
+        "metaTitle": "3D Printer",
+        "metaDescription": "Whether you're looking to enhance your 3D printing experience with accessories or need to replace a printer part with a printed one, we have you covered. You can download and print models from a wide selection available just a click away."
+      },
+      "901": {
+        "name": "3D Printer Accessories",
+        "metaTitle": "3D Printer Accessories",
+        "metaDescription": "Elevate your 3D printing experience with our curated selection of premium accessories. Discover a wide range of essential tools and components designed to optimize print quality, enhance performance, and expand the capabilities of your 3D printer."
+      },
+      "902": {
+        "name": "3D Printer Parts",
+        "metaTitle": "3D Printer Parts & Upgrades",
+        "metaDescription": "Transform your 3D printer into a powerhouse of precision and performance with our extensive range of high-quality 3D printer parts and upgrades. Whether you're seeking to enhance print accuracy, increase printing speed, or expand your printer's functionality, our carefully curated selection of replacement parts and innovative upgrades caters to every need."
+      },
+      "903": {
+        "name": "Test Models",
+        "metaTitle": "3D Printer Test Models",
+        "metaDescription": "Ensure flawless prints and optimal performance with our collection of essential 3D printer test models. These meticulously designed models provide a comprehensive platform for evaluating printer settings, diagnosing potential issues, and validating print quality."
+      },
+      "1000": {
+        "name": "Props & Cosplays",
+        "metaTitle": "3D Printed Props & Cosplays",
+        "metaDescription": "Even if it's not Halloween, there's always time for printing a cool mask, helmet or other cosplay-related prints. Don't wait until it's too late, and start printing your awesome new outfit!"
+      },
+      "1001": {
+        "name": "Masks & Helmets",
+        "metaTitle": "3D Printed Masks & Helmets",
+        "metaDescription": "Elevate your cosplay with our detailed and realistic 3D printed masks, helmets, and other facial accessories."
+      },
+      "1002": {
+        "name": "Cosplay Weapons",
+        "metaTitle": "3D Printed Props for Cosplay Weapons",
+        "metaDescription": "Dive into the amazing cosplay world with our 3D printed props! We've got finely designed swords and shields, ideal for you to embody your favorite characters. Unleash their power and enjoy immersive role-playing!"
+      },
+      "1003": {
+        "name": "Costumes",
+        "metaTitle": "3D Printed Costumes",
+        "metaDescription": "Create stunning and authentic 3D printed costumes, from superhero suits to fantasy armor, for your next cosplay event or Halloween."
+      },
+      "1004": {
+        "name": "Other Props & Cosplays",
+        "metaTitle": "Other Props & Cosplays",
+        "metaDescription": "Enhance your cosplay with our diverse collection of 3D printed props, accessories, and gadgets to complete your transformation."
+      },
+      "2000": {
+        "name": "Generative 3D Model",
+        "metaTitle": "Generative 3D Model",
+        "metaDescription": "Here you can find creative models built using 3D model generators. They are beautifully crafted and may provide inspiration on how to utilize these generators."
+      },
+      "2001": {
+        "name": "Hueforge & Lithophane",
+        "metaTitle": "Hueforge & Lithophane",
+        "metaDescription": "Transform your favorite images into stunning 3D art pieces with Hueforge and create mesmerizing lithophanes that glow with light."
+      },
+      "2002": {
+        "name": "Make My Sign",
+        "metaTitle": "Make My Sign",
+        "metaDescription": "Create personalized and eye-catching signs using our user-friendly Make My Sign tool, perfect for home décor, businesses, and special occasions."
+      },
+      "2003": {
+        "name": "Make My Vase",
+        "metaTitle": "Make My Vase",
+        "metaDescription": "Design and customize unique and beautiful vases with our intuitive Make My Vase tool, from simple shapes to intricate patterns, solid or hollow."
+      },
+      "2004": {
+        "name": "Pixel Puzzle Maker",
+        "metaTitle": "Pixel Puzzle Maker",
+        "metaDescription": "Convert your cherished images into captivating pixel art puzzles using our Pixel Puzzle Maker tool, perfect for fun challenges and creative displays."
+      },
+      "2005": {
+        "name": "Relief Sculpture Maker",
+        "metaTitle": "Relief Sculpture Maker",
+        "metaDescription": "Elevate your artwork with our 3D to Relief Sculpture tool, seamlessly transforming 3D models or images into stunning bas-relief sculptures."
+      },
+      "2006": {
+        "name": "AI Scanner",
+        "metaTitle": "AI Scanner",
+        "metaDescription": "Recreate 3D assets with remarkable accuracy using our AI Scanner tool, simply capture a continuous video and let the AI do the rest."
+      },
+      "2007": {
+        "name": "Image to Keychain",
+        "metaTitle": "Image to Keychain",
+        "metaDescription": "Turns images into keychains, bookmarks and other 2D Art models."
+      },
+      "2008": {
+        "name": "Make My Desk Organizer",
+        "metaTitle": "Make My Desk Organizer",
+        "metaDescription": "Design your perfect desk organizer. Customize every detail to fit exactly what you need."
+      },
+      "2009": {
+        "name": "PrintMon Maker",
+        "metaTitle": "PrintMon Maker",
+        "metaDescription": "Generate adorable creatures from text or images, ready for 3D printing."
+      },
+      "2010": {
+        "name": "Statue Maker",
+        "metaTitle": "Statue Maker",
+        "metaDescription": "Turn Your Portrait into a Lifelike 3D Masterpiece."
+      },
+      "2011": {
+        "name": "Christmas Ornament Maker",
+        "metaTitle": "Christmas Ornament Maker",
+        "metaDescription": "Create personalized, spinning 2D Christmas ornaments with the Christmas Ornament Maker, perfect for decorations or gifts."
+      },
+      "2012": {
+        "name": "Make My Lantern",
+        "metaTitle": "Make My Lantern",
+        "metaDescription": "Generate a hollowed lantern from an image."
+      }
+    },
     "grid": {
       "empty": "No models yet.",
       "loadingMore": "Loading…"
