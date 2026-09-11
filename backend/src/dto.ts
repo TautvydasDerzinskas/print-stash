@@ -102,6 +102,11 @@ export type PrintOut = {
   collection: string | null;
   tags: string[];
   folder_id: string | null;
+  // Only populated by the single-print detail fetch (printOutById) -- see toPrintOut's `folder`
+  // param. Null both when there's no folder and when the caller didn't load one (list endpoints
+  // skip the extra join since nothing there renders it).
+  folder_name: string | null;
+  created_at: string;
   storage_path: string | null;
   plates: PlateOut[];
   preview_images: PreviewImageOut[];
@@ -205,6 +210,7 @@ export function toPrintOut(
   preparedFile: PrintFile | null,
   author?: Author | null,
   previewImages: PreviewImage[] = [],
+  folder?: Folder | null,
 ): PrintOut {
   const sortedPlates = plates.toSorted((a, b) => a.position - b.position);
   const plateOuts = sortedPlates.map((p) => toPlateOut(print.id, p));
@@ -259,6 +265,8 @@ export function toPrintOut(
     collection: print.collection,
     tags: print.tags,
     folder_id: print.folderId,
+    folder_name: folder?.name ?? null,
+    created_at: print.createdAt.toISOString(),
     storage_path: storageParentDir(sortedPlates),
     plates: plateOuts,
     preview_images: previewImageOuts,
