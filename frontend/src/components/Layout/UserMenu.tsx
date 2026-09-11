@@ -166,6 +166,11 @@ export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout }
             <ListItemText>{t(`userMenu.${mode}`)}</ListItemText>
           </MenuItem>
         ))}
+        <Divider />
+        <MenuItem selected={theme === "system"} onClick={() => handleThemeSelect("system")}>
+          <ListItemIcon>{theme === "system" && <CheckIcon fontSize="small" />}</ListItemIcon>
+          <ListItemText>{t("userMenu.system")}</ListItemText>
+        </MenuItem>
       </Menu>
     </>
   );

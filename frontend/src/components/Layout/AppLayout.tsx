@@ -13,12 +13,15 @@ import { ToastProvider } from "../ToastProvider";
 import { PageHeaderContext, type PageHeader } from "./PageHeaderContext";
 import { ImportJobProvider } from "./ImportJobContext";
 import { NotificationsProvider, useNotifications } from "./NotificationsContext";
-import type { ResolvedTheme, ThemeSelection } from "../../constants/settingsOptions";
+import type { ThemeSelection } from "../../constants/settingsOptions";
 import type { AuthUser } from "../../api/auth";
 
 type AppLayoutProps = {
   muiTheme: Theme;
-  resolvedTheme: ResolvedTheme;
+  /** The user's raw persisted choice (light/dark/system), for UserMenu's theme submenu to show
+   *  which one is checked -- NOT the resolved light/dark palette, which lives in muiTheme
+   *  instead and has already collapsed "system" into a concrete value by this point. */
+  themeSelection: ThemeSelection;
   apiUp: boolean | null;
   folderId: string | null;
   onPrintsChanged: () => void;
@@ -105,7 +108,7 @@ type ShellProps = Omit<AppLayoutProps, "muiTheme">;
  *  Split out from AppLayout because that wiring needs useNotifications(), which only works
  *  below the provider AppLayout itself renders. */
 function AppLayoutShell({
-  resolvedTheme,
+  themeSelection,
   apiUp,
   folderId,
   onPrintsChanged,
@@ -153,7 +156,7 @@ function AppLayoutShell({
             onUploaded={onPrintsChanged}
             onUnauthorized={onUnauthorized}
             user={user}
-            theme={resolvedTheme}
+            theme={themeSelection}
             onThemeChange={onThemeChange}
             onOpenProfile={onOpenProfile}
             onLogout={onLogout}

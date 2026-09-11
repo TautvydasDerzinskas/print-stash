@@ -27,6 +27,8 @@ import { authApi, type AuthUser } from "./api/auth";
 import { settingsApi, type PreviewMode } from "./api/settings";
 import { clearToken, clearUser, readToken, readUser, storeToken, storeUser } from "./utils/auth";
 import { type AppSettings, loadSettings, saveSettings } from "./utils/settings";
+import { useResolvedTheme } from "./hooks/useResolvedTheme";
+import type { ResolvedTheme } from "./constants/settingsOptions";
 import { buildTheme } from "./theme";
 
 const DEFAULT_REFRESH_SECONDS = 6 * 60 * 60; // 6 hours
@@ -39,7 +41,7 @@ type AppShellProps = {
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
   previewMode: PreviewMode;
   setPreviewMode: (mode: PreviewMode) => void;
-  resolvedTheme: AppSettings["theme"]["selected"];
+  resolvedTheme: ResolvedTheme;
   muiTheme: ReturnType<typeof buildTheme>;
   onUnauthorized: () => void;
   onLogout: () => void;
@@ -78,7 +80,7 @@ function AppShell({
   return (
     <AppLayout
       muiTheme={muiTheme}
-      resolvedTheme={resolvedTheme}
+      themeSelection={settings.theme.selected}
       apiUp={apiUp}
       folderId={folderId}
       onPrintsChanged={handlePrintsChanged}
@@ -179,7 +181,7 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = React.useState(false);
   const [settings, setSettings] = React.useState<AppSettings>(() => loadSettings());
   const [previewMode, setPreviewMode] = React.useState<PreviewMode>("automatic");
-  const resolvedTheme = settings.theme.selected;
+  const resolvedTheme = useResolvedTheme(settings.theme.selected);
   const muiTheme = React.useMemo(() => buildTheme(resolvedTheme), [resolvedTheme]);
   const isAdmin = user?.role === "ADMIN";
   React.useEffect(() => { (async ()=> setHealth(await healthApi.get()))(); }, []);

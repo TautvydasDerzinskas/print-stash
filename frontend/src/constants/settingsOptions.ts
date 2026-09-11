@@ -15,14 +15,18 @@ export const SLICER_OPTIONS: SlicerOption[] = [
   { id: "other", label: "Other / Manual" },
 ];
 
-/** The user's persisted theme choice. There's no "system" option -- the user picks explicitly. */
-export type ThemeSelection = "light" | "dark";
-/** Alias kept for call sites written against the pre-reduction light/dark/neon/purple/blue
- *  palette -- now identical to ThemeSelection since every selection is already resolved. */
-export type ResolvedTheme = ThemeSelection;
+/** The user's persisted theme choice -- "system" tracks the OS/browser's prefers-color-scheme
+ *  instead of a fixed pick. Never used directly for rendering; see useResolvedTheme, which turns
+ *  this into a concrete ResolvedTheme. */
+export type ThemeSelection = "light" | "dark" | "system";
+/** The actual palette to render -- always a concrete light/dark, even when the user's
+ *  ThemeSelection is "system". Every call site that picks an asset variant or palette value
+ *  (BrandMark, ModelViewer, theme.ts's buildTheme, ...) wants this, not the raw selection. */
+export type ResolvedTheme = "light" | "dark";
 export type ThemeOption = { id: ThemeSelection; label: string; description: string };
 
 export const THEME_OPTIONS: ThemeOption[] = [
   { id: "light", label: "Light", description: "Bright backgrounds, dark text." },
   { id: "dark", label: "Dark", description: "Dimmed panels for low light." },
+  { id: "system", label: "Adapt to system", description: "Follows your device's light/dark setting." },
 ];

@@ -202,6 +202,7 @@
       "theme": "Theme",
       "light": "Light",
       "dark": "Dark",
+      "system": "Adapt to system",
       "serviceConnected": "{{service}}: connected",
       "serviceNotConnected": "{{service}}: not connected",
       "makerworldDisabledReason": "MakerWorld: you haven't added a cookie in your profile yet",
