@@ -18,14 +18,18 @@ import type { AuthUser } from "../../api/auth";
 import type { ThemeSelection } from "../../constants/settingsOptions";
 import { IMPORT_PROVIDER_INFO } from "../../constants/importProviders";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
+import { settingsApi } from "../../api/settings";
 
 const THEME_MODES: ThemeSelection[] = ["light", "dark"];
 
 type ServiceChipDef = {
-  key: "makerworld";
+  key: "makerworld" | "thingiverse" | "printables";
   label: string;
   color: string;
   connected: boolean;
+  /** Shown in the tooltip only when connected is false -- explains what's missing (a per-user
+   *  credential the viewer can fix themselves, vs. an instance-wide one only an admin can). */
+  disabledReason?: string;
 };
 
 type Props = {
@@ -34,19 +38,30 @@ type Props = {
   onThemeChange: (theme: ThemeSelection) => void;
   onOpenProfile: () => void;
   onLogout: () => void;
-  makerworldCookie: string;
 };
 
 /** Avatar (Gravatar, from the account email) that opens identity + quick settings, mirroring
  *  the youtube-mp3-vault UserMenu: name/email/logout up top, Profile and a light/dark Theme
- *  submenu below, then at-a-glance MakerWorld cookie status. Thingiverse import auth is an
- *  admin-configured, instance-wide Access Token now (see AdminSettingsPage/ThingiverseSection),
- *  not a per-user credential, so it has no chip here. */
-export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout, makerworldCookie }: Props) {
+ *  submenu below, then at-a-glance import-provider connection chips (MakerWorld, Thingiverse,
+ *  Printables). Each provider's "configured" status is fetched from the backend once on mount --
+ *  never from localStorage, which only mirrors what this one browser last saved and can easily
+ *  disagree with the DB (e.g. the cookie was set from a different device, or localStorage was
+ *  cleared) -- see MakerworldCookieSection, which had the same DB-truth fetch already for its
+ *  own chip; this just brings UserMenu's chip in line with it. */
+export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const avatarUrl = useGravatarUrl(user?.email, 128);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [themeAnchorEl, setThemeAnchorEl] = React.useState<HTMLElement | null>(null);
+  const [makerworldConfigured, setMakerworldConfigured] = React.useState(false);
+  const [thingiverseConfigured, setThingiverseConfigured] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    settingsApi.getMakerworld().then(res => { if (active) setMakerworldConfigured(res.configured); }).catch(() => undefined);
+    settingsApi.getThingiverse().then(res => { if (active) setThingiverseConfigured(res.configured); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   const closeMenu = () => setAnchorEl(null);
   const closeThemeMenu = () => setThemeAnchorEl(null);
@@ -58,7 +73,21 @@ export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout, 
   };
 
   const services: ServiceChipDef[] = [
-    { key: "makerworld", ...IMPORT_PROVIDER_INFO.makerworld, connected: Boolean(makerworldCookie.trim()) },
+    {
+      key: "makerworld",
+      ...IMPORT_PROVIDER_INFO.makerworld,
+      connected: makerworldConfigured,
+      disabledReason: t("userMenu.makerworldDisabledReason"),
+    },
+    {
+      key: "thingiverse",
+      ...IMPORT_PROVIDER_INFO.thingiverse,
+      connected: thingiverseConfigured,
+      disabledReason: t("userMenu.thingiverseDisabledReason"),
+    },
+    // No configuration to check -- Printables' public API answers unauthenticated requests
+    // directly (see backend's printablesApi.ts), so imports from it always work.
+    { key: "printables", ...IMPORT_PROVIDER_INFO.printables, connected: true },
   ];
 
   return (
@@ -104,7 +133,11 @@ export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout, 
           {services.map(svc => (
             <Box
               key={svc.key}
-              title={svc.connected ? t("userMenu.serviceConnected", { service: svc.label }) : t("userMenu.serviceNotConnected", { service: svc.label })}
+              title={
+                svc.connected
+                  ? t("userMenu.serviceConnected", { service: svc.label })
+                  : svc.disabledReason ?? t("userMenu.serviceNotConnected", { service: svc.label })
+              }
               sx={{
                 px: 1, py: 0.375, borderRadius: 1, fontSize: 11, fontWeight: 600, lineHeight: 1.4,
                 whiteSpace: "nowrap", color: "#fff",

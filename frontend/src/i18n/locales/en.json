@@ -203,7 +203,9 @@
       "light": "Light",
       "dark": "Dark",
       "serviceConnected": "{{service}}: connected",
-      "serviceNotConnected": "{{service}}: not connected"
+      "serviceNotConnected": "{{service}}: not connected",
+      "makerworldDisabledReason": "MakerWorld: you haven't added a cookie in your profile yet",
+      "thingiverseDisabledReason": "Thingiverse: the admin hasn't configured an API key yet"
     },
     "notifications": {
       "label": "Notifications",

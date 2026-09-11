@@ -108,13 +108,14 @@ router.post(
   }),
 );
 
-// Admin-only end to end, like storage settings: the token is a shared credential for the whole
-// instance's Thingiverse imports, not a per-user preference. GET never echoes the token itself
-// back (write-only, like any other API secret) -- only whether one is currently configured, so
-// the admin UI can show "configured" / "not configured" without re-displaying the value.
+// Read is open to every user -- UserMenu's Thingiverse connection chip needs to know whether
+// imports will actually work, same as /settings/previews above. Only admins can change it: the
+// token is a shared credential for the whole instance's Thingiverse imports, not a per-user
+// preference. GET never echoes the token itself back (write-only, like any other API secret) --
+// only whether one is currently configured, so the admin UI can show "configured" / "not
+// configured" without re-displaying the value.
 router.get(
   "/settings/thingiverse",
-  requireAdmin,
   asyncHandler(async (_req, res) => {
     res.json({ configured: Boolean(await getThingiverseAccessToken()) });
   }),

@@ -74,7 +74,6 @@ export default function TopBar({
           onThemeChange={onThemeChange}
           onOpenProfile={onOpenProfile}
           onLogout={onLogout}
-          makerworldCookie={makerworldCookie}
         />
       </Stack>
     </Box>

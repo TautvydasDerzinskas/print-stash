@@ -203,7 +203,9 @@
       "light": "Šviesi",
       "dark": "Tamsi",
       "serviceConnected": "{{service}}: prijungta",
-      "serviceNotConnected": "{{service}}: neprijungta"
+      "serviceNotConnected": "{{service}}: neprijungta",
+      "makerworldDisabledReason": "MakerWorld: profilyje dar nepridėjote slapuko (cookie)",
+      "thingiverseDisabledReason": "Thingiverse: administratorius dar nesukonfigūravo API rakto"
     },
     "notifications": {
       "label": "Pranešimai",
