@@ -3,10 +3,9 @@ import { useTranslation } from "react-i18next";
 import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import Tooltip from "@mui/material/Tooltip";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
+import StarToggle from "../../components/StarToggle";
 
 type Props = {
   print: Print;
@@ -43,15 +42,13 @@ export default function FavoriteButton({ print, onUpdated, onUnauthorized }: Pro
   return (
     <Tooltip title={label}>
       <span>
-        <IconButton size="small" onClick={toggle} disabled={busy} aria-label={label ?? undefined}>
-          {busy ? (
+        {busy ? (
+          <IconButton size="small" disabled>
             <CircularProgress size={18} />
-          ) : print.is_favorite ? (
-            <FavoriteIcon fontSize="small" color="error" />
-          ) : (
-            <FavoriteBorderIcon fontSize="small" />
-          )}
-        </IconButton>
+          </IconButton>
+        ) : (
+          <StarToggle active={print.is_favorite} onClick={toggle} ariaLabel={label} />
+        )}
       </span>
     </Tooltip>
   );

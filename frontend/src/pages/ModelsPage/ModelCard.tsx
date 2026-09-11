@@ -11,8 +11,6 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Tooltip from "@mui/material/Tooltip";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
-import FavoriteIcon from "@mui/icons-material/Favorite";
-import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import { type Print, printsApi } from "../../api/prints";
 import { type PreviewMode } from "../../api/settings";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
@@ -20,6 +18,7 @@ import { UnauthorizedError } from "../../api/client";
 import { useToast } from "../../components/ToastProvider";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { importProviderInfo } from "../../constants/importProviders";
+import StarToggle from "../../components/StarToggle";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
 
 type Props = {
@@ -133,15 +132,13 @@ export default function ModelCard({ item, theme, previewMode, onDeleted, onFavor
       >
         <Tooltip title={favoriteLabel}>
           <Box sx={hoverActionBg}>
-            <IconButton size="small" onClick={toggleFavorite} disabled={favoriteBusy} aria-label={favoriteLabel ?? undefined}>
-              {favoriteBusy ? (
+            {favoriteBusy ? (
+              <IconButton size="small" disabled>
                 <CircularProgress size={16} sx={{ color: "#fff" }} />
-              ) : item.is_favorite ? (
-                <FavoriteIcon fontSize="small" color="error" />
-              ) : (
-                <FavoriteBorderIcon fontSize="small" sx={{ color: "#fff" }} />
-              )}
-            </IconButton>
+              </IconButton>
+            ) : (
+              <StarToggle active={item.is_favorite} onClick={toggleFavorite} ariaLabel={favoriteLabel} inactiveColor="#fff" />
+            )}
           </Box>
         </Tooltip>
         <Box sx={hoverActionBg}>
