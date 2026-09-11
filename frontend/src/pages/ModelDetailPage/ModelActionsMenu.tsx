@@ -5,15 +5,7 @@ import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import ListItemText from "@mui/material/ListItemText";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
-import Stack from "@mui/material/Stack";
 import Divider from "@mui/material/Divider";
-import List from "@mui/material/List";
-import ListItemButton from "@mui/material/ListItemButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DownloadIcon from "@mui/icons-material/Download";
@@ -23,13 +15,14 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import LaunchIcon from "@mui/icons-material/Launch";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
-import { type Plate, type Print, printsApi } from "../../api/prints";
-import { saveResponseToDisk } from "../../utils/downloadResponse";
+import { type Print, printsApi } from "../../api/prints";
 import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { useConfirm } from "../../components/ConfirmProvider";
 import { importProviderInfo } from "../../constants/importProviders";
 import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import { useSlicerPreference } from "../../hooks/useSlicerPreference";
+import { useDownloadPrint } from "./useDownloadPrint";
+import DownloadPickerDialog from "./DownloadPickerDialog";
 
 type Props = {
   print: Print;
@@ -55,59 +48,15 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
   const confirmDialog = useConfirm();
   const slicerPreference = useSlicerPreference();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [downloading, setDownloading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const { pickerOpen, setPickerOpen, downloading, handleDownload, downloadPlate, downloadAllZip, sortedPlates } =
+    useDownloadPrint(print, onUnauthorized);
 
   const closeMenu = () => setAnchorEl(null);
 
-  const handleDownloadError = (err: unknown) => {
-    if (err instanceof UnauthorizedError) {
-      onUnauthorized?.();
-      return;
-    }
-    console.error(err);
-    alert(t("models:detail.downloadFailed"));
-  };
-
-  const downloadPlate = async (plate: Plate) => {
-    setDownloading(true);
-    try {
-      const res = await fetch(printsApi.fileUrl(plate.url));
-      if (res.status === 401) throw new UnauthorizedError();
-      if (!res.ok) throw new Error("Download failed");
-      await saveResponseToDisk(res, plate.filename || "download");
-      setPickerOpen(false);
-      printsApi.recordDownload(print.id).catch(() => {});
-    } catch (err) {
-      handleDownloadError(err);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const downloadAllZip = async () => {
-    setDownloading(true);
-    try {
-      const res = await printsApi.downloadZip({ print_ids: [print.id] });
-      await saveResponseToDisk(res, `${print.name || "model"}.zip`);
-      setPickerOpen(false);
-      printsApi.recordDownload(print.id).catch(() => {});
-    } catch (err) {
-      handleDownloadError(err);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const handleDownload = () => {
+  const onDownloadClick = () => {
     closeMenu();
-    if (print.plates.length <= 1) {
-      const plate = print.plates[0];
-      if (plate) void downloadPlate(plate);
-      return;
-    }
-    setPickerOpen(true);
+    handleDownload();
   };
 
   const handleDelete = async () => {
@@ -133,7 +82,6 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
     }
   };
 
-  const sortedPlates = print.plates.toSorted((a, b) => a.position - b.position);
   const providerInfo = importProviderInfo(print.source_provider);
   // "other" has no registered URL protocol to launch -- treated the same as no preference set.
   const slicerOption = SLICER_OPTIONS.find(opt => opt.id === slicerPreference && opt.id !== "other");
@@ -167,7 +115,7 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
               : t("models:detail.openInSlicerGeneric")}
           </ListItemText>
         </MenuItem>
-        <MenuItem onClick={handleDownload} disabled={downloading}>
+        <MenuItem onClick={onDownloadClick} disabled={downloading}>
           <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("common:download")}</ListItemText>
         </MenuItem>
@@ -195,41 +143,14 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
         ]}
       </Menu>
 
-      <Dialog open={pickerOpen} onClose={() => !downloading && setPickerOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>{t("models:detail.downloadPickerTitle")}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1.5}>
-            <Button
-              variant="contained"
-              onClick={downloadAllZip}
-              disabled={downloading}
-              startIcon={downloading ? <CircularProgress size={14} /> : <DownloadIcon fontSize="small" />}
-            >
-              {t("models:detail.downloadAllZip", { count: sortedPlates.length })}
-            </Button>
-            <Divider>{t("models:detail.orDownloadOne")}</Divider>
-            <List disablePadding>
-              {sortedPlates.map((plate, idx) => (
-                <ListItemButton
-                  key={plate.id}
-                  onClick={() => downloadPlate(plate)}
-                  disabled={downloading}
-                  sx={{ borderRadius: 1 }}
-                >
-                  <ListItemText
-                    primary={t("models:detail.plateLabel", { n: idx + 1 })}
-                    secondary={plate.filename}
-                    secondaryTypographyProps={{ noWrap: true }}
-                  />
-                </ListItemButton>
-              ))}
-            </List>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setPickerOpen(false)} disabled={downloading}>{t("common:cancel")}</Button>
-        </DialogActions>
-      </Dialog>
+      <DownloadPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        downloading={downloading}
+        sortedPlates={sortedPlates}
+        downloadAllZip={downloadAllZip}
+        downloadPlate={downloadPlate}
+      />
     </>
   );
 }

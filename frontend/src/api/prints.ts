@@ -60,6 +60,9 @@ export type Print = {
   collection?: string | null;
   tags: string[];
   folder_id?: string | null;
+  // Only populated by GET /print/:id (the detail page) -- list endpoints don't join it.
+  folder_name?: string | null;
+  created_at: string;
   storage_path?: string | null;
   plates: Plate[]; // ordered by position, length >= 1
   preview_images: PreviewImage[]; // ordered by position; [0] is the default/main gallery image

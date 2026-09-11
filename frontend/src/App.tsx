@@ -119,7 +119,7 @@ function AppShell({
         />
         <Route
           path="/models/:printId"
-          element={<ModelDetailPage theme={resolvedTheme} onUnauthorized={onUnauthorized} />}
+          element={<ModelDetailPage theme={resolvedTheme} onSelectFolder={setFolderId} onUnauthorized={onUnauthorized} />}
         />
         <Route path="/authors/:authorId" element={<AuthorPage />} />
         <Route

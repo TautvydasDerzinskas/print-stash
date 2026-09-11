@@ -671,7 +671,10 @@
       "nextImage": "Next image",
       "addToFavorites": "Add to Favourites",
       "removeFromFavorites": "Remove from Favourites",
-      "favoriteFailed": "Failed to update favourites. Please try again."
+      "favoriteFailed": "Failed to update favourites. Please try again.",
+      "category": "Category",
+      "downloadModelFiles": "Download model files",
+      "imported": "Imported {{date}}"
     },
     "author": {
       "pageTitle": "Author",

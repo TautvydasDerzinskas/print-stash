@@ -672,7 +672,10 @@
       "nextImage": "Kitas paveikslėlis",
       "addToFavorites": "Pridėti prie mėgstamų",
       "removeFromFavorites": "Pašalinti iš mėgstamų",
-      "favoriteFailed": "Nepavyko atnaujinti mėgstamų. Bandykite dar kartą."
+      "favoriteFailed": "Nepavyko atnaujinti mėgstamų. Bandykite dar kartą.",
+      "category": "Kategorija",
+      "downloadModelFiles": "Atsisiųsti modelio failus",
+      "imported": "Importuota {{date}}"
     },
     "author": {
       "pageTitle": "Autorius",

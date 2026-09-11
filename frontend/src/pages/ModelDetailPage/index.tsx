@@ -25,13 +25,15 @@ import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import Model3DPreviewModal from "./Model3DPreviewModal";
 import ModelActionsMenu from "./ModelActionsMenu";
 import FavoriteButton from "./FavoriteButton";
+import ModelSidePanel from "./ModelSidePanel";
 
 type Props = {
   theme: ResolvedTheme;
+  onSelectFolder: (id: string) => void;
   onUnauthorized?: () => void;
 };
 
-export default function ModelDetailPage({ theme, onUnauthorized }: Props) {
+export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized }: Props) {
   const { printId } = useParams<{ printId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["models", "common", "library"]);
@@ -115,156 +117,169 @@ export default function ModelDetailPage({ theme, onUnauthorized }: Props) {
   const goNextImage = () => setActiveImageIndex(i => (i + 1) % images.length);
 
   return (
-    <Box sx={{ maxWidth: 1100 }}>
-      <Stack
-        direction="row"
-        alignItems="center"
-        spacing={1}
+    <Box sx={{ maxWidth: "1390px", mx: "auto" }}>
+      <Box
         sx={{
-          mb: 2,
-          width: "fit-content",
-          cursor: print.author ? "pointer" : "default",
-          ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "2fr 1fr" },
+          gap: "24px",
+          alignItems: "start",
         }}
-        onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
       >
-        <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
-          {(authorName || "?").slice(0, 1).toUpperCase()}
-        </Avatar>
-        <Typography variant="body2" sx={{ color: "inherit" }}>
-          {authorName || t("models:card.unknownAuthor")}
-        </Typography>
-      </Stack>
-
-      <Box sx={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: "12px", overflow: "hidden", bgcolor: "action.hover" }}>
-        {hasImages ? (
-          <Box
-            component="img"
-            src={printsApi.fileUrl(activeImage.url)}
-            alt={print.title || print.name}
-            sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-          />
-        ) : (
-          firstPlate && renderPreviewContent(print, "modal", theme, t, "automatic", firstPlate)
-        )}
-
-        {images.length > 1 && (
-          <>
-            <IconButton
-              onClick={goPrevImage}
-              aria-label={t("models:detail.previousImage") ?? undefined}
-              sx={{
-                position: "absolute",
-                left: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                bgcolor: "rgba(0, 0, 0, 0.45)",
-                color: "#fff",
-                "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
-              }}
-            >
-              <ChevronLeftIcon />
-            </IconButton>
-            <IconButton
-              onClick={goNextImage}
-              aria-label={t("models:detail.nextImage") ?? undefined}
-              sx={{
-                position: "absolute",
-                right: 8,
-                top: "50%",
-                transform: "translateY(-50%)",
-                bgcolor: "rgba(0, 0, 0, 0.45)",
-                color: "#fff",
-                "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
-              }}
-            >
-              <ChevronRightIcon />
-            </IconButton>
-          </>
-        )}
-
-        {canPreview3d && (
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<ViewInArIcon fontSize="small" />}
-            onClick={() => setPreviewOpen(true)}
+        <Box>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
             sx={{
-              position: "absolute",
-              left: 12,
-              bottom: 12,
-              bgcolor: "rgba(0, 0, 0, 0.65)",
-              color: "#fff",
-              "&:hover": { bgcolor: "rgba(0, 0, 0, 0.8)" },
+              mb: 2,
+              width: "fit-content",
+              cursor: print.author ? "pointer" : "default",
+              ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
             }}
+            onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
           >
-            {t("models:detail.preview3d")}
-          </Button>
-        )}
-      </Box>
+            <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
+              {(authorName || "?").slice(0, 1).toUpperCase()}
+            </Avatar>
+            <Typography variant="body2" sx={{ color: "inherit" }}>
+              {authorName || t("models:card.unknownAuthor")}
+            </Typography>
+          </Stack>
 
-      {images.length > 1 && (
-        <Stack direction="row" spacing={1} sx={{ mt: 1.5, overflowX: "auto", pb: 0.5 }}>
-          {images.map((image, idx) => (
-            <ButtonBase
-              key={image.id}
-              onClick={() => setActiveImageIndex(idx)}
-              sx={{
-                width: 84,
-                height: 64,
-                borderRadius: 1.5,
-                overflow: "hidden",
-                border: "2px solid",
-                borderColor: idx === activeImageIndex ? "primary.main" : "divider",
-                flexShrink: 0,
-              }}
-            >
+          <Box sx={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: "12px", overflow: "hidden", bgcolor: "action.hover" }}>
+            {hasImages ? (
               <Box
                 component="img"
-                src={printsApi.fileUrl(image.url)}
-                alt=""
-                sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                src={printsApi.fileUrl(activeImage.url)}
+                alt={print.title || print.name}
+                sx={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
-            </ButtonBase>
-          ))}
-        </Stack>
-      )}
+            ) : (
+              firstPlate && renderPreviewContent(print, "modal", theme, t, "automatic", firstPlate)
+            )}
 
-      {needsGeneratedPreview && firstPlate && (
-        <Box sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 }} aria-hidden="true">
-          <ModelSnapshot
-            url={printsApi.fileUrl(firstPlate.url)}
-            ext={extOf(firstPlate.filename)}
-            plateId={firstPlate.id}
-            theme={theme}
-            mode="automatic"
-          />
-        </Box>
-      )}
+            {images.length > 1 && (
+              <>
+                <IconButton
+                  onClick={goPrevImage}
+                  aria-label={t("models:detail.previousImage") ?? undefined}
+                  sx={{
+                    position: "absolute",
+                    left: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    bgcolor: "rgba(0, 0, 0, 0.45)",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
+                  }}
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+                <IconButton
+                  onClick={goNextImage}
+                  aria-label={t("models:detail.nextImage") ?? undefined}
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    bgcolor: "rgba(0, 0, 0, 0.45)",
+                    color: "#fff",
+                    "&:hover": { bgcolor: "rgba(0, 0, 0, 0.65)" },
+                  }}
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              </>
+            )}
 
-      <Paper variant="outlined" sx={{ mt: 3, p: 2, borderRadius: "12px" }}>
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>{t("models:detail.description")}</Typography>
-        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", color: print.notes ? "text.primary" : "text.disabled" }}>
-          {print.notes || t("models:detail.noDescription")}
-        </Typography>
-
-        <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2.5, mb: 1 }}>{t("models:detail.tags")}</Typography>
-        {print.tags.length ? (
-          <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
-            {print.tags.map(tag => (
-              <Chip
-                key={tag}
-                label={tag}
+            {canPreview3d && (
+              <Button
+                variant="contained"
                 size="small"
-                variant="outlined"
-                sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.primary" }}
+                startIcon={<ViewInArIcon fontSize="small" />}
+                onClick={() => setPreviewOpen(true)}
+                sx={{
+                  position: "absolute",
+                  left: 12,
+                  bottom: 12,
+                  bgcolor: "rgba(0, 0, 0, 0.65)",
+                  color: "#fff",
+                  "&:hover": { bgcolor: "rgba(0, 0, 0, 0.8)" },
+                }}
+              >
+                {t("models:detail.preview3d")}
+              </Button>
+            )}
+          </Box>
+
+          {images.length > 1 && (
+            <Stack direction="row" spacing={1} sx={{ mt: 1.5, overflowX: "auto", pb: 0.5 }}>
+              {images.map((image, idx) => (
+                <ButtonBase
+                  key={image.id}
+                  onClick={() => setActiveImageIndex(idx)}
+                  sx={{
+                    width: 84,
+                    height: 64,
+                    borderRadius: 1.5,
+                    overflow: "hidden",
+                    border: "2px solid",
+                    borderColor: idx === activeImageIndex ? "primary.main" : "divider",
+                    flexShrink: 0,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={printsApi.fileUrl(image.url)}
+                    alt=""
+                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                </ButtonBase>
+              ))}
+            </Stack>
+          )}
+
+          {needsGeneratedPreview && firstPlate && (
+            <Box sx={{ position: "absolute", width: 1, height: 1, overflow: "hidden", opacity: 0 }} aria-hidden="true">
+              <ModelSnapshot
+                url={printsApi.fileUrl(firstPlate.url)}
+                ext={extOf(firstPlate.filename)}
+                plateId={firstPlate.id}
+                theme={theme}
+                mode="automatic"
               />
-            ))}
-          </Stack>
-        ) : (
-          <Typography variant="body2" color="text.disabled">{t("models:detail.noTags")}</Typography>
-        )}
-      </Paper>
+            </Box>
+          )}
+
+          <Paper variant="outlined" sx={{ mt: 3, p: 2, borderRadius: "12px" }}>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>{t("models:detail.description")}</Typography>
+            <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", color: print.notes ? "text.primary" : "text.disabled" }}>
+              {print.notes || t("models:detail.noDescription")}
+            </Typography>
+
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2.5, mb: 1 }}>{t("models:detail.tags")}</Typography>
+            {print.tags.length ? (
+              <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
+                {print.tags.map(tag => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    size="small"
+                    variant="outlined"
+                    sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.primary" }}
+                  />
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.disabled">{t("models:detail.noTags")}</Typography>
+            )}
+          </Paper>
+        </Box>
+
+        <ModelSidePanel print={print} onSelectFolder={onSelectFolder} onUnauthorized={onUnauthorized} />
+      </Box>
 
       {previewOpen && <Model3DPreviewModal print={print} onClose={() => setPreviewOpen(false)} />}
     </Box>
