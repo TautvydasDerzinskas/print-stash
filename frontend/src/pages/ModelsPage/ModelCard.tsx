@@ -30,7 +30,10 @@ type Props = {
   onUnauthorized?: () => void;
 };
 
-const hoverActionBg = { bgcolor: "rgba(0, 0, 0, 0.55)", borderRadius: "50%" };
+// No solid backdrop behind the hover-overlay icons (a card's thumbnail can be any color) -- a
+// drop-shadow keeps them legible against light and dark images alike without boxing them in.
+const hoverIconShadow = { filter: "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85))" };
+const HOVER_ICON_SIZE = 26;
 
 export default function ModelCard({ item, theme, previewMode, onDeleted, onFavoriteChange, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
@@ -131,24 +134,30 @@ export default function ModelCard({ item, theme, previewMode, onDeleted, onFavor
         }}
       >
         <Tooltip title={favoriteLabel}>
-          <Box sx={hoverActionBg}>
+          <Box>
             {favoriteBusy ? (
-              <IconButton size="small" disabled>
+              <IconButton size="small" disabled sx={hoverIconShadow}>
                 <CircularProgress size={16} sx={{ color: "#fff" }} />
               </IconButton>
             ) : (
-              <StarToggle active={item.is_favorite} onClick={toggleFavorite} ariaLabel={favoriteLabel} inactiveColor="#fff" />
+              <StarToggle
+                active={item.is_favorite}
+                onClick={toggleFavorite}
+                ariaLabel={favoriteLabel}
+                inactiveColor="#fff"
+                size={HOVER_ICON_SIZE}
+                sx={hoverIconShadow}
+              />
             )}
           </Box>
         </Tooltip>
-        <Box sx={hoverActionBg}>
-          <ModelActionsMenu
-            print={item}
-            onUnauthorized={onUnauthorized}
-            onDeleted={() => onDeleted?.(item.id)}
-            triggerSx={{ color: "#fff" }}
-          />
-        </Box>
+        <ModelActionsMenu
+          print={item}
+          onUnauthorized={onUnauthorized}
+          onDeleted={() => onDeleted?.(item.id)}
+          triggerSx={{ color: "#fff", ...hoverIconShadow }}
+          iconFontSize={HOVER_ICON_SIZE}
+        />
       </Stack>
       <Box sx={{ p: 1.5 }}>
         <Typography variant="body2" fontWeight={600} noWrap title={item.title || item.name}>

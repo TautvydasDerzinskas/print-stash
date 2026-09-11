@@ -47,7 +47,7 @@ export default function FavoriteButton({ print, onUpdated, onUnauthorized }: Pro
             <CircularProgress size={18} />
           </IconButton>
         ) : (
-          <StarToggle active={print.is_favorite} onClick={toggle} ariaLabel={label} />
+          <StarToggle active={print.is_favorite} onClick={toggle} ariaLabel={label} size={26} />
         )}
       </span>
     </Tooltip>

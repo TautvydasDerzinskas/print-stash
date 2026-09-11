@@ -38,6 +38,10 @@ type Props = {
   /** Lets callers restyle the trigger button -- e.g. the Models grid's hover overlay, which
    *  needs to read over an arbitrary thumbnail instead of the detail page header's plain icon. */
   triggerSx?: SxProps<Theme>;
+  /** Overrides the trigger icon's glyph size in px -- default (undefined) keeps the standard
+   *  fontSize="small" (20px) used everywhere else. Only the Models grid hover overlay bumps
+   *  this, to stay legible now that it no longer sits on a dark circular backdrop. */
+  iconFontSize?: number;
 };
 
 /** The "..." menu for a model: "Open in {Slicer}" (launches the user's preferred slicer via its
@@ -46,7 +50,7 @@ type Props = {
  *  (confirm, then delete), and -- only for an imported print -- a divider then "Open in
  *  {Provider}" linking back to the original model page. Shared by the model detail page's header
  *  and the Models/Collection grids' per-card hover overlay. */
-export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, triggerSx }: Props) {
+export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, triggerSx, iconFontSize }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const slicerPreference = useSlicerPreference();
@@ -146,7 +150,13 @@ export default function ModelActionsMenu({ print, onUnauthorized, onDeleted, tri
         disabled={deleting}
         sx={triggerSx}
       >
-        {deleting ? <CircularProgress size={18} /> : <MoreVertIcon fontSize="small" />}
+        {deleting ? (
+          <CircularProgress size={18} />
+        ) : iconFontSize ? (
+          <MoreVertIcon sx={{ fontSize: iconFontSize }} />
+        ) : (
+          <MoreVertIcon fontSize="small" />
+        )}
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
         <MenuItem component="a" href={openInSlicerHref} onClick={closeMenu} disabled={!openInSlicerHref}>
