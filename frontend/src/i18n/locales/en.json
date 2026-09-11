@@ -1080,6 +1080,7 @@
       "removeFromFavorites": "Remove from Favourites",
       "favoriteFailed": "Failed to update favourites. Please try again.",
       "category": "Category",
+      "author": "Author",
       "downloadModelFiles": "Download model files",
       "imported": "Imported {{date}}"
     },

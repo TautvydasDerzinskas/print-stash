@@ -57,11 +57,12 @@ function CollapsedNavIcon({ icon, label, selected, onClick }: {
 
 type Props = {
   isAdmin: boolean;
+  onSelectFolder: (id: string | null) => void;
 };
 
 /** The persistent app-wide navigation rail: Dashboard, Models, Collections, Downloads, and
  *  (for admins) Administration. Folder browsing lives inside the Models page itself, not here. */
-export default function Sidebar({ isAdmin }: Props) {
+export default function Sidebar({ isAdmin, onSelectFolder }: Props) {
   const { t } = useTranslation(["app", "common"]);
   const location = useLocation();
   const navigate = useNavigate();
@@ -96,6 +97,13 @@ export default function Sidebar({ isAdmin }: Props) {
   };
 
   const currentWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+
+  // Always lands on the unfiltered grid, even if a category was selected the last time Models
+  // was open -- unlike the in-page back button, which keeps the filter (see useRouteChrome).
+  const goToModelsRoot = () => {
+    onSelectFolder(null);
+    navigate("/models");
+  };
 
   return (
     <Box
@@ -161,12 +169,12 @@ export default function Sidebar({ isAdmin }: Props) {
               icon={<ViewInArIcon fontSize="small" />}
               label={t("sidebar.models")}
               selected={onModels}
-              onClick={() => navigate("/models")}
+              onClick={goToModelsRoot}
             />
           ) : (
             <ListItemButton
               selected={onModels}
-              onClick={() => navigate("/models")}
+              onClick={goToModelsRoot}
               sx={{ borderRadius: 1, mb: 0.5 }}
             >
               <ListItemIcon sx={{ minWidth: 30 }}>

@@ -5,7 +5,6 @@ import Box from "@mui/material/Box";
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import IconButton from "@mui/material/IconButton";
@@ -103,7 +102,6 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
   const images = print.preview_images.toSorted((a, b) => a.position - b.position);
   const hasImages = images.length > 0;
   const activeImage = images[activeImageIndex] || images[0];
-  const authorName = print.author?.name || print.author?.handle || print.creator || null;
   const firstPlate = print.plates[0];
   const canPreview3d = Boolean(firstPlate) && MODEL_EXTS.has(extOf(firstPlate?.filename || ""));
   // Every model should end up with at least one preview image -- an import brings its own cover
@@ -127,26 +125,6 @@ export default function ModelDetailPage({ theme, onSelectFolder, onUnauthorized 
         }}
       >
         <Box>
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{
-              mb: 2,
-              width: "fit-content",
-              cursor: print.author ? "pointer" : "default",
-              ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
-            }}
-            onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
-          >
-            <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
-              {(authorName || "?").slice(0, 1).toUpperCase()}
-            </Avatar>
-            <Typography variant="body2" sx={{ color: "inherit" }}>
-              {authorName || t("models:card.unknownAuthor")}
-            </Typography>
-          </Stack>
-
           <Box sx={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: "12px", overflow: "hidden", bgcolor: "action.hover" }}>
             {hasImages ? (
               <Box

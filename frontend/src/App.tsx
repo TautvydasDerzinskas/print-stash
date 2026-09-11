@@ -4,6 +4,8 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Box from "@mui/material/Box";
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
 import AppLayout from "./components/Layout/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
 import ModelsPage from "./pages/ModelsPage";
@@ -83,6 +85,7 @@ function AppShell({
       themeSelection={settings.theme.selected}
       apiUp={apiUp}
       folderId={folderId}
+      onSelectFolder={setFolderId}
       onPrintsChanged={handlePrintsChanged}
       onUnauthorized={onUnauthorized}
       isAdmin={isAdmin}
@@ -178,7 +181,11 @@ export default function App() {
   const [user, setUser] = React.useState<AuthUser | null>(() => readUser());
   const [health, setHealth] = React.useState<HealthInfo | null>(null);
   const [tokenTtl, setTokenTtl] = React.useState<number | null>(null);
-  const [sessionExpired, setSessionExpired] = React.useState(false);
+  const [showExpiredToast, setShowExpiredToast] = React.useState(false);
+  // A ref (not state) so concurrent 401s from several in-flight requests all see the guard
+  // synchronously -- state's setSessionExpired(true) wouldn't be visible to the others until
+  // the next render, letting each of them past the check and onto its own alert().
+  const sessionExpiredRef = React.useRef(false);
   const [settings, setSettings] = React.useState<AppSettings>(() => loadSettings());
   const [previewMode, setPreviewMode] = React.useState<PreviewMode>("automatic");
   const resolvedTheme = useResolvedTheme(settings.theme.selected);
@@ -207,17 +214,17 @@ export default function App() {
     setToken(tok);
     setUser(loggedInUser);
     setTokenTtl(ttl);
-    setSessionExpired(false);
+    sessionExpiredRef.current = false;
   };
 
   const handleUnauthorized = React.useCallback(() => {
-    if (sessionExpired) return;
+    if (sessionExpiredRef.current) return;
+    sessionExpiredRef.current = true;
     clearToken();
     setToken(null);
     setTokenTtl(null);
-    setSessionExpired(true);
-    alert(t("shell.sessionExpired"));
-  }, [sessionExpired, t]);
+    setShowExpiredToast(true);
+  }, []);
 
   const handleLogout = () => {
     // Fire-and-forget: the audit-log entry is recorded server-side before the token that
@@ -257,6 +264,21 @@ export default function App() {
     return () => window.clearTimeout(timer);
   }, [token, tokenTtl, handleUnauthorized]);
 
+  // Shared between both branches below so the toast survives the AppShell -> AuthPage swap that
+  // handleUnauthorized triggers (clearing the token unmounts AppShell and mounts this instead).
+  const sessionExpiredToast = (
+    <Snackbar
+      open={showExpiredToast}
+      autoHideDuration={5000}
+      onClose={() => setShowExpiredToast(false)}
+      anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+    >
+      <Alert onClose={() => setShowExpiredToast(false)} severity="error" variant="filled" sx={{ width: "100%" }}>
+        {t("shell.sessionExpired")}
+      </Alert>
+    </Snackbar>
+  );
+
   if (authRequired && !token) {
     // No BrowserRouter wraps this branch (see AppShell's comment), so /verify-email -- reached
     // pre-login from the link in the verification email -- is checked directly against
@@ -285,26 +307,30 @@ export default function App() {
             />
           )}
         </Box>
+        {sessionExpiredToast}
       </ThemeProvider>
     );
   }
 
   return (
-    <BrowserRouter>
-      <AppShell
-        isAdmin={isAdmin}
-        user={user}
-        apiUp={apiUp}
-        settings={settings}
-        setSettings={setSettings}
-        previewMode={previewMode}
-        setPreviewMode={setPreviewMode}
-        resolvedTheme={resolvedTheme}
-        muiTheme={muiTheme}
-        onUnauthorized={handleUnauthorized}
-        onLogout={handleLogout}
-        onUserUpdated={handleUserUpdated}
-      />
-    </BrowserRouter>
+    <>
+      <BrowserRouter>
+        <AppShell
+          isAdmin={isAdmin}
+          user={user}
+          apiUp={apiUp}
+          settings={settings}
+          setSettings={setSettings}
+          previewMode={previewMode}
+          setPreviewMode={setPreviewMode}
+          resolvedTheme={resolvedTheme}
+          muiTheme={muiTheme}
+          onUnauthorized={handleUnauthorized}
+          onLogout={handleLogout}
+          onUserUpdated={handleUserUpdated}
+        />
+      </BrowserRouter>
+      <ThemeProvider theme={muiTheme}>{sessionExpiredToast}</ThemeProvider>
+    </>
   );
 }

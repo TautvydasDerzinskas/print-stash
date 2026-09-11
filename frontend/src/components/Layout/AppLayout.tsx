@@ -24,6 +24,7 @@ type AppLayoutProps = {
   themeSelection: ThemeSelection;
   apiUp: boolean | null;
   folderId: string | null;
+  onSelectFolder: (id: string | null) => void;
   onPrintsChanged: () => void;
   onUnauthorized: () => void;
   isAdmin: boolean;
@@ -111,6 +112,7 @@ function AppLayoutShell({
   themeSelection,
   apiUp,
   folderId,
+  onSelectFolder,
   onPrintsChanged,
   onUnauthorized,
   isAdmin,
@@ -140,7 +142,7 @@ function AppLayoutShell({
           display: "flex",
         }}
       >
-        <Sidebar isAdmin={isAdmin} />
+        <Sidebar isAdmin={isAdmin} onSelectFolder={onSelectFolder} />
         <Box component="main" sx={{ flex: 1, p: 2, overflow: "auto" }}>
           {apiUp === false && (
             <Alert severity="error" sx={{ mb: 1.5 }}>

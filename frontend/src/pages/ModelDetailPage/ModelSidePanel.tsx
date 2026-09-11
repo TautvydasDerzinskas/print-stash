@@ -4,6 +4,7 @@ import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Avatar from "@mui/material/Avatar";
 import Button from "@mui/material/Button";
 import ButtonBase from "@mui/material/ButtonBase";
 import FolderIcon from "@mui/icons-material/Folder";
@@ -25,12 +26,13 @@ type Props = {
   onUnauthorized?: () => void;
 };
 
-/** The model detail page's right-hand summary card: category (jumps back to the Models grid
- *  filtered to it), "Open in {Slicer}" (only when both a preference is set and this print has a
- *  slicer_url -- same condition ModelActionsMenu's menu item uses), "Download model files" (the
- *  same picker-or-direct-download flow as ModelActionsMenu's Download, via useDownloadPrint so
- *  the two can't drift), view/print counts, and -- only for an actually-imported print, per
- *  source_provider -- when it was imported. */
+/** The model detail page's right-hand summary card, sticky so it stays in view while the
+ *  description/tags column scrolls: author (jumps to their author page), category (jumps back
+ *  to the Models grid filtered to it), "Open in {Slicer}" (only when both a preference is set
+ *  and this print has a slicer_url -- same condition ModelActionsMenu's menu item uses),
+ *  "Download model files" (the same picker-or-direct-download flow as ModelActionsMenu's
+ *  Download, via useDownloadPrint so the two can't drift), view/print counts, and -- only for an
+ *  actually-imported print, per source_provider -- when it was imported. */
 export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
@@ -54,9 +56,35 @@ export default function ModelSidePanel({ print, onSelectFolder, onUnauthorized }
     ? new Date(print.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     : null;
 
+  const authorName = print.author?.name || print.author?.handle || print.creator || null;
+
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "12px" }}>
+    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: "12px", position: "sticky", top: 16 }}>
       <Stack spacing={2}>
+        <Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            {t("models:detail.author")}
+          </Typography>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1}
+            sx={{
+              width: "fit-content",
+              cursor: print.author ? "pointer" : "default",
+              ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
+            }}
+            onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
+          >
+            <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
+              {(authorName || "?").slice(0, 1).toUpperCase()}
+            </Avatar>
+            <Typography variant="body2" sx={{ color: "inherit" }}>
+              {authorName || t("models:card.unknownAuthor")}
+            </Typography>
+          </Stack>
+        </Box>
+
         {print.folder_id && print.folder_name && (
           <Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>

@@ -1081,6 +1081,7 @@
       "removeFromFavorites": "Pašalinti iš mėgstamų",
       "favoriteFailed": "Nepavyko atnaujinti mėgstamų. Bandykite dar kartą.",
       "category": "Kategorija",
+      "author": "Autorius",
       "downloadModelFiles": "Atsisiųsti modelio failus",
       "imported": "Importuota {{date}}"
     },
