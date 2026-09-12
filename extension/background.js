@@ -49,23 +49,83 @@ async function ensureToken(config, { forceRefresh = false } = {}) {
   return loginAndStoreToken(config);
 }
 
+function isMakerworldUrl(url) {
+  return Boolean(url) && (Boolean(thingportIsMakerworldModelUrl(url)) || thingportIsMakerworldCollectionUrl(url));
+}
+
+/** Reads the user's live MakerWorld session straight from the browser's cookie jar -- makerworld.com
+ *  sets it HttpOnly, which blocks a page's own `document.cookie` (that's the whole reason today's
+ *  Profile-settings flow has the user paste it in manually), but chrome.cookies is a privileged,
+ *  extension-only API that's explicitly allowed to read HttpOnly cookies regardless. Requires the
+ *  "cookies" permission plus host access to makerworld.com -- the latter already comes from this
+ *  extension's static content_scripts match for that domain, so no extra permission prompt is
+ *  needed beyond what installing the extension already grants. Returns null (never throws) if the
+ *  user isn't logged into MakerWorld in this browser, or cookie access is blocked by some browser
+ *  policy -- callers just fall back to whatever's already stored in Thingport for that case. */
+async function getLiveMakerworldCookie() {
+  try {
+    const cookie = await chrome.cookies.get({ url: "https://makerworld.com", name: "token" });
+    if (!cookie) return null;
+    // Re-wrapped as "token=<value>" rather than the bare value -- the backend's
+    // extractMakerworldBearerToken (makerworldCloudApi.ts) has two extraction paths: a
+    // "token=...;" regex match, or a bare-token fallback that only accepts a value with no `=`,
+    // `;`, or whitespace at all. A real session token can easily contain `=` (base64 padding),
+    // which would silently fail that bare-token path and make this whole feature quietly not
+    // work. A cookie value can never itself contain a literal `;` (RFC 6265 forbids it unquoted),
+    // so this format always matches the *first*, unambiguous regex path regardless of what
+    // characters the token contains.
+    return `token=${cookie.value}`;
+  } catch {
+    return null;
+  }
+}
+
+/** Best-effort: keeps Thingport's own stored makerworld_cookie (Profile > MakerWorld) in sync
+ *  with whatever's live in the browser, so the plain web app's imports benefit from this too, not
+ *  just ones triggered through the extension. Skipped entirely once it's already in sync, so a
+ *  steady MakerWorld session doesn't PATCH this on every single import. Never lets a failure here
+ *  (network hiccup, session not fully configured yet, etc.) affect the import that triggered it --
+ *  callers fire this and move on. */
+async function maybeSyncMakerworldCookie(config, cookieValue) {
+  if (config.lastSyncedMakerworldCookie === cookieValue) return;
+  try {
+    await apiCall("PATCH", "/settings/makerworld", { cookie: cookieValue });
+    await chrome.storage.local.set({ lastSyncedMakerworldCookie: cookieValue });
+  } catch {
+    // Best-effort -- the import this was piggybacking on already has the live cookie regardless.
+  }
+}
+
 /** Generic authenticated call to the stored instance -- every content-script/popup action goes
  *  through this rather than a bespoke RPC per endpoint, since the backend surface this extension
  *  needs (see the plan this was built from) is otherwise a straight passthrough. `path` is the
- *  API path after `/api` (e.g. "/collections", "/import/jobs/abc123"). */
+ *  API path after `/api` (e.g. "/collections", "/import/jobs/abc123"). Any `/import*` call whose
+ *  body targets a MakerWorld URL gets the live browser cookie attached automatically (see
+ *  getLiveMakerworldCookie) unless the caller already set one explicitly -- this is what lets a
+ *  user who has never touched Profile > MakerWorld still import from MakerWorld via the
+ *  extension. */
 async function apiCall(method, path, body) {
   const config = await getStoredConfig();
   if (!isConfigured(config)) throw new Error("Thingport Grab isn't configured yet -- open the extension popup first.");
   if (config.disabled) throw new Error("Thingport Grab is disabled -- re-enable it from the extension popup.");
+
+  let finalBody = body;
+  if (path.startsWith("/import") && body && !body.makerworld_cookie && isMakerworldUrl(body.url)) {
+    const liveCookie = await getLiveMakerworldCookie();
+    if (liveCookie) {
+      finalBody = { ...body, makerworld_cookie: liveCookie };
+      void maybeSyncMakerworldCookie(config, liveCookie);
+    }
+  }
 
   const doFetch = async (token) =>
     fetch(thingportApiUrl(config.instanceUrl, path), {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(body ? { "Content-Type": "application/json" } : {}),
+        ...(finalBody ? { "Content-Type": "application/json" } : {}),
       },
-      body: body ? JSON.stringify(body) : undefined,
+      body: finalBody ? JSON.stringify(finalBody) : undefined,
     });
 
   let token = await ensureToken(config);
@@ -86,6 +146,148 @@ async function apiCall(method, path, body) {
   }
   if (res.status === 204) return null;
   return res.json();
+}
+
+// Same ~1s cadence as ImportJobContext.tsx / content.js's own batch-progress poll.
+const JOB_POLL_INTERVAL_MS = 1000;
+
+async function pollJobToCompletion(jobId) {
+  for (;;) {
+    const job = await apiCall("GET", `/import/jobs/${jobId}`);
+    if (job.status !== "RUNNING") return job;
+    await new Promise((resolve) => setTimeout(resolve, JOB_POLL_INTERVAL_MS));
+  }
+}
+
+/** Runs a single-model import (direct or "choose files" zip entries) and, if a destination
+ *  collection was picked, files the result into it -- as ONE call from the content script rather
+ *  than two chained ones, so the whole sequence still completes even if the tab that started it
+ *  navigates away or fully reloads a moment later. This service worker isn't torn down by a tab
+ *  navigation the way a content script's execution context is, so once this handler has started,
+ *  the import (and any collection filing) runs to completion regardless of what the calling page
+ *  does next -- only the reply back to a since-destroyed content script can get lost, never the
+ *  work itself. */
+async function handleImportSingle({ url, entries, collectionId }) {
+  let print;
+  if (entries) {
+    const { job_id } = await apiCall("POST", "/import/zip", { url, entries });
+    const job = await pollJobToCompletion(job_id);
+    if (job.status === "ERROR") throw new Error(job.error_message || "Import failed");
+    print = job.result_print_id ? { id: job.result_print_id } : null;
+  } else {
+    print = await apiCall("POST", "/import", { url });
+  }
+  if (collectionId && print && print.id) {
+    await apiCall("POST", `/collection/${collectionId}/items/${print.id}`).catch(() => undefined);
+  }
+  return print;
+}
+
+// -- MakerWorld guided collection import ---------------------------------------------------------
+//
+// MakerWorld's own anti-abuse system CAPTCHAs the whole account for hours the moment a burst of
+// collection-import API calls looks automated -- even with pacing, a large collection can trip it
+// almost immediately (see the backend's own IMPORT_MAKERWORLD_CALL_DELAY_MS comment). Rather than
+// firing every design's import calls back-to-back from the backend, this literally drives the tab
+// to each model's own page, one at a time -- a real navigation + page load imposes pacing no
+// config value can fake, and looks like a person browsing rather than a script. Each page load is
+// treated as a plain single-model import (handleImportSingle), the same path a manual visit would
+// use -- no batch-specific inspect/zip logic, no extra pacing beyond the wait below.
+//
+// State lives in chrome.storage (not a module-level variable) because this job outlives any single
+// page load in the tab it's driving, and an MV3 service worker can be suspended and woken again
+// between steps -- chrome.tabs.onUpdated firing later is what wakes it back up, at which point it
+// re-reads this instead of having "remembered" anything.
+
+const MAKERWORLD_JOB_STORAGE_KEY = "makerworldCollectionJob";
+// "A couple of seconds" of pacing after each import, on top of however long the model page itself
+// took to load -- deliberately not configurable/hidden away, since a shorter value would undercut
+// the entire point of this feature.
+const MAKERWORLD_JOB_STEP_DELAY_MS = 3000;
+
+async function getMakerworldJob() {
+  const { [MAKERWORLD_JOB_STORAGE_KEY]: job } = await chrome.storage.local.get(MAKERWORLD_JOB_STORAGE_KEY);
+  return job || null;
+}
+
+async function setMakerworldJob(job) {
+  if (job) await chrome.storage.local.set({ [MAKERWORLD_JOB_STORAGE_KEY]: job });
+  else await chrome.storage.local.remove(MAKERWORLD_JOB_STORAGE_KEY);
+}
+
+/** Started by content.js once the user clicks "Start import" on a MakerWorld collection page --
+ *  `urls` is every not-yet-imported design's model-page URL (already-imported ones are filed into
+ *  the destination collection separately, synchronously, by content.js itself before this ever
+ *  runs -- see its own doc comment for why that split makes sense). Stores the job, then makes the
+ *  first move; chrome.tabs.onUpdated's "complete" handler below drives every step after that. */
+async function startMakerworldCollectionJob(tabId, { urls, collectionId, originalUrl }) {
+  if (!urls.length) return;
+  await setMakerworldJob({
+    tabId,
+    originalUrl,
+    collectionId: collectionId || null,
+    urls,
+    index: 0,
+    imported: 0,
+    total: urls.length,
+    // True exactly while a chrome.tabs.update navigation this job triggered is in flight -- the
+    // "complete" handler only acts once, on the transition to false, so it can't double-advance
+    // if MakerWorld's own page fires more than one "complete" event for a single navigation.
+    awaitingLoad: true,
+    error: null,
+  });
+  await chrome.tabs.update(tabId, { url: urls[0] });
+}
+
+/** The Abort button, from content.js's overlay -- returns the tab to wherever the run started and
+ *  discards the rest of the queue. Nothing already imported is undone (nor should it be); it just
+ *  stops importing anything further. */
+async function abortMakerworldJob(tabId) {
+  const job = await getMakerworldJob();
+  if (!job || job.tabId !== tabId) return;
+  await setMakerworldJob(null);
+  await chrome.tabs.update(tabId, { url: job.originalUrl });
+}
+
+/** Runs once the tab finishes loading the current step's model page: imports it, paces, and moves
+ *  to the next URL -- or, on the last one, returns to the collection page the run started from.
+ *  Any import failure stops the whole run rather than skipping past it: this almost always means
+ *  MakerWorld itself just rejected the request (CAPTCHA, rate limit, expired session), and
+ *  continuing to fire more requests at that point would only make it worse, not better. */
+async function advanceMakerworldJob(tabId) {
+  const job = await getMakerworldJob();
+  if (!job || job.tabId !== tabId || !job.awaitingLoad) return;
+  job.awaitingLoad = false;
+  await setMakerworldJob(job);
+
+  const currentUrl = job.urls[job.index];
+  try {
+    await handleImportSingle({ url: currentUrl, collectionId: job.collectionId });
+  } catch (err) {
+    await setMakerworldJob(null);
+    await chrome.storage.local.set({
+      makerworldJobError: { message: err instanceof Error ? err.message : String(err), imported: job.imported, total: job.total },
+    });
+    await chrome.tabs.update(tabId, { url: job.originalUrl });
+    return;
+  }
+
+  job.imported += 1;
+  job.index += 1;
+
+  if (job.index >= job.urls.length) {
+    await setMakerworldJob(null);
+    await chrome.tabs.update(tabId, { url: job.originalUrl });
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, MAKERWORLD_JOB_STEP_DELAY_MS));
+  // The user may have hit Abort during the pacing delay above -- re-check before navigating on.
+  const stillActive = await getMakerworldJob();
+  if (!stillActive || stillActive.tabId !== tabId) return;
+  job.awaitingLoad = true;
+  await setMakerworldJob(job);
+  await chrome.tabs.update(tabId, { url: job.urls[job.index] });
 }
 
 function iconPaths(active) {
@@ -158,6 +360,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: true, data });
           return;
         }
+        case "IMPORT_SINGLE": {
+          const data = await handleImportSingle(message.payload);
+          sendResponse({ ok: true, data });
+          return;
+        }
+        case "START_MAKERWORLD_COLLECTION_JOB":
+          if (sender.tab) await startMakerworldCollectionJob(sender.tab.id, message.payload);
+          sendResponse({ ok: true });
+          return;
+        case "ABORT_MAKERWORLD_COLLECTION_JOB":
+          if (sender.tab) await abortMakerworldJob(sender.tab.id);
+          sendResponse({ ok: true });
+          return;
+        case "GET_MAKERWORLD_JOB": {
+          const job = sender.tab ? await getMakerworldJob() : null;
+          const forThisTab = job && sender.tab && job.tabId === sender.tab.id ? job : null;
+          if (forThisTab) {
+            sendResponse({ ok: true, data: forThisTab });
+          } else {
+            // A job error is surfaced exactly once, on whichever page loads right after the job
+            // aborts itself (always the original collection page -- see advanceMakerworldJob) --
+            // read-and-clear so it doesn't reappear on a later, unrelated visit to that same page.
+            const { makerworldJobError } = await chrome.storage.local.get("makerworldJobError");
+            if (makerworldJobError) await chrome.storage.local.remove("makerworldJobError");
+            sendResponse({ ok: true, data: null, error: makerworldJobError || null });
+          }
+          return;
+        }
         default:
           sendResponse({ ok: false, error: `Unknown message type: ${message.type}` });
       }
@@ -176,4 +406,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // the correct state a moment later via SET_TAB_ICON_STATE.
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.status === "loading") void setTabIconState(tabId, false);
+  // Drives the guided MakerWorld collection import (see advanceMakerworldJob's own doc comment)
+  // -- "complete" is what wakes this back up even if the service worker was suspended between
+  // steps, since the job's own state lives in chrome.storage rather than a variable here.
+  if (changeInfo.status === "complete") void advanceMakerworldJob(tabId);
+});
+
+// If the tab a guided import is driving gets closed outright (not just navigated), there's no
+// further chrome.tabs.onUpdated event to ever act on -- without this, the job's state would just
+// sit in storage forever, orphaned, with nothing left to show progress or an Abort button for it.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  (async () => {
+    const job = await getMakerworldJob();
+    if (job && job.tabId === tabId) await setMakerworldJob(null);
+  })();
 });

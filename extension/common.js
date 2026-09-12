@@ -10,6 +10,11 @@ const THINGPORT_STORAGE_KEYS = {
   disabled: "disabled",
   token: "token",
   tokenExpiresAt: "tokenExpiresAt",
+  // The last MakerWorld `token` cookie value pushed to this account's Thingport-stored
+  // makerworld_cookie -- lets background.js's cookie sync skip a redundant PATCH when the live
+  // browser cookie hasn't actually changed since the last one. See background.js's
+  // maybeSyncMakerworldCookie.
+  lastSyncedMakerworldCookie: "lastSyncedMakerworldCookie",
 };
 
 /** Strips a trailing slash so `${instanceUrl}/api/...` never ends up with a doubled slash,
@@ -39,6 +44,14 @@ function thingportIsMakerworldModelUrl(url) {
   if (!parsed.hostname.toLowerCase().endsWith("makerworld.com")) return null;
   const m = parsed.pathname.match(/\/models?\/(\d+)/i);
   return m ? { designId: m[1] } : null;
+}
+
+/** Mirrors the backend's buildImportSourceUrl (importService.ts) for MakerWorld -- lets the
+ *  guided collection import (see content.js's MakerWorld-collection flow) turn a bare design id
+ *  from /import/collection/entries into a real page URL to navigate the tab to, and to check
+ *  import status for, without a round trip through the backend just to reconstruct it. */
+function thingportMakerworldModelUrl(designId) {
+  return `https://makerworld.com/en/models/${designId}`;
 }
 
 function thingportIsMakerworldCollectionUrl(url) {

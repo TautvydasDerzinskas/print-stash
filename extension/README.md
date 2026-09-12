@@ -38,6 +38,19 @@ to keep re-entering day to day. If your password changes or a session gets revok
 next import attempt will silently re-login with the stored credentials, or surface a clear error if
 those no longer work.
 
+### MakerWorld: no separate cookie setup needed
+
+Importing from MakerWorld normally requires pasting a session cookie into Thingport's Profile
+settings by hand (MakerWorld's own site sets it `HttpOnly`, which blocks a normal web page from
+reading it -- that's the whole reason for the manual copy/paste). This extension reads that same
+cookie directly from your browser instead, using the `chrome.cookies` API -- a privileged,
+extension-only capability explicitly allowed to read `HttpOnly` cookies, unlike a regular page's
+own JavaScript. It's sent only to your own Thingport instance, as part of the same import request
+that needs it, exactly like the cookie you'd otherwise paste in by hand -- never anywhere else. If
+your Thingport account doesn't already have a MakerWorld cookie saved, the extension also pushes
+this one to Profile > MakerWorld for you, so the plain web app's own imports benefit too, not just
+ones started from the extension.
+
 ## What counts as "importable"
 
 - A single model page (MakerWorld, a Thingiverse Thing, a Printables Model) -- hidden automatically
@@ -65,9 +78,15 @@ zip -r ../thingport-grab.zip . -x '*.DS_Store'
 
 ## Regenerating the icons
 
-The toolbar icon PNGs (`icons/thingport-icon-{color,dark}-{16,32,48,128}.png`) are rendered once
-from `frontend/src/assets/logos/thingport-icon-{color,dark}.svg` and checked in rather than built
-on the fly. Regenerate them (e.g. after the source SVGs change) from the repo root:
+The toolbar icon PNGs (`icons/thingport-icon-{color,dark}-{16,32,48,128}.png`) and the inline
+`icons/thingport-icon-color.svg` (used by the popup header and the in-page floating button) are
+rendered once from `frontend/src/assets/logos/thingport-icon-{color,dark}.svg` and checked in
+rather than built on the fly -- with a tighter `viewBox` than the source files use. The source
+SVGs' own 80x80 canvas leaves a fairly generous margin around the glyph (fine at logo size, but at
+a 16-19px toolbar icon it reads as "too small" -- most of the square is empty). This crops to the
+glyph's actual bounding box (including its stroke width) plus a small ~6% padding: `4 4 72 72`
+instead of `0 0 80 80`. Regenerate (e.g. after the source SVGs change) from the repo root -- if the
+glyph's proportions change, recompute the crop rather than reusing `4 4 72 72` as-is:
 
 ```bash
 node -e "
@@ -80,9 +99,11 @@ const jobs = [
 ];
 (async () => {
   for (const [src, outBase] of jobs) {
-    const svg = fs.readFileSync(src);
+    let svg = fs.readFileSync(src, 'utf8').replace('viewBox=\"0 0 80 80\"', 'viewBox=\"4 4 72 72\"');
+    const buf = Buffer.from(svg);
+    if (outBase.endsWith('color')) fs.writeFileSync(outBase + '.svg', svg);
     for (const size of sizes) {
-      await sharp(svg, { density: 384 }).resize(size, size).png().toFile(\`\${outBase}-\${size}.png\`);
+      await sharp(buf, { density: 384 }).resize(size, size).png().toFile(\`\${outBase}-\${size}.png\`);
     }
   }
 })();

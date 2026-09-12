@@ -12,12 +12,14 @@
     return chrome.runtime.sendMessage({ type, payload });
   }
   /** Unwraps background.js's `{ok, data}` / `{ok:false, error}` message-response shape into a
-   *  plain resolve-with-data-or-throw call, so every call site below can just `await api(...)`
-   *  and try/catch it like a normal fetch. */
-  async function api(method, path, body) {
-    const res = await call("API_CALL", { method, path, body });
+   *  plain resolve-with-data-or-throw call, so every call site below can just `await` it and
+   *  try/catch it like a normal fetch. */
+  function unwrap(res) {
     if (!res.ok) throw new Error(res.error);
     return res.data;
+  }
+  function api(method, path, body) {
+    return call("API_CALL", { method, path, body }).then(unwrap);
   }
 
   // -- Shell: shadow-rooted host, icon button, panel container ---------------------------------
@@ -89,6 +91,11 @@
   }
 
   function renderPanel(html) {
+    // A no-op, not a bug, once the panel's been torn down (unmount(), e.g. an SPA route change
+    // mid-import) -- a still-in-flight step like the batch progress poll below has nothing left
+    // to draw into, but the underlying request/job it's watching keeps running regardless (see
+    // background.js's handleImportSingle and the README's own note on batch jobs).
+    if (!contentEl) return;
     contentEl.innerHTML = html;
   }
 
@@ -229,32 +236,26 @@
     return select && select.value ? select.value : null;
   }
 
+  // Captured up front rather than read from `context` after the await below -- if the page
+  // navigates (an SPA route change) while the import is still in flight, `context` gets nulled
+  // out from under this still-running function (see unmount()); these locals keep working
+  // regardless, though there's nothing left to render into a torn-down panel by then anyway (see
+  // renderPanel's own guard for that).
   async function runDirectImport(opts) {
     const collectionId = selectedCollectionId();
+    const { url, instanceUrl } = context;
     renderPanel(`<div class="tg-status">Importing…</div>`);
     try {
-      const print = opts && opts.entries
-        ? await api("POST", "/import/zip", { url: context.url, entries: opts.entries }).then((job) => waitForJobSingleResult(job.job_id))
-        : await api("POST", "/import", { url: context.url });
-      if (collectionId && print && print.id) {
-        await api("POST", `/collection/${collectionId}/items/${print.id}`).catch(() => undefined);
-      }
-      renderPanel(successHtml(print ? `${context.instanceUrl}/models/${print.id}` : `${context.instanceUrl}/models`));
+      // One message, not two -- import (and, per collectionId, filing the result into a
+      // collection) both run to completion inside the background service worker regardless of
+      // whether this tab/page is still around by the time it finishes (see background.js's
+      // handleImportSingle for why that matters: a content script's own execution ends the
+      // moment the page navigates or fully reloads, but the service worker doesn't).
+      const print = await call("IMPORT_SINGLE", { url, entries: opts && opts.entries, collectionId }).then(unwrap);
+      renderPanel(successHtml(print ? `${instanceUrl}/models/${print.id}` : `${instanceUrl}/models`));
     } catch (err) {
       renderPanel(errorHtml(err));
     }
-  }
-
-  /** /import/zip is a background job even for a single "choose files" selection (it can still
-   *  resolve to more than one print) -- polls to completion and returns the single Print DTO
-   *  only when exactly one resulted (matching resultPrintId's own semantics), else null. Throws
-   *  on an ERROR job so the caller's existing catch block renders the error state instead of
-   *  mistaking a failed job for a (null-print) success. */
-  async function waitForJobSingleResult(jobId) {
-    const job = await pollJob(jobId);
-    if (job.status === "ERROR") throw new Error(job.error_message || "Import failed");
-    if (job.result_print_id) return { id: job.result_print_id };
-    return null;
   }
 
   // -- Batch flow (a collection/Likes listing page) ---------------------------------------------
@@ -265,14 +266,14 @@
     "thingiverse:collection": "/import/thingiverse-collection/entries",
     "printables:collection": "/import/printables-collection/entries",
   };
+  // MakerWorld collections don't use these two -- see loadMakerworldGuidedCollection/
+  // startMakerworldGuidedImport above instead, which never calls the bulk job-start endpoint.
   const BATCH_START_PATH = {
-    "makerworld:collection": "/import/collection",
     "thingiverse:likes": "/import/thingiverse-likes",
     "thingiverse:collection": "/import/thingiverse-collection",
     "printables:collection": "/import/printables-collection",
   };
   const BATCH_ID_FIELD = {
-    "makerworld:collection": "design_ids",
     "thingiverse:likes": "thing_ids",
     "thingiverse:collection": "thing_ids",
     "printables:collection": "model_ids",
@@ -280,6 +281,79 @@
 
   function batchKey() {
     return `${context.classification.provider}:${context.classification.type}`;
+  }
+
+  // -- MakerWorld guided collection import -------------------------------------------------------
+  //
+  // MakerWorld specifically (not the other providers below) trips a multi-hour account-wide
+  // CAPTCHA lockout from a burst of collection-import API calls, even with pacing -- see
+  // background.js's startMakerworldCollectionJob for the full reasoning. Rather than the generic
+  // "pick entries, start a background job" flow every other batch provider uses, this drives the
+  // tab through each not-yet-imported model's own page one at a time. There's no entry-selection
+  // step here (unlike loadBatchEntries below) -- every not-yet-imported model gets queued.
+
+  async function loadMakerworldGuidedCollection() {
+    renderPanel(`<div class="tg-status">Loading models…</div>`);
+    let result;
+    try {
+      result = await api("POST", BATCH_ENTRIES_PATH["makerworld:collection"], { url: context.url });
+    } catch (err) {
+      renderPanel(errorHtml(err));
+      return;
+    }
+    const toImport = result.entries.filter((e) => !e.already_imported);
+    const alreadyImported = result.entries.filter((e) => e.already_imported);
+    const collectionHtml = await collectionOptionsHtml();
+    const parts = [];
+    if (toImport.length) parts.push(`${toImport.length} new model${toImport.length === 1 ? "" : "s"} to import`);
+    if (alreadyImported.length) parts.push(`${alreadyImported.length} already in your library`);
+    renderPanel(`
+      <div class="tg-title">${escapeHtml(result.title || "Import collection")}</div>
+      <div class="tg-hint">
+        ${parts.join(", ") || "No models found."}${result.truncated ? " (more available on the site)" : ""}
+      </div>
+      ${collectionHtml}
+      <button class="tg-btn" data-action="start" ${toImport.length || alreadyImported.length ? "" : "disabled"}>Start import</button>
+      <div class="tg-hint" style="margin-top:8px">
+        New models are imported one page visit at a time, pacing itself to avoid MakerWorld's rate
+        limiting -- this can take a while for a large collection.
+      </div>
+    `);
+    const startBtn = panelEl.querySelector("[data-action=start]");
+    if (startBtn) startBtn.addEventListener("click", () => void startMakerworldGuidedImport(toImport, alreadyImported));
+  }
+
+  async function startMakerworldGuidedImport(toImport, alreadyImported) {
+    const collectionId = selectedCollectionId();
+    const originalUrl = context.url;
+
+    if (alreadyImported.length && collectionId) {
+      renderPanel(
+        `<div class="tg-status">Adding ${alreadyImported.length} existing model${alreadyImported.length === 1 ? "" : "s"} to your collection…</div>`,
+      );
+      for (const entry of alreadyImported) {
+        try {
+          const modelUrl = thingportMakerworldModelUrl(entry.design_id);
+          const status = await api("GET", `/import/status?url=${encodeURIComponent(modelUrl)}`);
+          if (status.print_id) {
+            await api("POST", `/collection/${collectionId}/items/${status.print_id}`).catch(() => undefined);
+          }
+        } catch {
+          // Best-effort -- one failed lookup shouldn't block filing the rest, or the new imports.
+        }
+      }
+    }
+
+    if (!toImport.length) {
+      renderPanel(successHtml(`${context.instanceUrl}/models`, "Nothing new to import -- already-imported models were added to your collection."));
+      return;
+    }
+
+    renderPanel(`<div class="tg-status">Starting guided import…</div>`);
+    const urls = toImport.map((e) => thingportMakerworldModelUrl(e.design_id));
+    await call("START_MAKERWORLD_COLLECTION_JOB", { urls, collectionId, originalUrl });
+    // The tab is about to navigate to the first model's page (background just kicked that off) --
+    // nothing more to render here; the full-page overlay (mountJobOverlay) takes over from there.
   }
 
   async function loadBatchEntries() {
@@ -314,28 +388,26 @@
   async function runBatchImport() {
     const ids = [...panelEl.querySelectorAll(".tg-entry-checkbox:checked")].map((el) => el.value);
     if (!ids.length) return;
+    const { url, instanceUrl } = context;
     renderPanel(`<div class="tg-status">Starting import…</div>`);
     try {
-      const body = { url: context.url, [BATCH_ID_FIELD[batchKey()]]: ids };
+      const body = { url, [BATCH_ID_FIELD[batchKey()]]: ids };
       const { job_id } = await api("POST", BATCH_START_PATH[batchKey()], body);
-      await pollJobWithProgress(job_id);
+      await pollJobWithProgress(job_id, instanceUrl);
     } catch (err) {
       renderPanel(errorHtml(err));
     }
   }
 
-  async function pollJob(jobId) {
-    // Matches ImportJobContext.tsx's own cadence -- see that file for why 1s.
+  async function pollJobWithProgress(jobId, instanceUrl) {
     for (;;) {
+      // The panel was torn down (unmount(), e.g. an SPA route change) since the last tick --
+      // stop polling. The job itself is unaffected: it keeps running server-side either way
+      // (see the README's own note on this), this just stops burning a request every second on
+      // a job nothing is watching any more.
+      if (!contentEl) return;
       const job = await api("GET", `/import/jobs/${jobId}`);
-      if (job.status !== "RUNNING") return job;
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
-  }
-
-  async function pollJobWithProgress(jobId) {
-    for (;;) {
-      const job = await api("GET", `/import/jobs/${jobId}`);
+      if (!contentEl) return;
       if (job.status === "RUNNING") {
         renderPanel(`<div class="tg-status">Importing ${job.processed} of ${job.total}…</div>`);
         await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -345,7 +417,7 @@
         renderPanel(errorHtml(new Error(job.error_message || "Import failed")));
         return;
       }
-      const link = job.result_print_id ? `${context.instanceUrl}/models/${job.result_print_id}` : `${context.instanceUrl}/models`;
+      const link = job.result_print_id ? `${instanceUrl}/models/${job.result_print_id}` : `${instanceUrl}/models`;
       renderPanel(successHtml(link, `Imported ${job.imported} of ${job.total}.`));
       return;
     }
@@ -368,6 +440,7 @@
 
   async function loadPanel() {
     if (context.classification.kind === "single") await loadSingleItem();
+    else if (batchKey() === "makerworld:collection") await loadMakerworldGuidedCollection();
     else await loadBatchEntries();
   }
 
@@ -379,6 +452,40 @@
     contentEl = null;
     panelOpen = false;
     context = null;
+  }
+
+  // -- MakerWorld guided-import full-page cover ---------------------------------------------------
+  //
+  // Shown instead of the normal fab/panel on every page this tab visits while a guided collection
+  // import (see background.js) is running -- each model's own page is a fresh navigation, so this
+  // mounts fresh each time too, reading the job's current progress from storage rather than
+  // carrying any state of its own across pages.
+
+  async function mountJobOverlay(job) {
+    const host = document.createElement("div");
+    host.id = "thingport-grab-host";
+    document.documentElement.appendChild(host);
+    shadowRoot = host.attachShadow({ mode: "open" });
+    await injectStyles(shadowRoot);
+
+    const overlay = document.createElement("div");
+    overlay.className = "tg-overlay";
+    const percent = job.total ? Math.round((job.imported / job.total) * 100) : 0;
+    overlay.innerHTML = `
+      <div class="tg-overlay-card">
+        <img class="tg-overlay-icon" src="${ICON_URL}" alt="" />
+        <div class="tg-overlay-title">Importing from MakerWorld…</div>
+        <div class="tg-overlay-count">${job.imported} / ${job.total} models imported (${percent}%)</div>
+        <button class="tg-btn tg-overlay-abort" type="button" data-action="abort">Abort</button>
+      </div>
+    `;
+    shadowRoot.appendChild(overlay);
+    overlay.querySelector("[data-action=abort]").addEventListener("click", (event) => {
+      const btn = event.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "Aborting…";
+      void call("ABORT_MAKERWORLD_COLLECTION_JOB");
+    });
   }
 
   // -- Entry point: decide whether this page gets the icon at all -------------------------------
@@ -394,6 +501,19 @@
 
   async function init() {
     const myToken = ++initToken;
+
+    // A guided MakerWorld collection import in progress for this tab takes over the whole page,
+    // on every model page it visits along the way -- checked before anything else below, since
+    // none of the normal single/batch detection applies while this is running.
+    const jobRes = await call("GET_MAKERWORLD_JOB");
+    if (myToken !== initToken) return;
+    if (jobRes.ok && jobRes.data) {
+      await mountJobOverlay(jobRes.data);
+      if (myToken !== initToken) return;
+      reportTabIconState(true);
+      return;
+    }
+
     const stateRes = await call("GET_STATE");
     if (myToken !== initToken) return;
     if (!stateRes.ok || !stateRes.data.configured || stateRes.data.disabled) {
@@ -426,6 +546,16 @@
     await mount();
     if (myToken !== initToken) return;
     reportTabIconState(true);
+
+    // A guided import that just stopped early (see background.js's advanceMakerworldJob) always
+    // lands back here, on the collection page it started from -- surface why immediately rather
+    // than leaving the user to wonder why it only got partway through.
+    if (jobRes.ok && jobRes.error) {
+      panelOpen = true;
+      panelEl.hidden = false;
+      const { message, imported, total } = jobRes.error;
+      renderPanel(errorHtml(new Error(`Guided import stopped after ${imported} of ${total} models: ${message}`)));
+    }
   }
 
   // MakerWorld, Printables, and Thingiverse are all client-side-routed SPAs -- navigating from

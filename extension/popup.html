@@ -77,6 +77,12 @@
         display: none;
       }
       .error.visible { display: block; }
+      .note {
+        font-size: 11px;
+        line-height: 1.4;
+        color: var(--text-muted);
+        margin: 10px 0 0;
+      }
       .configured-url {
         font-size: 12px;
         color: var(--text-muted);
@@ -118,6 +124,11 @@
       <input type="email" id="email" required />
       <label for="password">Password</label>
       <input type="password" id="password" required />
+      <p class="note">
+        If you're logged into MakerWorld in this browser, Thingport Grab reads your MakerWorld
+        session cookie locally to import from it -- it's sent only to the instance URL above, never
+        anywhere else.
+      </p>
       <button type="submit" id="save-btn">Save</button>
       <button type="button" class="secondary" id="cancel-btn" hidden>Cancel</button>
       <div class="error" id="error"></div>
