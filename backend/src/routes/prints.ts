@@ -11,7 +11,7 @@ import { modelUpload } from "../uploadMiddleware";
 import { createPrint, deletePlateFiles, resolvePlateFilePath, type NewPlateInput } from "../services/printCreation";
 import { plateThumbPath, relocatePrint, uniqueModelName } from "../services/printService";
 import { previewImagePath, deleteAllPreviewImages } from "../services/previewImageService";
-import { deleteAuthorIfOrphaned } from "../services/authorService";
+import { deleteAuthorIfOrphaned, getLinkedAuthorIds } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
 import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
@@ -23,6 +23,10 @@ import type { Prisma } from "@prisma/client";
 
 const router = Router();
 router.use(requireAuth);
+
+// Sentinel `author_id` value the "My models" author page sends to mean "prints with no real
+// author at all" (see buildPrintWhere below) -- never a value a real Author id could take.
+const SELF_AUTHOR_ID = "self";
 
 // Tag matching is case-insensitive (a print tagged "Fun" should still show up under "fun"), which
 // Postgres array containment (`hasEvery`/`hasSome`) doesn't support natively -- so tags are left
@@ -47,7 +51,7 @@ function isRenderableUpload(f: Express.Multer.File): boolean {
   return RENDERABLE_MODEL_EXTS.has(path.extname(f.originalname).toLowerCase());
 }
 
-function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
+async function buildPrintWhere(req: Request): Promise<Prisma.PrintWhereInput> {
   const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
   const categoryIdParam = typeof req.query.category_id === "string" ? req.query.category_id : "";
   const categoryIds = categoryIdParam
@@ -58,9 +62,28 @@ function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
   const authorId = typeof req.query.author_id === "string" ? req.query.author_id.trim() : "";
 
   const where: Prisma.PrintWhereInput = { userId: req.userId };
+  // Composed as top-level AND clauses (rather than each assigning `where.OR` directly) since the
+  // self-author case and the `q` search below each need their own OR group -- the second one
+  // would otherwise silently clobber the first.
+  const andClauses: Prisma.PrintWhereInput[] = [];
   if (categoryIds.length === 1) where.categoryId = categoryIds[0];
   else if (categoryIds.length > 1) where.categoryId = { in: categoryIds };
-  if (authorId) where.authorId = authorId;
+  if (authorId === SELF_AUTHOR_ID) {
+    // The "My models" author page (see AuthorPage's self mode): "no real author at all" (no
+    // Author row, no plain creator string, not resolved from a known import source -- exactly
+    // what ModelCard/ModelSidePanel's showViewerAsAuthor fallback covers) OR one of the Author
+    // rows this user has explicitly linked as themselves (the Author page's "It's me!" button --
+    // see authorService.ts's getLinkedAuthorIds/linkAuthorToUser).
+    const linkedAuthorIds = await getLinkedAuthorIds(req.userId!);
+    andClauses.push({
+      OR: [
+        { authorId: null, creator: null, sourceProvider: null },
+        ...(linkedAuthorIds.length ? [{ authorId: { in: linkedAuthorIds } }] : []),
+      ],
+    });
+  } else if (authorId) {
+    where.authorId = authorId;
+  }
   if (collectionId) {
     const systemKey = systemCollectionKeyForId(collectionId);
     if (systemKey === "favorites") where.favoritedAt = { not: null };
@@ -68,14 +91,17 @@ function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
     else where.collectionItems = { some: { collectionId } };
   }
   if (q) {
-    where.OR = [
-      { name: { contains: q, mode: "insensitive" } },
-      { title: { contains: q, mode: "insensitive" } },
-      { notes: { contains: q, mode: "insensitive" } },
-      { creator: { contains: q, mode: "insensitive" } },
-      { collection: { contains: q, mode: "insensitive" } },
-    ];
+    andClauses.push({
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { title: { contains: q, mode: "insensitive" } },
+        { notes: { contains: q, mode: "insensitive" } },
+        { creator: { contains: q, mode: "insensitive" } },
+        { collection: { contains: q, mode: "insensitive" } },
+      ],
+    });
   }
+  if (andClauses.length) where.AND = andClauses;
   return where;
 }
 
@@ -173,7 +199,7 @@ router.get(
       if (!Number.isFinite(offset) || offset < 0) throw new HttpError(400, "Invalid offset");
     }
 
-    const where = buildPrintWhere(req);
+    const where = await buildPrintWhere(req);
     const tagList = parseTagList(req);
     const allMatching = await prisma.print.findMany({
       where,
@@ -295,7 +321,7 @@ router.post(
 router.get(
   "/tags",
   asyncHandler(async (req, res) => {
-    const where = buildPrintWhere(req);
+    const where = await buildPrintWhere(req);
     const tagList = parseTagList(req);
     const allRows = await prisma.print.findMany({ where, select: { tags: true } });
     const rows = tagList.length ? allRows.filter((r) => matchesTagList(r.tags, tagList)) : allRows;

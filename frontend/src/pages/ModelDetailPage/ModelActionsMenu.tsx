@@ -20,6 +20,7 @@ import LaunchIcon from "@mui/icons-material/Launch";
 import type { SxProps, Theme } from "@mui/material/styles";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
+import type { AuthUser } from "../../api/auth";
 import { collectionsApi } from "../../api/collections";
 import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { useConfirm } from "../../components/ConfirmProvider";
@@ -50,6 +51,8 @@ type Props = {
    *  fontSize="small" (20px) used everywhere else. Only the Models grid hover overlay bumps
    *  this, to stay legible now that it no longer sits on a dark circular backdrop. */
   iconFontSize?: number;
+  /** Passed straight through to EditModelModal's own `viewer` fallback -- see its doc comment. */
+  viewer?: AuthUser | null;
 };
 
 /** The "..." menu for a model: "Add to collection" (opens the chip-toggle picker), "Remove from
@@ -70,6 +73,7 @@ export default function ModelActionsMenu({
   onRemovedFromCollection,
   triggerSx,
   iconFontSize,
+  viewer,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
@@ -249,6 +253,7 @@ export default function ModelActionsMenu({
           onClose={closeEdit}
           onUnauthorized={onUnauthorized}
           onUpdated={(updated) => onUpdated?.(updated)}
+          viewer={viewer}
         />
       )}
     </>

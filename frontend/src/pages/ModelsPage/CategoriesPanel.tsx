@@ -15,6 +15,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import type { Category, CategoryMetaInput } from "../../api/categories";
 import { translateCategoryDisplay } from "../../utils/translateCategoryDisplay";
+import { dividerBorderColor } from "../../theme";
 import CategoryManagerModal from "./CategoryManagerModal";
 
 type Props = {
@@ -129,7 +130,7 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
           p: 1.5,
           alignSelf: "flex-start",
           bgcolor: "background.paper",
-          borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
+          borderColor: dividerBorderColor,
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0.5, pb: 1 }}>

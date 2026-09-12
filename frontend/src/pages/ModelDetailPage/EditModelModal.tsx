@@ -30,6 +30,7 @@ import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { type Print, printsApi } from "../../api/prints";
 import { categoriesApi, type Category } from "../../api/categories";
+import type { AuthUser } from "../../api/auth";
 import { UnauthorizedError } from "../../api/client";
 import { useConfirm } from "../../components/ConfirmProvider";
 import { useToast } from "../../components/ToastProvider";
@@ -65,6 +66,12 @@ type Props = {
   onClose: () => void;
   onUnauthorized?: () => void;
   onUpdated: (print: Print) => void;
+  /** Only used as a fallback when the print has neither an Author nor a plain `creator` string --
+   *  a direct upload has no import-source author at all, so this shows the viewer's own identity
+   *  instead of "Unknown" (see ModelCard/ModelSidePanel's identical showViewerAsAuthor fallback).
+   *  Purely a label here: there's no Author id behind it, so "Reset author" stays hidden either
+   *  way (hasImportedAuthor already only looks at real author/creator/source_provider data). */
+  viewer?: AuthUser | null;
 };
 
 /** The "Edit" modal for a model: title, category (a two-level tree, but only leaf/secondary
@@ -75,7 +82,7 @@ type Props = {
  *  "Update" is clicked; "Cancel" discards it all, confirming first if anything was actually
  *  touched. Opened from ModelActionsMenu's "Edit" item, shared by the model detail page's header
  *  and the Models/Collection grids' per-card menu. */
-export default function EditModelModal({ print, onClose, onUnauthorized, onUpdated }: Props) {
+export default function EditModelModal({ print, onClose, onUnauthorized, onUpdated, viewer }: Props) {
   const { t, i18n } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const showToast = useToast();
@@ -85,10 +92,19 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
   const [notes, setNotes] = useState(print.notes ?? "");
   const [tags, setTags] = useState<string[]>(print.tags);
   const hasImportedAuthor = Boolean(print.author || print.creator || print.source_provider);
+  const showViewerAsAuthor = !hasImportedAuthor && Boolean(viewer);
   const [authorResetPending, setAuthorResetPending] = useState(false);
   const [images, setImages] = useState<ImageItem[]>(
     () => print.preview_images.map((img): ImageItem => ({ kind: "existing", id: img.id, url: img.url })),
   );
+  // Ids the user explicitly removed via the trash icon below -- handleUpdate deletes exactly
+  // these, rather than diffing the local `images` list against print.preview_images. A plain
+  // upload opens straight into this modal (see useUploadImport's post-upload redirect) before its
+  // automatically-generated thumbnail has necessarily finished uploading in the background; a
+  // diff-based delete would treat that not-yet-known image as "removed" the moment it appears and
+  // destroy it the instant "Update" is clicked. Tracking removals explicitly means an image this
+  // modal never learned about is simply never a delete candidate.
+  const [removedImageIds, setRemovedImageIds] = useState<Set<string>>(new Set());
   const [plateItems, setPlateItems] = useState<PlateItem[]>(
     () => print.plates.map((p): PlateItem => ({ kind: "existing", id: p.id, filename: p.filename })),
   );
@@ -136,6 +152,10 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
     markDirty();
   };
   const removeImage = (key: string) => {
+    const target = images.find((img) => imageKey(img) === key);
+    if (target?.kind === "existing") {
+      setRemovedImageIds((ids) => new Set(ids).add(target.id));
+    }
     setImages((prev) => prev.filter((img) => imageKey(img) !== key));
     markDirty();
   };
@@ -191,12 +211,11 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
         latest = authorRes.print ?? latest;
       }
 
-      // Preview images: delete what's gone, upload what's new, then reorder to the arrangement
-      // the user actually left on screen.
-      const keptImageIds = new Set(images.filter((img) => img.kind === "existing").map((img) => img.id));
-      for (const original of print.preview_images) {
-        if (keptImageIds.has(original.id)) continue;
-        const res = await printsApi.deletePreviewImage(print.id, original.id);
+      // Preview images: delete only what the user explicitly removed (see removedImageIds' doc
+      // comment for why this isn't a diff against print.preview_images), upload what's new, then
+      // reorder to the arrangement the user actually left on screen.
+      for (const id of removedImageIds) {
+        const res = await printsApi.deletePreviewImage(print.id, id);
         latest = res.print ?? latest;
       }
       const newImageFiles = images.filter((img) => img.kind === "new").map((img) => img.file);
@@ -212,7 +231,18 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
       }
       if (images.length) {
         let nextNew = 0;
-        const finalOrder = images.map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]));
+        const known = images.map((img) => (img.kind === "existing" ? img.id : newImageIdsInOrder[nextNew++]));
+        // The reorder endpoint requires an exhaustive id list (see previewImages.ts's reorder
+        // route). `known` may not be exhaustive -- it can't include an image this modal never
+        // learned about (again, the background-generated-thumbnail case) -- so anything else
+        // currently in `latest` gets appended after it, in its own existing order, rather than
+        // tripping that endpoint's 400 or (the old bug) getting silently deleted.
+        const knownIds = new Set(known);
+        const unknown = latest.preview_images
+          .filter((img) => !knownIds.has(img.id))
+          .toSorted((a, b) => a.position - b.position)
+          .map((img) => img.id);
+        const finalOrder = [...known, ...unknown];
         const reorderRes = await printsApi.reorderPreviewImages(print.id, finalOrder);
         latest = reorderRes.print ?? latest;
       }
@@ -311,7 +341,8 @@ export default function EditModelModal({ print, onClose, onUnauthorized, onUpdat
               <Typography variant="body2">
                 {authorResetPending
                   ? t("models:edit.authorWillBeYou")
-                  : (print.author?.name || print.author?.handle || print.creator || t("models:card.unknownAuthor"))}
+                  : (print.author?.name || print.author?.handle || print.creator ||
+                     (showViewerAsAuthor ? viewer!.display_name : null) || t("models:card.unknownAuthor"))}
               </Typography>
               {hasImportedAuthor && (
                 authorResetPending ? (

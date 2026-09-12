@@ -8,6 +8,10 @@ export type AuthUser = {
   role: "ADMIN" | "MEMBER";
   // Set while an email change (Profile > Change email) is awaiting confirmation.
   pending_email: string | null;
+  // Populated by linking an imported Author to this account (AuthorPage's "It's me!" button) --
+  // shown on this user's own "My models" author page. See authorsApi.link.
+  bio: string | null;
+  background_url: string | null;
 };
 export type AuthResult = { token: string; expires_in: number; user: AuthUser };
 // /register returns this instead of AuthResult when SMTP is configured -- the account exists but

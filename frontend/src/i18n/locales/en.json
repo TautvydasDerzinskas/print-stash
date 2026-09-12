@@ -170,7 +170,8 @@
       "serviceConnected": "{{service}}: connected",
       "serviceNotConnected": "{{service}}: not connected",
       "makerworldDisabledReason": "MakerWorld: you haven't added a cookie in your profile yet",
-      "thingiverseDisabledReason": "Thingiverse: the admin hasn't configured an API key yet"
+      "thingiverseDisabledReason": "Thingiverse: the admin hasn't configured an API key yet",
+      "myModels": "My models"
     },
     "notifications": {
       "label": "Notifications",
@@ -1071,11 +1072,19 @@
     "author": {
       "pageTitle": "Author",
       "pageTitleWithName": "Author - {{name}}",
+      "myModelsPageTitle": "My models",
       "bio": "Bio",
       "noBio": "No bio yet.",
       "viewOnProvider": "View on {{provider}}",
       "notFound": "Author not found.",
-      "noModels": "No models from this author yet."
+      "noModels": "No models from this author yet.",
+      "itsMe": "It's me!",
+      "linkedBadge": "This is you",
+      "linkConfirmTitle": "Link this author to your account?",
+      "linkConfirmMessage": "This links \"{{name}}\" as your own identity. Your \"My models\" page will also list their models, and your profile bio/cover picture will be filled in from theirs if you don't already have one set.",
+      "linkConfirmLabel": "Yes, it's me",
+      "linkSuccess": "Linked \"{{name}}\" to your account",
+      "linkFailed": "Failed to link this author to your account"
     },
     "collections": {
       "pageTitle": "Collections",

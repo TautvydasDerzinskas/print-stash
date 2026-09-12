@@ -198,3 +198,14 @@ export function subtleTextColor(id: ResolvedTheme): string {
 export function accentSoftColor(id: ResolvedTheme): string {
   return THEME_DEFS[id].accentSoft;
 }
+
+/** The one `borderColor` every container-edge/column-divider border in the app should use: the
+ *  theme's divider color (`palette.divider`, i.e. `theme.thingport.border`/`borderStrong`'s light-
+ *  mode value) in light mode, invisible in dark mode -- dark mode's panels already contrast against
+ *  the page background on their own, so an explicit border there reads as an unwanted extra line
+ *  rather than a separator. Shared by Sidebar, CategoriesPanel, ModelSidePanel, and AuthorPage's
+ *  profile-column divider so all four can never drift from each other; use as
+ *  `sx={{ borderColor: dividerBorderColor, ... }}`. */
+export function dividerBorderColor(theme: Theme): string {
+  return theme.palette.mode === "dark" ? "transparent" : "divider";
+}

@@ -140,7 +140,7 @@ function AppShell({
         />
         <Route
           path="/authors/:authorId"
-          element={<AuthorPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+          element={<AuthorPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} viewer={user} onUserUpdated={onUserUpdated} />}
         />
         <Route
           path="/profile"

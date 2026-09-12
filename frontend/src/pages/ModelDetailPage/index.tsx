@@ -17,6 +17,7 @@ import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
 import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
+import { dividerBorderColor } from "../../theme";
 import { MODEL_EXTS } from "../../constants/fileTypes";
 import { extOf } from "../../utils/fileExtensions";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
@@ -57,7 +58,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
     actions: print ? (
       <Stack direction="row" alignItems="center" spacing={0.5}>
         <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
-        <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} onUpdated={setPrint} />
+        <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} onUpdated={setPrint} viewer={viewer} />
       </Stack>
     ) : undefined,
   });
@@ -269,7 +270,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
               mt: 3,
               p: 2,
               borderRadius: "12px",
-              borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
+              borderColor: dividerBorderColor,
             }}
           >
             <Typography

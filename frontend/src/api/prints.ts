@@ -48,6 +48,10 @@ export type Author = {
   links: string[];
   avatar_url: string | null;
   background_url: string | null;
+  // Whether ANY Thingport account has claimed this author as themselves -- see authorsApi.link.
+  // Only computed by GET /author/:id and the /me/author-links endpoints; an Author embedded in a
+  // Print DTO always has this false regardless of the real state (see backend dto.ts's comment).
+  is_linked: boolean;
 };
 
 export type Print = {

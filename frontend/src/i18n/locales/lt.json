@@ -170,7 +170,8 @@
       "serviceConnected": "{{service}}: prijungta",
       "serviceNotConnected": "{{service}}: neprijungta",
       "makerworldDisabledReason": "MakerWorld: profilyje dar nepridėjote slapuko (cookie)",
-      "thingiverseDisabledReason": "Thingiverse: administratorius dar nesukonfigūravo API rakto"
+      "thingiverseDisabledReason": "Thingiverse: administratorius dar nesukonfigūravo API rakto",
+      "myModels": "Mano modeliai"
     },
     "notifications": {
       "label": "Pranešimai",
@@ -1072,11 +1073,19 @@
     "author": {
       "pageTitle": "Autorius",
       "pageTitleWithName": "Autorius - {{name}}",
+      "myModelsPageTitle": "Mano modeliai",
       "bio": "Biografija",
       "noBio": "Biografijos dar nėra.",
       "viewOnProvider": "Žiūrėti {{provider}} svetainėje",
       "notFound": "Autorius nerastas.",
-      "noModels": "Iš šio autoriaus dar nėra modelių."
+      "noModels": "Iš šio autoriaus dar nėra modelių.",
+      "itsMe": "Tai aš!",
+      "linkedBadge": "Tai jūs",
+      "linkConfirmTitle": "Susieti šį autorių su savo paskyra?",
+      "linkConfirmMessage": "Tai susies „{{name}}“ kaip jūsų pačių tapatybę. Jūsų „Mano modeliai“ puslapyje taip pat bus rodomi jų modeliai, o jūsų profilio biografija / viršelio nuotrauka bus užpildyta iš jų, jei dar neturite savo nustatytos.",
+      "linkConfirmLabel": "Taip, tai aš",
+      "linkSuccess": "„{{name}}“ susieta su jūsų paskyra",
+      "linkFailed": "Nepavyko susieti šio autoriaus su jūsų paskyra"
     },
     "collections": {
       "pageTitle": "Kolekcijos",

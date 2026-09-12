@@ -1,5 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import Avatar from "@mui/material/Avatar";
 import Box from "@mui/material/Box";
 import Divider from "@mui/material/Divider";
@@ -11,12 +12,14 @@ import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import PersonIcon from "@mui/icons-material/Person";
+import ViewInArIcon from "@mui/icons-material/ViewInAr";
 import PaletteIcon from "@mui/icons-material/Palette";
 import CheckIcon from "@mui/icons-material/Check";
 import LogoutIcon from "@mui/icons-material/Logout";
 import type { AuthUser } from "../../api/auth";
 import type { ThemeSelection } from "../../constants/settingsOptions";
 import { IMPORT_PROVIDER_INFO } from "../../constants/importProviders";
+import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 import { settingsApi } from "../../api/settings";
 
@@ -50,6 +53,7 @@ type Props = {
  *  own chip; this just brings UserMenu's chip in line with it. */
 export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout }: Props) {
   const { t } = useTranslation(["app", "common"]);
+  const navigate = useNavigate();
   const avatarUrl = useGravatarUrl(user?.email, 128);
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null);
   const [themeAnchorEl, setThemeAnchorEl] = React.useState<HTMLElement | null>(null);
@@ -120,6 +124,10 @@ export function UserMenu({ user, theme, onThemeChange, onOpenProfile, onLogout }
           </Tooltip>
         </Box>
         <Divider />
+        <MenuItem onClick={() => { closeMenu(); navigate(`/authors/${SELF_AUTHOR_ID}`); }}>
+          <ListItemIcon><ViewInArIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t("userMenu.myModels")}</ListItemText>
+        </MenuItem>
         <MenuItem onClick={() => { closeMenu(); onOpenProfile(); }}>
           <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("profile.title")}</ListItemText>

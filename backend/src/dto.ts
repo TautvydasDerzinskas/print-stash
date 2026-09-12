@@ -13,6 +13,10 @@ export type UserOut = {
   role: "ADMIN" | "MEMBER";
   // Set while an email change is awaiting confirmation (see routes/auth.ts's PATCH /profile).
   pending_email: string | null;
+  // Populated by linking an imported Author to this account (see authorService.ts's
+  // linkAuthorToUser) -- shown on this user's own "My models" author page.
+  bio: string | null;
+  background_url: string | null;
 };
 
 export function toUserOut(user: User): UserOut {
@@ -22,6 +26,8 @@ export function toUserOut(user: User): UserOut {
     display_name: user.displayName,
     role: user.role,
     pending_email: user.pendingEmail,
+    bio: user.bio,
+    background_url: user.backgroundUrl,
   };
 }
 
@@ -36,9 +42,14 @@ export type AuthorOut = {
   links: string[];
   avatar_url: string | null;
   background_url: string | null;
+  // Whether ANY Thingport account has claimed this author as themselves (see authorService.ts's
+  // isAuthorLinked) -- doesn't say *who*, just whether the Author page's "It's me!" button should
+  // stay hidden. Defaults to false wherever a caller doesn't look it up (e.g. every Author
+  // embedded in a Print DTO) -- only the standalone GET /author/:id route computes it for real.
+  is_linked: boolean;
 };
 
-export function toAuthorOut(author: Author): AuthorOut {
+export function toAuthorOut(author: Author, isLinked = false): AuthorOut {
   return {
     id: author.id,
     provider: author.provider,
@@ -50,6 +61,7 @@ export function toAuthorOut(author: Author): AuthorOut {
     links: author.links,
     avatar_url: author.avatarUrl,
     background_url: author.backgroundUrl,
+    is_linked: isLinked,
   };
 }
 

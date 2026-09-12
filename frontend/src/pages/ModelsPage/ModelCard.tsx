@@ -17,6 +17,7 @@ import { UnauthorizedError } from "../../api/client";
 import { useToast } from "../../components/ToastProvider";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { printProviderInfo } from "../../constants/importProviders";
+import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 import StarToggle from "../../components/StarToggle";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
@@ -210,6 +211,7 @@ export default function ModelCard({
           onRemovedFromCollection={() => onRemovedFromCollection?.(item.id)}
           triggerSx={{ color: overlayIconColor, ...overlayButtonSx }}
           iconFontSize={HOVER_ICON_SIZE}
+          viewer={viewer}
         />
       </Stack>
       <Box sx={{ px: 1.5, pt: 0.75, pb: 1.5 }}>
@@ -230,12 +232,12 @@ export default function ModelCard({
             sx={{
               minWidth: 0,
               color: "#858585",
-              ...(author ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
+              ...(author || showViewerAsAuthor ? { cursor: "pointer", "&:hover": { color: "#00b800" } } : undefined),
             }}
             onClick={e => {
-              if (!author) return;
+              if (!author && !showViewerAsAuthor) return;
               e.stopPropagation();
-              navigate(`/authors/${author.id}`);
+              navigate(`/authors/${author ? author.id : SELF_AUTHOR_ID}`);
             }}
           >
             <Avatar src={authorAvatarUrl || undefined} sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}>

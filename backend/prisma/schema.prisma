@@ -35,12 +35,20 @@ model User {
   // slicer's own registered URL protocol (e.g. bambustudio://) -- see
   // services/slicerPreferenceService.ts. Not yet acted on anywhere; just stored for now.
   slicer                   String?
+  // Populated by linking an imported Author to this account (the Author page's "It's me!"
+  // button -- see AuthorLink below) rather than edited directly: the first link with bio/cover
+  // data fills these in if they're still empty, later links never overwrite them. Shown on this
+  // user's own "My models" author page (AuthorPage's self mode) in place of the empty state a
+  // plain upload-only account would otherwise show.
+  bio                      String?
+  backgroundUrl            String?
   categories               Category[]
   prints                   Print[]
   collections              Collection[]
   importJobs               ImportJob[]
   notifications            Notification[]
   logs                     Log[]
+  authorLinks              AuthorLink[]
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 }
@@ -243,10 +251,33 @@ model Author {
   avatarUrl     String?
   backgroundUrl String?
   prints        Print[]
+  // At most one Thingport account can claim to be this real-world creator -- see AuthorLink.
+  link          AuthorLink?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@unique([provider, externalId])
+}
+
+/// Claims an imported Author row as "this is me" for one Thingport account (the Author page's
+/// "It's me!" button). Two constraints model the real-world rule: `authorId` is unique because a
+/// given external creator account can only ever be one Thingport user; `[userId, provider]` is
+/// unique because a user can only have one linked identity per provider (you can't be two
+/// different Thingiverse creators). Linking merges the author's bio/backgroundUrl onto User (see
+/// its own doc comment) and lets that user's "My models" page also list this author's prints,
+/// alongside their own plain uploads (see routes/prints.ts's SELF_AUTHOR_ID handling).
+model AuthorLink {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  authorId  String   @unique
+  author    Author   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // Denormalized from Author.provider purely so the [userId, provider] unique index below doesn't
+  // need a join to enforce "one linked identity per provider per user".
+  provider  String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, provider])
 }
 
 model Plate {

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import type { Theme } from "@mui/material/styles";
+import { dividerBorderColor } from "../../../theme";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
@@ -146,7 +147,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
         display: "flex",
         flexDirection: "column",
         borderRight: "1px solid",
-        borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider"),
+        borderColor: dividerBorderColor,
         bgcolor: "background.paper",
         overflow: "hidden",
         transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),

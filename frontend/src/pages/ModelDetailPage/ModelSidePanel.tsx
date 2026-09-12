@@ -19,6 +19,8 @@ import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import { useSlicerPreference } from "../../hooks/useSlicerPreference";
 import { useGravatarUrl } from "../../hooks/useGravatarUrl";
+import { dividerBorderColor } from "../../theme";
+import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
 import { useDownloadPrint } from "./useDownloadPrint";
 import DownloadPickerDialog from "./DownloadPickerDialog";
 
@@ -80,7 +82,7 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
       sx={{
         p: 2.5,
         borderRadius: "12px",
-        borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
+        borderColor: dividerBorderColor,
         position: { xs: "static", md: "sticky" },
         // TopBar is sticky too (see its own doc comment) and sits above this in stacking order --
         // sticking at a fixed offset from the viewport top would land this panel right underneath
@@ -102,11 +104,14 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
             spacing={1}
             sx={{
               width: "fit-content",
-              cursor: print.author ? "pointer" : "default",
+              cursor: print.author || showViewerAsAuthor ? "pointer" : "default",
               color: (muiTheme) => muiTheme.thingport.headingText,
-              ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
+              ...(print.author || showViewerAsAuthor ? { "&:hover": { color: "primary.main" } } : undefined),
             }}
-            onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
+            onClick={() => {
+              if (print.author) navigate(`/authors/${print.author.id}`);
+              else if (showViewerAsAuthor) navigate(`/authors/${SELF_AUTHOR_ID}`);
+            }}
           >
             <Avatar src={authorAvatarUrl || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
               {(authorName || "?").slice(0, 1).toUpperCase()}
