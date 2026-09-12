@@ -7,6 +7,7 @@ import Stack from "@mui/material/Stack";
 import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
+import { useTheme } from "@mui/material/styles";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
 import { type Print, printsApi } from "../../api/prints";
@@ -25,6 +26,7 @@ type Props = {
   previewMode: PreviewMode;
   onDeleted?: (id: string) => void;
   onFavoriteChange?: (print: Print) => void;
+  onUpdated?: (print: Print) => void;
   onUnauthorized?: () => void;
   /** Set only by CollectionDetailPage, and only for a real (non-system) collection -- shows
    *  "Remove from collection" in the card's "..." menu. See ModelActionsMenu's doc comment. */
@@ -32,10 +34,18 @@ type Props = {
   onRemovedFromCollection?: (id: string) => void;
 };
 
-// No solid backdrop behind the hover-overlay icons (a card's thumbnail can be any color) -- a
-// drop-shadow keeps them legible against light and dark images alike without boxing them in.
-const hoverIconShadow = { filter: "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85))" };
-const HOVER_ICON_SIZE = 26;
+// The star/"..." hover icons sit on a plain neutral circle -- readable over any thumbnail color
+// without a drop-shadow crutch -- and both share this exact size so they read as one matched pair
+// regardless of which icon (star vs. dots) is inside.
+const OVERLAY_BUTTON_SIZE = 30;
+const HOVER_ICON_SIZE = 18;
+const overlayButtonSx = {
+  width: OVERLAY_BUTTON_SIZE,
+  height: OVERLAY_BUTTON_SIZE,
+  padding: 0,
+  borderRadius: "50%",
+  bgcolor: "background.paper",
+} as const;
 
 export default function ModelCard({
   item,
@@ -43,6 +53,7 @@ export default function ModelCard({
   previewMode,
   onDeleted,
   onFavoriteChange,
+  onUpdated,
   onUnauthorized,
   collectionId,
   onRemovedFromCollection,
@@ -50,6 +61,11 @@ export default function ModelCard({
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
   const showToast = useToast();
+  const muiTheme = useTheme();
+  // headingText is dark text in light mode, white in dark mode -- exactly the contrast an icon
+  // needs against overlayButtonSx's own bgcolor (background.paper: white in light mode, the panel
+  // color in dark mode).
+  const overlayIconColor = muiTheme.thingport.headingText;
   // Flips immediately on click (optimistic, rolled back on failure) instead of waiting on the
   // request behind a spinner -- StarToggle's burst animation only plays on an actual
   // false->true prop transition while mounted, so swapping it for a spinner mid-request (then
@@ -100,7 +116,7 @@ export default function ModelCard({
         overflow: "hidden",
         borderRadius: "12px",
         borderColor: "transparent",
-        bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100]),
+        bgcolor: muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100],
         transition: "background-color .15s ease, box-shadow .15s ease, transform .15s ease",
         "&:hover": {
           bgcolor: "background.paper",
@@ -111,13 +127,7 @@ export default function ModelCard({
         "&:hover .model-card-actions": { opacity: 1 },
       }}
     >
-      <Box
-        sx={{
-          width: "100%",
-          aspectRatio: "4 / 3",
-          bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[200]),
-        }}
-      >
+      <Box sx={{ width: "100%", aspectRatio: "4 / 3" }}>
         {renderPreviewContent(item, "card", theme, t, previewMode)}
       </Box>
 
@@ -160,9 +170,9 @@ export default function ModelCard({
               active={isFavorite}
               onClick={toggleFavorite}
               ariaLabel={favoriteLabel}
-              inactiveColor="#fff"
+              inactiveColor={overlayIconColor}
               size={HOVER_ICON_SIZE}
-              sx={hoverIconShadow}
+              sx={overlayButtonSx}
             />
           </Box>
         </Tooltip>
@@ -170,19 +180,20 @@ export default function ModelCard({
           print={item}
           onUnauthorized={onUnauthorized}
           onDeleted={() => onDeleted?.(item.id)}
+          onUpdated={onUpdated}
           collectionId={collectionId}
           onRemovedFromCollection={() => onRemovedFromCollection?.(item.id)}
-          triggerSx={{ color: "#fff", ...hoverIconShadow }}
+          triggerSx={{ color: overlayIconColor, ...overlayButtonSx }}
           iconFontSize={HOVER_ICON_SIZE}
         />
       </Stack>
-      <Box sx={{ p: 1.5 }}>
+      <Box sx={{ px: 1.5, pt: 0.75, pb: 1.5 }}>
         <Typography
           variant="body2"
           fontWeight={600}
           noWrap
           title={item.title || item.name}
-          sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}
+          sx={{ color: muiTheme.thingport.headingText }}
         >
           {item.title || item.name}
         </Typography>

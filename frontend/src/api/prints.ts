@@ -351,6 +351,49 @@ export const printsApi = {
     return res.json();
   },
 
+  /** Clears the imported author/creator and import-source linkage -- afterward the print reads
+   *  exactly like one this user uploaded themselves. Used by the Edit modal's "reset author". */
+  resetAuthor: async (id: string): Promise<{ print: Print }> => {
+    const res = await fetch(`${apiBase()}/print/${id}/author-reset`, { method: "POST", headers: authHeaders() });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to reset author"));
+    return res.json();
+  },
+
+  addPreviewImages: async (id: string, files: File[]): Promise<{ print: Print }> => {
+    const fd = new FormData();
+    for (const file of files) fd.append("files", file);
+    const res = await fetch(`${apiBase()}/print/${id}/preview-images`, {
+      method: "POST",
+      body: fd,
+      headers: authHeaders(),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to add preview image"));
+    return res.json();
+  },
+
+  deletePreviewImage: async (printId: string, imageId: string): Promise<{ print: Print }> => {
+    const res = await fetch(`${apiBase()}/print/${printId}/preview-images/${imageId}`, {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to remove preview image"));
+    return res.json();
+  },
+
+  reorderPreviewImages: async (id: string, imageIds: string[]): Promise<{ print: Print }> => {
+    const res = await fetch(`${apiBase()}/print/${id}/preview-images/reorder`, {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ image_ids: imageIds }),
+    });
+    if (res.status === 401) throw new UnauthorizedError();
+    if (!res.ok) throw new Error(await readErrorMessage(res, "Failed to reorder preview images"));
+    return res.json();
+  },
+
   downloadZip: async (opts: { print_ids?: string[]; tag?: string; category_id?: string; filename?: string }) => {
     const res = await fetch(`${apiBase()}/download/zip`, {
       method: "POST",

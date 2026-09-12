@@ -7,6 +7,7 @@ import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
 import printsRoutes from "./routes/prints";
 import platesRoutes from "./routes/plates";
+import previewImagesRoutes from "./routes/previewImages";
 import categoriesRoutes from "./routes/categories";
 import printFilesRoutes from "./routes/printFiles";
 import settingsRoutes from "./routes/settings";
@@ -37,6 +38,7 @@ export function createApp(): Express {
   app.use("/api", settingsRoutes);
   app.use("/api", printsRoutes);
   app.use("/api", platesRoutes);
+  app.use("/api", previewImagesRoutes);
   app.use("/api", categoriesRoutes);
   app.use("/api", printFilesRoutes);
   app.use("/api", importsRoutes);

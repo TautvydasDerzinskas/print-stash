@@ -463,6 +463,24 @@ router.post(
   }),
 );
 
+// Clears the imported author/creator and import-source linkage, so the print reads exactly like
+// one this user uploaded themselves (a plain upload never sets authorId/creator/sourceProvider/
+// sourceExternalId -- see createPrint in printCreation.ts). Used by the Edit modal's "reset
+// author" action.
+router.post(
+  "/print/:id/author-reset",
+  asyncHandler(async (req, res) => {
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!print) throw new HttpError(404, "Print not found");
+    await prisma.print.update({
+      where: { id: print.id },
+      data: { authorId: null, creator: null, sourceProvider: null, sourceExternalId: null },
+    });
+    res.json({ print: await printOutById(req.userId!, print.id) });
+    void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "author_reset", name: print.name } });
+  }),
+);
+
 router.delete(
   "/print/:id",
   asyncHandler(async (req, res) => {

@@ -52,7 +52,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
     actions: print ? (
       <Stack direction="row" alignItems="center" spacing={0.5}>
         <FavoriteButton print={print} onUpdated={setPrint} onUnauthorized={onUnauthorized} />
-        <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} />
+        <ModelActionsMenu print={print} onUnauthorized={onUnauthorized} onDeleted={goBack} onUpdated={setPrint} />
       </Stack>
     ) : undefined,
   });

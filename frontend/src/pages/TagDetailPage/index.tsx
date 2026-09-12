@@ -171,6 +171,7 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized }: Pr
                 previewMode={previewMode}
                 onDeleted={deletedId => setItems(prev => prev.filter(i => i.id !== deletedId))}
                 onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
+                onUpdated={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUnauthorized={onUnauthorized}
               />
             ))}

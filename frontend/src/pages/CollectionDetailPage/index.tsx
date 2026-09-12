@@ -176,6 +176,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
                 }
                 collectionId={collection && !collection.system_key ? collection.id : undefined}
                 onRemovedFromCollection={removedId => setItems(prev => prev.filter(i => i.id !== removedId))}
+                onUpdated={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUnauthorized={onUnauthorized}
               />
             ))}

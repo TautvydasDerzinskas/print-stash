@@ -1044,6 +1044,24 @@
       "downloadModelFiles": "Download model files",
       "imported": "Imported {{date}}"
     },
+    "edit": {
+      "title": "Edit model",
+      "titleLabel": "Title",
+      "noCategory": "No category",
+      "resetAuthor": "Reset author",
+      "undoResetAuthor": "Undo",
+      "authorWillBeYou": "You (after Update)",
+      "previewImages": "Preview images",
+      "thumbnailBadge": "Thumbnail",
+      "newBadge": "New",
+      "modelFiles": "Model files",
+      "addFiles": "Add files",
+      "update": "Update",
+      "confirmDiscard": "Discard all unsaved changes to this model?",
+      "discardConfirmLabel": "Discard",
+      "updateSuccess": "Model updated",
+      "updateFailed": "Failed to update the model. Please try again."
+    },
     "author": {
       "pageTitle": "Author",
       "comingSoon": "Author pages are coming soon."

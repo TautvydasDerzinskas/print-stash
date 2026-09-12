@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import IconButton from "@mui/material/IconButton";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
@@ -27,11 +28,15 @@ import { useSlicerPreference } from "../../hooks/useSlicerPreference";
 import { useDownloadPrint } from "./useDownloadPrint";
 import DownloadPickerDialog from "./DownloadPickerDialog";
 import AddToCollectionModal from "./AddToCollectionModal";
+import EditModelModal from "./EditModelModal";
 
 type Props = {
   print: Print;
   onUnauthorized?: () => void;
   onDeleted: () => void;
+  /** Called with the fresh print after a successful Edit-modal update, so the grid card / detail
+   *  page it's rendered in can refresh without a full refetch -- same shape as onFavoriteChange. */
+  onUpdated?: (print: Print) => void;
   /** Set only while browsing an actual (non-system) collection -- shows "Remove from collection"
    *  above Delete. Favourites/Browsing History have no real membership to drop (see
    *  collectionsApi.removeItem's doc comment), so callers there simply don't pass this. */
@@ -46,17 +51,20 @@ type Props = {
   iconFontSize?: number;
 };
 
-/** The "..." menu for a model: "Open in {Slicer}" (launches the user's preferred slicer via its
- *  own URL protocol -- disabled when no slicer is set, or it's set to "Other"), Download (single
- *  file, or a plate picker / zip-all for multi-plate models), Edit (disabled for now), "Add to
- *  collection" (opens the chip-toggle picker), "Remove from collection" (only while browsing one),
- *  Delete (confirm, then delete), and -- only for an imported print -- a divider then "Open in
- *  {Provider}" linking back to the original model page. Shared by the model detail page's header
- *  and the Models/Collection grids' per-card hover overlay. */
+/** The "..." menu for a model: Download (single file, or a plate picker / zip-all for multi-plate
+ *  models), Edit (opens EditModelModal, driven by a `?edit=<id>` URL param -- see openEdit/
+ *  closeEdit below), "Add to collection" (opens the chip-toggle picker), "Remove from collection"
+ *  (only while browsing one), Delete (confirm, then delete), then a divider followed by the two
+ *  "leaves the app" actions grouped together: "Open in {Slicer}" (launches the user's preferred
+ *  slicer via its own URL protocol -- disabled when no slicer is set, or it's set to "Other") and
+ *  -- only for an imported print -- "Open in {Provider}" linking back to the original model page.
+ *  Shared by the model detail page's header and the Models/Collection grids' per-card hover
+ *  overlay. */
 export default function ModelActionsMenu({
   print,
   onUnauthorized,
   onDeleted,
+  onUpdated,
   collectionId,
   onRemovedFromCollection,
   triggerSx,
@@ -65,14 +73,30 @@ export default function ModelActionsMenu({
   const { t } = useTranslation(["models", "common"]);
   const confirmDialog = useConfirm();
   const slicerPreference = useSlicerPreference();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [removingFromCollection, setRemovingFromCollection] = useState(false);
   const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
+  // Driven by the URL (?edit=<id>) rather than local state, per spec -- lets a direct link (or the
+  // back button) open/close it too, and lets the grid-card trigger below just navigate there.
+  const editOpen = searchParams.get("edit") === print.id;
   const { pickerOpen, setPickerOpen, downloading, handleDownload, downloadPlate, downloadAllZip, sortedPlates } =
     useDownloadPrint(print, onUnauthorized);
 
   const closeMenu = () => setAnchorEl(null);
+
+  const openEdit = () => {
+    closeMenu();
+    navigate(`/models/${print.id}?edit=${print.id}`);
+  };
+
+  const closeEdit = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("edit");
+    setSearchParams(next, { replace: true });
+  };
 
   const onDownloadClick = () => {
     closeMenu();
@@ -146,19 +170,11 @@ export default function ModelActionsMenu({
         )}
       </IconButton>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem component="a" href={openInSlicerHref} onClick={closeMenu} disabled={!openInSlicerHref}>
-          <ListItemIcon><LaunchIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>
-            {slicerOption
-              ? t("models:detail.openInSlicer", { slicer: slicerOption.label })
-              : t("models:detail.openInSlicerGeneric")}
-          </ListItemText>
-        </MenuItem>
         <MenuItem onClick={onDownloadClick} disabled={downloading}>
           <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("common:download")}</ListItemText>
         </MenuItem>
-        <MenuItem disabled>
+        <MenuItem onClick={openEdit}>
           <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("common:edit")}</ListItemText>
         </MenuItem>
@@ -176,10 +192,17 @@ export default function ModelActionsMenu({
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>
         </MenuItem>
-        {providerInfo && print.source_url && [
-          <Divider key="open-in-provider-divider" />,
+        <Divider />
+        <MenuItem component="a" href={openInSlicerHref} onClick={closeMenu} disabled={!openInSlicerHref}>
+          <ListItemIcon><LaunchIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>
+            {slicerOption
+              ? t("models:detail.openInSlicer", { slicer: slicerOption.label })
+              : t("models:detail.openInSlicerGeneric")}
+          </ListItemText>
+        </MenuItem>
+        {providerInfo && print.source_url && (
           <MenuItem
-            key="open-in-provider"
             component="a"
             href={print.source_url}
             target="_blank"
@@ -188,8 +211,8 @@ export default function ModelActionsMenu({
           >
             <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
             <ListItemText>{t("models:detail.openInProvider", { provider: providerInfo.label })}</ListItemText>
-          </MenuItem>,
-        ]}
+          </MenuItem>
+        )}
       </Menu>
 
       <DownloadPickerDialog
@@ -209,6 +232,15 @@ export default function ModelActionsMenu({
         collectionId={collectionId}
         onRemovedFromCollection={onRemovedFromCollection}
       />
+
+      {editOpen && (
+        <EditModelModal
+          print={print}
+          onClose={closeEdit}
+          onUnauthorized={onUnauthorized}
+          onUpdated={(updated) => onUpdated?.(updated)}
+        />
+      )}
     </>
   );
 }

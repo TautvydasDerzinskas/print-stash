@@ -1045,6 +1045,24 @@
       "downloadModelFiles": "Atsisiųsti modelio failus",
       "imported": "Importuota {{date}}"
     },
+    "edit": {
+      "title": "Redaguoti modelį",
+      "titleLabel": "Pavadinimas",
+      "noCategory": "Be kategorijos",
+      "resetAuthor": "Atstatyti autorių",
+      "undoResetAuthor": "Anuliuoti",
+      "authorWillBeYou": "Jūs (po atnaujinimo)",
+      "previewImages": "Peržiūros nuotraukos",
+      "thumbnailBadge": "Miniatiūra",
+      "newBadge": "Nauja",
+      "modelFiles": "Modelio failai",
+      "addFiles": "Pridėti failų",
+      "update": "Atnaujinti",
+      "confirmDiscard": "Atmesti visus neišsaugotus šio modelio pakeitimus?",
+      "discardConfirmLabel": "Atmesti",
+      "updateSuccess": "Modelis atnaujintas",
+      "updateFailed": "Nepavyko atnaujinti modelio. Bandykite dar kartą."
+    },
     "author": {
       "pageTitle": "Autorius",
       "comingSoon": "Autorių puslapiai netrukus bus pasiekiami."
