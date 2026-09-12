@@ -128,6 +128,10 @@ export async function runCollectionImportJob(jobId: string, userId: string, body
       status: "DONE",
       sourceLabel: collectionTitle,
       resultCollectionId,
+      // Only when this is unambiguous -- see resultPrintId's doc comment on the schema. A batch
+      // job that happens to succeed on just one item still deserves "open that one model" over
+      // "open the (now single-item) collection it also landed in".
+      resultPrintId: successPrintIds.length === 1 ? successPrintIds[0] : null,
       processed,
       imported,
       alreadyInLibrary,
@@ -239,6 +243,7 @@ async function runThingiverseThingsImportJob(
       status: "DONE",
       sourceLabel: collectionTitle,
       resultCollectionId,
+      resultPrintId: successPrintIds.length === 1 ? successPrintIds[0] : null,
       processed,
       imported,
       alreadyInLibrary,
@@ -365,6 +370,7 @@ export async function runPrintablesCollectionImportJob(jobId: string, userId: st
       status: "DONE",
       sourceLabel: collectionTitle,
       resultCollectionId,
+      resultPrintId: successPrintIds.length === 1 ? successPrintIds[0] : null,
       processed,
       imported,
       alreadyInLibrary,
@@ -431,6 +437,8 @@ export async function runZipImportJob(jobId: string, userId: string, body: ZipIm
       processed: body.entries.length,
       imported: prints.length,
       failedCount: failed.length,
+      // Only when this is unambiguous -- see resultPrintId's doc comment on the schema.
+      resultPrintId: prints.length === 1 ? prints[0].id : null,
     });
     void createLog({
       userId,

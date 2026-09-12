@@ -136,11 +136,17 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
   } = useImportJob();
   const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
-  // Sends the user straight into editing a just-created model (per spec: after an upload
-  // finishes, open it and drop into edit mode so the rest of its details can be filled in) --
-  // reuses the same `?edit=<id>` URL param ModelActionsMenu's own "Edit" menu item drives.
+  // Sends the user straight into editing a just-uploaded model (per spec: a plain upload has no
+  // title/notes/tags/category yet, so drop into edit mode immediately to fill them in) -- reuses
+  // the same `?edit=<id>` URL param ModelActionsMenu's own "Edit" menu item drives.
   const openForEditing = (print: Print) => {
     navigate(`/models/${print.id}?edit=${print.id}`);
+  };
+
+  // A provider import, by contrast, arrives with real metadata already (title, creator, preview
+  // images, ...) -- just open its details page, not the edit form.
+  const openForViewing = (print: Print) => {
+    navigate(`/models/${print.id}`);
   };
 
   const uploadFlatAsMultiplate = async (files: File[]) => {
@@ -386,7 +392,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         const imported = await importsApi.fromLink(payload);
         showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
-        openForEditing(imported);
+        openForViewing(imported);
         return;
       }
 
@@ -395,7 +401,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         const imported = await importsApi.fromLink(payload);
         showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
-        openForEditing(imported);
+        openForViewing(imported);
         return;
       }
       setImporting(false);
@@ -406,7 +412,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
             const imported = await importsApi.fromLink(payload);
             showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
             onUploaded();
-            openForEditing(imported);
+            openForViewing(imported);
           } catch (err) {
             if (err instanceof UnauthorizedError) {
               onUnauthorized?.();

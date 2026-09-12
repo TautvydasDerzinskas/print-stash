@@ -24,7 +24,6 @@ import { useToast } from "../../components/ToastProvider";
 import { importProviderInfo, printProviderInfo } from "../../constants/importProviders";
 import { authorProfileUrl } from "../../utils/authorProfileUrl";
 import { SELF_AUTHOR_ID } from "../../constants/selfAuthor";
-import { dividerBorderColor } from "../../theme";
 import ModelCard from "../ModelsPage/ModelCard";
 
 const PAGE_SIZE = 24;
@@ -231,19 +230,29 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
         }}
       />
 
-      <Box sx={{ p: 3 }}>
+      <Box sx={{ pl: 3, pr: 3 }}>
         <Box
           sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", md: "320px 1fr" },
             gap: "32px",
-            alignItems: "start",
+            // "stretch" (the grid default, but spelled out since the divider below depends on it)
+            // -- so the shorter profile column's box is exactly as tall as the models grid next to
+            // it, and its border-right runs the full height instead of stopping wherever the
+            // profile column's own (usually much shorter) content ends.
+            alignItems: "stretch",
+            pt: 3,
+            pb: 3
           }}
         >
           <Box
             sx={{
               borderRight: { xs: "none", md: "1px solid" },
-              borderColor: dividerBorderColor,
+              // Unlike every other light-mode-only border in the app (see dividerBorderColor),
+              // this one stays visible in dark mode too -- the same plain `divider` token the
+              // sidebar's own Download/Administration separator renders unconditionally, rather
+              // than the sidebar's own outer edge (which dividerBorderColor hides in dark mode).
+              borderColor: "divider",
               pr: { xs: 0, md: 4 },
             }}
           >
@@ -321,7 +330,7 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized, viewer,
             </Typography>
           </Box>
 
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, pt: 3, pb: 3 }}>
             <Typography variant="h6" fontWeight={700} sx={{ mb: 2 }}>{t("models:pageTitle")}</Typography>
             {items.length ? (
               <Stack spacing={2}>

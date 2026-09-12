@@ -382,6 +382,10 @@ export type ImportJobOut = {
   failed_count: number;
   error_message: string | null;
   result_collection_id: string | null;
+  // Set whenever this job finished having created exactly one Print, whatever its type -- see
+  // importJobRunner.ts. Lets the frontend redirect straight into that print's details page instead
+  // of the models grid.
+  result_print_id: string | null;
 };
 
 export function toImportJobOut(job: ImportJob): ImportJobOut {
@@ -399,6 +403,7 @@ export function toImportJobOut(job: ImportJob): ImportJobOut {
     failed_count: job.failedCount,
     error_message: job.errorMessage,
     result_collection_id: job.resultCollectionId,
+    result_print_id: job.resultPrintId,
   };
 }
 

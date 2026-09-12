@@ -210,6 +210,13 @@ model ImportJob {
   failedCount        Int             @default(0)
   errorMessage       String?
   resultCollectionId String?
+  // Set whenever this job finished having created exactly one Print, whatever its type -- a ZIP
+  // job (a single link that needed the zip-entry picker), or a COLLECTION job (MakerWorld/
+  // Thingiverse/Printables) that happened to succeed on just one item despite being a batch import.
+  // See importJobRunner.ts's various runners. ImportJobContext uses it to redirect straight into
+  // that one print's details page; a job with more than one result instead sends the viewer to the
+  // models grid, and a COLLECTION job's own resultCollectionId grouping still applies either way.
+  resultPrintId      String?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 

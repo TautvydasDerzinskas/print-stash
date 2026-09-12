@@ -47,6 +47,11 @@ export type ImportJob = {
   failed_count: number;
   error_message: string | null;
   result_collection_id: string | null;
+  // Set only for a "ZIP" job (a single link that turned out to need the zip-entry picker) that
+  // finished having created exactly one Print -- see the backend's runZipImportJob. Used to
+  // redirect into that print's edit mode, mirroring what a synchronous single-link import
+  // already does (see useUploadImport's openForEditing).
+  result_print_id: string | null;
 };
 
 type ImportLinkPayload = {

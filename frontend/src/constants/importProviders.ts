@@ -1,3 +1,5 @@
+import type { Theme } from "@mui/material/styles";
+
 // Display info for a Print's import source (Print.source_provider from the backend -- see
 // importService.ts's identifySourceModel). Same brand colors UserMenu already uses for its
 // MakerWorld connection chip, kept here so the model card badge and "Open in {Provider}" menu
@@ -6,8 +8,9 @@
 // `color`/`textColor` are plain sx palette-token strings (e.g. "text.primary",
 // "background.paper") for "thingport", or fixed hex brand colors for everything else -- both
 // forms resolve the same way through MUI's sx `bgcolor`/`color`, so call sites don't need to
-// care which kind a given provider uses.
-export type ImportProviderInfo = { label: string; color: string; textColor?: string };
+// care which kind a given provider uses. `textColor` may also be an sx-style theme callback,
+// for "thingport"'s dark-mode override below.
+export type ImportProviderInfo = { label: string; color: string; textColor?: string | ((theme: Theme) => string) };
 
 export const IMPORT_PROVIDER_INFO: Record<string, ImportProviderInfo> = {
   makerworld: { label: "MakerWorld", color: "#00B800" },
@@ -17,7 +20,14 @@ export const IMPORT_PROVIDER_INFO: Record<string, ImportProviderInfo> = {
   // only ever comes from printProviderInfo's fallback below, ID never stored this literally).
   // Deliberately monochrome (the app's own heading-text/panel colors, inverted) rather than a
   // brand hue, so it reads as "this is us" instead of competing with the real provider badges.
-  thingport: { label: "Thingport", color: "text.primary", textColor: "background.paper" },
+  // Dark mode overrides to a flat white instead of following background.paper (a dark navy
+  // there) -- text.primary's dark-mode chip background is a muted grey, not the near-black light
+  // mode gets, so paper's own dark tone reads as too low-contrast against it.
+  thingport: {
+    label: "Thingport",
+    color: "text.primary",
+    textColor: (theme) => (theme.palette.mode === "dark" ? "#FFFFFF" : theme.palette.background.paper),
+  },
 };
 
 /** Looks up a KNOWN external provider only -- null for anything else, including a plain upload

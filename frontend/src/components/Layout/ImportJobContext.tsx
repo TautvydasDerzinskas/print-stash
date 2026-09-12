@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
+import { useNavigate } from "react-router-dom";
 import { importsApi, type ImportJob } from "../../api/imports";
 import { UnauthorizedError } from "../../api/client";
 
@@ -37,6 +38,7 @@ export function ImportJobProvider({
   onJobCompleted?: () => void;
   children: React.ReactNode;
 }) {
+  const navigate = useNavigate();
   const [activeJob, setActiveJob] = useState<ImportJob | null>(null);
   const pollRef = useRef<number | null>(null);
   const onJobCompletedRef = useRef(onJobCompleted);
@@ -59,12 +61,29 @@ export function ImportJobProvider({
       stopPolling();
       setActiveJob(null);
       onJobCompletedRef.current?.();
+      // Any finished import lands the viewer somewhere useful: exactly one resulting print (see
+      // the backend's resultPrintId -- set for a "ZIP" job, or a "COLLECTION" batch job that
+      // happened to succeed on just one item) opens straight to its details page, matching
+      // useUploadImport's openForViewing for a synchronous single-link import. Not edit mode: an
+      // import arrives with real metadata already, unlike a plain upload. More than one result
+      // has no single "it" to open, so it goes to the models grid instead -- and nothing goes
+      // anywhere for a job that imported nothing at all (every item failed).
+      if (job.status === "DONE") {
+        if (job.result_print_id) {
+          navigate(`/models/${job.result_print_id}`);
+        } else if (job.imported + job.already_in_library > 1) {
+          // job.imported alone undercounts a batch where some items were dedup hits (already in
+          // the library) rather than newly imported -- those still landed a real print each, and
+          // still count toward "more than one result" the same as a fresh import would.
+          navigate("/models");
+        }
+      }
     } catch (err) {
       stopPolling();
       setActiveJob(null);
       if (err instanceof UnauthorizedError) onUnauthorized?.();
     }
-  }, [onUnauthorized, stopPolling]);
+  }, [onUnauthorized, stopPolling, navigate]);
 
   const startPolling = useCallback((jobId: string) => {
     stopPolling();
