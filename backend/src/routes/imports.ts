@@ -7,7 +7,7 @@ import { HttpError } from "../utils/fileUtils";
 import { normalizeImportUrl } from "../utils/urlUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
-import { downloadImportToTemp, findImportedExternalIds, importPrintFromUrl, inspectImportLink } from "../services/importService";
+import { checkImportStatus, downloadImportToTemp, findImportedExternalIds, importPrintFromUrl, inspectImportLink } from "../services/importService";
 import { resolveMakerworldCookie } from "../services/importResolvers";
 import { extractMakerworldBearerToken, MakerworldAuthError, MakerworldCaptchaError } from "../services/makerworldCloudApi";
 import { fetchMakerworldCollectionEntries, fetchMakerworldCollectionTitle, parseMakerworldCollectionUrl } from "../services/makerworldCollections";
@@ -75,6 +75,21 @@ router.post(
     const url = await normalizeImportUrl(body.url);
     const result = await inspectImportLink(url, body);
     res.json(result);
+  }),
+);
+
+// Deliberately GET + a plain query param, and skips normalizeImportUrl's DNS-resolution SSRF
+// check (see urlUtils.ts) -- unlike every other import route, this never fetches the URL itself,
+// so there's nothing to protect against and no reason to pay that latency. Called on every page
+// load by the Thingport Grab browser extension to decide whether to show its floating icon on a
+// single-model page (see checkImportStatus's own doc comment for why a listing page always comes
+// back not-already-imported).
+router.get(
+  "/import/status",
+  asyncHandler(async (req, res) => {
+    const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
+    if (!url) throw new HttpError(400, "url is required");
+    res.json(await checkImportStatus(req.userId!, url));
   }),
 );
 

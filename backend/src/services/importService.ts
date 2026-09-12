@@ -455,6 +455,24 @@ export function identifySourceModel(url: string): { provider: string; externalId
   return null;
 }
 
+export type ImportStatus = { recognized: boolean; already_imported: boolean; print_id: string | null };
+
+/** Cheap "is this page importable, and have I already imported it" check -- unlike
+ * inspectImportLink, this never fetches the provider's page itself, so it's safe to call on
+ * every page load (the Thingport Grab browser extension's floating-icon visibility check on a
+ * single-model page). A URL identifySourceModel doesn't recognize (a collection/Likes listing,
+ * or anything not from a known provider) always reports not-already-imported -- dedup only makes
+ * sense for a single model, never a listing page. */
+export async function checkImportStatus(userId: string, url: string): Promise<ImportStatus> {
+  const source = identifySourceModel(url);
+  if (!source) return { recognized: false, already_imported: false, print_id: null };
+  const print = await prisma.print.findFirst({
+    where: { userId, sourceProvider: source.provider, sourceExternalId: source.externalId },
+    select: { id: true },
+  });
+  return { recognized: true, already_imported: Boolean(print), print_id: print?.id ?? null };
+}
+
 /** The inverse of identifySourceModel above -- rebuilds the original model page URL from the
  * stable provider + external id a Print was imported with (Print.sourceProvider/
  * sourceExternalId), for the "Open in {Provider}" link on the model card/detail menus. No raw

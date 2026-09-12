@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Thingport Grab</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --accent: #00b800;
+        --text: #1f1f1f;
+        --text-muted: #6b6b6b;
+        --border: #e2e2e2;
+        --bg: #ffffff;
+        --danger: #d32f2f;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 300px;
+        margin: 0;
+        padding: 16px;
+        font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 13px;
+        color: var(--text);
+        background: var(--bg);
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .header img { width: 24px; height: 24px; }
+      .header h1 {
+        font-size: 15px;
+        font-weight: 700;
+        margin: 0;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 4px;
+        margin-top: 10px;
+      }
+      label:first-of-type { margin-top: 0; }
+      input[type="text"], input[type="email"], input[type="password"], input[type="url"] {
+        width: 100%;
+        padding: 7px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        color: var(--text);
+        background: var(--bg);
+      }
+      input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+      button {
+        margin-top: 14px;
+        width: 100%;
+        padding: 8px 10px;
+        border: none;
+        border-radius: 6px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.6; cursor: default; }
+      button.secondary {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .error {
+        color: var(--danger);
+        font-size: 12px;
+        margin-top: 8px;
+        display: none;
+      }
+      .error.visible { display: block; }
+      .configured-url {
+        font-size: 12px;
+        color: var(--text-muted);
+        word-break: break-all;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.04);
+        border-radius: 6px;
+      }
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .checkbox-row label { margin: 0; font-weight: 500; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <img src="icons/thingport-icon-color.svg" alt="" />
+      <h1>Thingport Grab</h1>
+    </div>
+
+    <div id="configured-view" hidden>
+      <label>Instance</label>
+      <div class="configured-url" id="configured-url"></div>
+      <button type="button" class="secondary" id="change-url-btn">Change URL</button>
+      <div class="checkbox-row">
+        <input type="checkbox" id="disabled-checkbox" />
+        <label for="disabled-checkbox">Disable extension</label>
+      </div>
+    </div>
+
+    <form id="setup-form">
+      <label for="instance-url">Thingport instance URL</label>
+      <input type="url" id="instance-url" placeholder="https://thingport.example.com" required />
+      <label for="email">Email</label>
+      <input type="email" id="email" required />
+      <label for="password">Password</label>
+      <input type="password" id="password" required />
+      <button type="submit" id="save-btn">Save</button>
+      <button type="button" class="secondary" id="cancel-btn" hidden>Cancel</button>
+      <div class="error" id="error"></div>
+    </form>
+
+    <script src="common.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

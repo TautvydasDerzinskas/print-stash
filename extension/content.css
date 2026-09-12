@@ -1,0 +1,107 @@
+/* Scoped to the Shadow DOM root content.js creates -- never leaks into, or is affected by, the
+   host provider page's own styles. */
+
+.tg-fab {
+  all: initial;
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2147483000;
+  transition: transform 0.15s ease;
+}
+.tg-fab:hover { transform: scale(1.06); }
+.tg-fab img { width: 34px; height: 34px; pointer-events: none; }
+
+.tg-panel {
+  all: initial;
+  position: fixed;
+  right: 24px;
+  bottom: 90px;
+  width: 300px;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  padding: 16px;
+  z-index: 2147483000;
+  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: #1f1f1f;
+  box-sizing: border-box;
+}
+.tg-panel * { box-sizing: border-box; }
+
+.tg-title { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+.tg-hint { color: #6b6b6b; font-size: 12px; margin-bottom: 10px; }
+.tg-status { font-size: 13px; color: #1f1f1f; padding: 8px 0; }
+.tg-error { color: #d32f2f; }
+
+.tg-label { display: block; font-weight: 600; margin: 10px 0 4px; }
+.tg-select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.tg-entries {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  padding: 4px 8px;
+  margin-bottom: 10px;
+}
+.tg-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 12px;
+}
+.tg-entry:last-child { border-bottom: none; }
+.tg-entry span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tg-entry-imported { opacity: 0.6; }
+.tg-badge {
+  flex: none;
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b6b6b;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+.tg-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: #00b800;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  margin-top: 6px;
+}
+.tg-btn:hover { background: #00a300; }
+.tg-btn-secondary { background: transparent; color: #1f1f1f; border: 1px solid #e2e2e2; }
+.tg-btn-secondary:hover { background: #f5f5f5; }
+.tg-link { box-sizing: border-box; }

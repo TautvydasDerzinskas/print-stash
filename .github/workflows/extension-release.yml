@@ -1,0 +1,72 @@
+name: Extension release
+
+# Only runs when extension/ (the Thingport Grab browser extension) or this workflow changes.
+# Unlike bridge-release.yml, this does NOT mark its release "latest" -- GitHub's "latest release"
+# is one repo-wide slot, and Bridge's workflow already claims it (make_latest: true) for its own
+# releases. Publishing here to a second, independently-tagged "latest" would clobber whichever one
+# ran most recently, breaking the OTHER track's /releases/latest/download/<asset> links. Instead
+# this always publishes to the same fixed tag, "extension-latest" -- deleting and recreating it
+# each run -- and the Downloads page links to the tag-scoped path
+# (.../releases/download/extension-latest/thingport-grab.zip), never the /latest/ alias.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extension/**"
+      - ".github/workflows/extension-release.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "extension/**"
+      - ".github/workflows/extension-release.yml"
+  workflow_dispatch: {}
+
+concurrency:
+  group: extension-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Package
+        run: |
+          mkdir -p dist
+          cd extension
+          zip -r ../dist/thingport-grab.zip . -x '*.DS_Store'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: thingport-grab
+          path: dist/thingport-grab.zip
+          if-no-files-found: error
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: thingport-grab
+          path: dist
+      - name: Move the extension-latest tag to this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete extension-latest --yes --cleanup-tag || true
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: extension-latest
+          name: Thingport Grab (latest)
+          body: |
+            Automated build of the Thingport Grab browser extension (see `extension/README.md`)
+            from ${{ github.sha }}.
+
+            Not published to the Chrome Web Store -- unzip `thingport-grab.zip`, then in Chrome:
+            `chrome://extensions` → enable **Developer mode** → **Load unpacked** → select the
+            unzipped folder.
+          files: dist/thingport-grab.zip

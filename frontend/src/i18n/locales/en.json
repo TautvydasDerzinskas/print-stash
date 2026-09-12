@@ -385,9 +385,25 @@
       }
     },
     "download": {
-      "pageTitle": "Thingport Bridge",
-      "intro": "A small helper app that runs on your computer so \"Open in Slicer\" can hand a model straight to your slicer.",
-      "downloadHeading": "Download",
+      "pageTitle": "Downloads",
+      "intro": "Companion tools that work alongside your Thingport instance.",
+      "extension": {
+        "heading": "Thingport Grab",
+        "intro": "A Chrome extension that imports MakerWorld, Thingiverse, and Printables models straight from their own pages.",
+        "name": "Thingport Grab",
+        "modal": {
+          "heading": "Install Thingport Grab",
+          "step1": "Unzip the downloaded file somewhere permanent -- Chrome loads the extension from this folder every time it starts.",
+          "step2": "Open chrome://extensions in a new tab.",
+          "step3": "Turn on Developer mode (top right).",
+          "step4": "Click \"Load unpacked\" and select the unzipped folder.",
+          "step5": "Click the new Thingport icon in your toolbar and enter your instance URL and login."
+        }
+      },
+      "bridge": {
+        "heading": "Thingport Bridge",
+        "intro": "A small helper app that runs on your computer so \"Open in Slicer\" can hand a model straight to your slicer."
+      },
       "modal": {
         "startedNote": "Your download should start automatically. Follow these steps to finish installing:",
         "windows": {

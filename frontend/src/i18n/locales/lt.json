@@ -385,9 +385,25 @@
       }
     },
     "download": {
-      "pageTitle": "Thingport Bridge",
-      "intro": "Nedidelė pagalbinė programa, veikianti jūsų kompiuteryje, kad „Atverti pjaustyklėje“ galėtų perduoti modelį tiesiai jūsų pjaustyklei.",
-      "downloadHeading": "Atsisiųsti",
+      "pageTitle": "Atsisiuntimai",
+      "intro": "Papildomi įrankiai, veikiantys kartu su jūsų Thingport aplinka.",
+      "extension": {
+        "heading": "Thingport Grab",
+        "intro": "Chrome plėtinys, importuojantis MakerWorld, Thingiverse ir Printables modelius tiesiai iš jų puslapių.",
+        "name": "Thingport Grab",
+        "modal": {
+          "heading": "Įdiegti Thingport Grab",
+          "step1": "Išarchyvuokite atsisiųstą failą kur nors nuolatinėje vietoje -- Chrome įkelia plėtinį iš šio aplanko kaskart paleidus naršyklę.",
+          "step2": "Naujame skirtuke atidarykite chrome://extensions.",
+          "step3": "Įjunkite Developer mode (viršuje dešinėje).",
+          "step4": "Spustelėkite „Load unpacked“ ir pasirinkite išarchyvuotą aplanką.",
+          "step5": "Spustelėkite naują Thingport piktogramą įrankių juostoje ir įveskite savo aplinkos URL bei prisijungimo duomenis."
+        }
+      },
+      "bridge": {
+        "heading": "Thingport Bridge",
+        "intro": "Nedidelė pagalbinė programa, veikianti jūsų kompiuteryje, kad „Atverti pjaustyklėje“ galėtų perduoti modelį tiesiai jūsų pjaustyklei."
+      },
       "modal": {
         "startedNote": "Atsisiuntimas turėtų prasidėti automatiškai. Norėdami baigti diegimą, atlikite šiuos veiksmus:",
         "windows": {

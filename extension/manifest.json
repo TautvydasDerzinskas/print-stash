@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "Thingport Grab",
+  "version": "1.0.0",
+  "description": "One-click import of MakerWorld, Thingiverse, and Printables models into your self-hosted Thingport instance.",
+  "icons": {
+    "16": "icons/thingport-icon-color-16.png",
+    "32": "icons/thingport-icon-color-32.png",
+    "48": "icons/thingport-icon-color-48.png",
+    "128": "icons/thingport-icon-color-128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/thingport-icon-dark-16.png",
+      "32": "icons/thingport-icon-dark-32.png",
+      "48": "icons/thingport-icon-dark-48.png",
+      "128": "icons/thingport-icon-dark-128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage"],
+  "optional_host_permissions": ["*://*/*"],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.thingiverse.com/*",
+        "*://*.makerworld.com/*",
+        "*://*.printables.com/*"
+      ],
+      "js": ["common.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content.css", "icons/thingport-icon-color.svg"],
+      "matches": [
+        "*://*.thingiverse.com/*",
+        "*://*.makerworld.com/*",
+        "*://*.printables.com/*"
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
+import Divider from "@mui/material/Divider";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -16,6 +17,8 @@ import TerminalIcon from "@mui/icons-material/Terminal";
 import CableIcon from "@mui/icons-material/Cable";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { BRIDGE_DOWNLOADS, bridgeDownloadUrl, type BridgeDownload } from "../../constants/bridge";
+import { EXTENSION_DOWNLOAD_URL } from "../../constants/extension";
+import extensionIcon from "../../assets/logos/thingport-icon-color.svg";
 
 const OS_ICON = { windows: LaptopWindowsIcon, macos: AppleIcon, linux: TerminalIcon };
 
@@ -78,6 +81,7 @@ export default function DownloadPage() {
   usePageHeader({ title: t("sidebar.downloads") });
 
   const [installOs, setInstallOs] = useState<BridgeDownload["os"] | null>(null);
+  const [extensionInstallOpen, setExtensionInstallOpen] = useState(false);
 
   const installSteps: Record<BridgeDownload["os"], InstallStep[]> = {
     windows: [{ text: t("download.modal.windows.step1") }],
@@ -97,18 +101,49 @@ export default function DownloadPage() {
 
   return (
     <Stack spacing={3} sx={{ maxWidth: 720 }}>
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
-        <CableIcon color="primary" sx={{ mt: 0.5 }} />
-        <Box>
-          <Typography variant="h6" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
-            {t("download.pageTitle")}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">{t("download.intro")}</Typography>
-        </Box>
-      </Stack>
+      <Box>
+        <Typography variant="h6" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+          {t("download.pageTitle")}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">{t("download.intro")}</Typography>
+      </Box>
 
       <Stack spacing={2}>
-        <Typography variant="subtitle1" fontWeight={600}>{t("download.downloadHeading")}</Typography>
+        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+          <Box component="img" src={extensionIcon} alt="" sx={{ width: 24, height: 24, mt: 0.5 }} />
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>{t("download.extension.heading")}</Typography>
+            <Typography variant="body2" color="text.secondary">{t("download.extension.intro")}</Typography>
+          </Box>
+        </Stack>
+        <Paper variant="outlined" sx={{ p: 2.5, maxWidth: 340 }}>
+          <Stack spacing={1.5} alignItems="flex-start">
+            <Box component="img" src={extensionIcon} alt="" sx={{ width: 40, height: 40 }} />
+            <Typography variant="subtitle2" fontWeight={600}>{t("download.extension.name")}</Typography>
+            <Button
+              component="a"
+              href={EXTENSION_DOWNLOAD_URL}
+              variant="outlined"
+              size="small"
+              startIcon={<DownloadIcon fontSize="small" />}
+              onClick={() => setExtensionInstallOpen(true)}
+            >
+              {t("common:download")}
+            </Button>
+          </Stack>
+        </Paper>
+      </Stack>
+
+      <Divider />
+
+      <Stack spacing={2}>
+        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+          <CableIcon color="primary" sx={{ mt: 0.5 }} />
+          <Box>
+            <Typography variant="subtitle1" fontWeight={600}>{t("download.bridge.heading")}</Typography>
+            <Typography variant="body2" color="text.secondary">{t("download.bridge.intro")}</Typography>
+          </Box>
+        </Stack>
         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
           {BRIDGE_DOWNLOADS.map(({ os, label, asset }) => {
             const Icon = OS_ICON[os];
@@ -154,6 +189,27 @@ export default function DownloadPage() {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      <Dialog open={extensionInstallOpen} onClose={() => setExtensionInstallOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{t("download.extension.modal.heading")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+            {t("download.modal.startedNote")}
+          </Typography>
+          <InstallSteps
+            steps={[
+              { text: t("download.extension.modal.step1") },
+              { text: t("download.extension.modal.step2") },
+              { text: t("download.extension.modal.step3") },
+              { text: t("download.extension.modal.step4") },
+              { text: t("download.extension.modal.step5") },
+            ]}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setExtensionInstallOpen(false)}>{t("common:close")}</Button>
+        </DialogActions>
       </Dialog>
     </Stack>
   );
