@@ -137,7 +137,10 @@ function AppShell({
           path="/models/:printId"
           element={<ModelDetailPage theme={resolvedTheme} onSelectCategory={setCategoryId} onUnauthorized={onUnauthorized} />}
         />
-        <Route path="/authors/:authorId" element={<AuthorPage />} />
+        <Route
+          path="/authors/:authorId"
+          element={<AuthorPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+        />
         <Route
           path="/profile"
           element={

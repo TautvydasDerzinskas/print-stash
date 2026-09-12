@@ -441,7 +441,8 @@
     "success": "Success",
     "retry": "Retry",
     "language": "Language",
-    "more": "More"
+    "more": "More",
+    "moreActions": "More actions"
   },
   "library": {
     "grid": {
@@ -1006,7 +1007,8 @@
     "card": {
       "unknownAuthor": "Unknown",
       "addedToFavorites": "Added \"{{name}}\" to Favourites",
-      "removedFromFavorites": "Removed \"{{name}}\" from Favourites"
+      "removedFromFavorites": "Removed \"{{name}}\" from Favourites",
+      "importedFrom": "Imported from {{provider}}"
     },
     "detail": {
       "preview3d": "3D Preview",
@@ -1025,6 +1027,7 @@
       "addToCollectionLoadFailed": "Failed to load collections. Please try again.",
       "addToCollectionFailed": "Failed to update collections. Please try again.",
       "removeFromCollection": "Remove from collection",
+      "confirmRemoveFromCollection": "Remove \"{{name}}\" from this collection?",
       "removeFromCollectionFailed": "Failed to remove from collection. Please try again.",
       "openInProvider": "Open in {{provider}}",
       "openInSlicer": "Open in {{slicer}}",
@@ -1064,7 +1067,12 @@
     },
     "author": {
       "pageTitle": "Author",
-      "comingSoon": "Author pages are coming soon."
+      "pageTitleWithName": "Author - {{name}}",
+      "bio": "Bio",
+      "noBio": "No bio yet.",
+      "viewOnProvider": "View on {{provider}}",
+      "notFound": "Author not found.",
+      "noModels": "No models from this author yet."
     },
     "collections": {
       "pageTitle": "Collections",

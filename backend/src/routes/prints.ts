@@ -50,10 +50,12 @@ function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
     .map((id) => id.trim())
     .filter(Boolean);
   const collectionId = typeof req.query.collection_id === "string" ? req.query.collection_id.trim() : "";
+  const authorId = typeof req.query.author_id === "string" ? req.query.author_id.trim() : "";
 
   const where: Prisma.PrintWhereInput = { userId: req.userId };
   if (categoryIds.length === 1) where.categoryId = categoryIds[0];
   else if (categoryIds.length > 1) where.categoryId = { in: categoryIds };
+  if (authorId) where.authorId = authorId;
   if (collectionId) {
     const systemKey = systemCollectionKeyForId(collectionId);
     if (systemKey === "favorites") where.favoritedAt = { not: null };

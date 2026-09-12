@@ -441,7 +441,8 @@
     "success": "Pavyko",
     "retry": "Bandyti dar kartą",
     "language": "Kalba",
-    "more": "Daugiau"
+    "more": "Daugiau",
+    "moreActions": "Daugiau veiksmų"
   },
   "library": {
     "grid": {
@@ -1006,7 +1007,8 @@
     "card": {
       "unknownAuthor": "Nežinomas",
       "addedToFavorites": "\"{{name}}\" pridėtas prie Mėgstamiausių",
-      "removedFromFavorites": "\"{{name}}\" pašalintas iš Mėgstamiausių"
+      "removedFromFavorites": "\"{{name}}\" pašalintas iš Mėgstamiausių",
+      "importedFrom": "Importuota iš {{provider}}"
     },
     "detail": {
       "preview3d": "3D peržiūra",
@@ -1026,6 +1028,7 @@
       "addToCollectionLoadFailed": "Nepavyko įkelti kolekcijų. Bandykite dar kartą.",
       "addToCollectionFailed": "Nepavyko atnaujinti kolekcijų. Bandykite dar kartą.",
       "removeFromCollection": "Pašalinti iš kolekcijos",
+      "confirmRemoveFromCollection": "Pašalinti „{{name}}“ iš šios kolekcijos?",
       "removeFromCollectionFailed": "Nepavyko pašalinti iš kolekcijos. Bandykite dar kartą.",
       "openInProvider": "Atverti „{{provider}}“",
       "openInSlicer": "Atverti su {{slicer}}",
@@ -1065,7 +1068,12 @@
     },
     "author": {
       "pageTitle": "Autorius",
-      "comingSoon": "Autorių puslapiai netrukus bus pasiekiami."
+      "pageTitleWithName": "Autorius - {{name}}",
+      "bio": "Biografija",
+      "noBio": "Biografijos dar nėra.",
+      "viewOnProvider": "Žiūrėti {{provider}} svetainėje",
+      "notFound": "Autorius nerastas.",
+      "noModels": "Iš šio autoriaus dar nėra modelių."
     },
     "collections": {
       "pageTitle": "Kolekcijos",

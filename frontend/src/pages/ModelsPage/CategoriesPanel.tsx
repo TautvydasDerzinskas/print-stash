@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Theme } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
@@ -77,6 +77,20 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
   const displayName = (category: Category) => translateCategoryDisplay(category, i18n).name;
 
   const untitledLabel = t("models:categories.untitled");
+
+  // Keeps the tree's expand state in sync with an externally-driven selectedId -- a page refresh
+  // on ?category=<childId>, a browser back/forward, or any other selection that didn't originate
+  // from clicking a root row here (see handleRootClick, which sets expandedId itself for the
+  // click case). Without this, the selected child's parent root would stay collapsed and the
+  // child would never render at all (its List lives inside a `Collapse ... unmountOnExit`), even
+  // though the grid alongside it is correctly filtered. Re-runs once categories finishes loading
+  // too, since selectedId is already known from the URL before that fetch resolves.
+  useEffect(() => {
+    if (!selectedId) return;
+    const selected = categories.find(c => c.id === selectedId);
+    if (!selected) return;
+    setExpandedId(selected.parent_id || selected.id);
+  }, [selectedId, categories]);
 
   const { roots, childrenByParent } = useMemo(() => {
     const childrenMap: Record<string, Category[]> = {};

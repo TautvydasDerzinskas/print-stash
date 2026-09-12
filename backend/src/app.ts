@@ -6,6 +6,7 @@ import { HttpError } from "./utils/fileUtils";
 import healthRoutes from "./routes/health";
 import authRoutes from "./routes/auth";
 import printsRoutes from "./routes/prints";
+import authorsRoutes from "./routes/authors";
 import platesRoutes from "./routes/plates";
 import previewImagesRoutes from "./routes/previewImages";
 import categoriesRoutes from "./routes/categories";
@@ -37,6 +38,7 @@ export function createApp(): Express {
   app.use("/api", authRoutes);
   app.use("/api", settingsRoutes);
   app.use("/api", printsRoutes);
+  app.use("/api", authorsRoutes);
   app.use("/api", platesRoutes);
   app.use("/api", previewImagesRoutes);
   app.use("/api", categoriesRoutes);

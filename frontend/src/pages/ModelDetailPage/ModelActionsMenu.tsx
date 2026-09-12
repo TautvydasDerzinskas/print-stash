@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import ListItemIcon from "@mui/material/ListItemIcon";
@@ -51,15 +52,15 @@ type Props = {
   iconFontSize?: number;
 };
 
-/** The "..." menu for a model: Download (single file, or a plate picker / zip-all for multi-plate
- *  models), Edit (opens EditModelModal, driven by a `?edit=<id>` URL param -- see openEdit/
- *  closeEdit below), "Add to collection" (opens the chip-toggle picker), "Remove from collection"
- *  (only while browsing one), Delete (confirm, then delete), then a divider followed by the two
- *  "leaves the app" actions grouped together: "Open in {Slicer}" (launches the user's preferred
- *  slicer via its own URL protocol -- disabled when no slicer is set, or it's set to "Other") and
- *  -- only for an imported print -- "Open in {Provider}" linking back to the original model page.
- *  Shared by the model detail page's header and the Models/Collection grids' per-card hover
- *  overlay. */
+/** The "..." menu for a model: "Add to collection" (opens the chip-toggle picker), "Remove from
+ *  collection" (only while browsing one -- grouped right after Add, its counterpart), Download
+ *  (single file, or a plate picker / zip-all for multi-plate models), Edit (opens EditModelModal,
+ *  driven by a `?edit=<id>` URL param -- see openEdit/closeEdit below), Delete (confirm, then
+ *  delete), then a divider followed by the two "leaves the app" actions grouped together: "Open
+ *  in {Slicer}" (launches the user's preferred slicer via its own URL protocol -- disabled when
+ *  no slicer is set, or it's set to "Other") and -- only for an imported print -- "Open in
+ *  {Provider}" linking back to the original model page. Shared by the model detail page's header
+ *  and the Models/Collection grids' per-card hover overlay. */
 export default function ModelActionsMenu({
   print,
   onUnauthorized,
@@ -106,6 +107,11 @@ export default function ModelActionsMenu({
   const handleRemoveFromCollection = async () => {
     closeMenu();
     if (!collectionId) return;
+    const confirmed = await confirmDialog({
+      message: t("models:detail.confirmRemoveFromCollection", { name: print.title || print.name }),
+      confirmLabel: t("common:remove"),
+    });
+    if (!confirmed) return;
     setRemovingFromCollection(true);
     try {
       await collectionsApi.removeItem(collectionId, print.id);
@@ -154,30 +160,26 @@ export default function ModelActionsMenu({
 
   return (
     <>
-      <IconButton
-        size="small"
-        onClick={e => setAnchorEl(e.currentTarget)}
-        aria-label={t("common:more") ?? undefined}
-        disabled={deleting || removingFromCollection}
-        sx={triggerSx}
-      >
-        {deleting || removingFromCollection ? (
-          <CircularProgress size={18} />
-        ) : iconFontSize ? (
-          <MoreVertIcon sx={{ fontSize: iconFontSize }} />
-        ) : (
-          <MoreVertIcon fontSize="small" />
-        )}
-      </IconButton>
+      <Tooltip title={t("common:moreActions")}>
+        <span>
+          <IconButton
+            size="small"
+            onClick={e => setAnchorEl(e.currentTarget)}
+            aria-label={t("common:moreActions") ?? undefined}
+            disabled={deleting || removingFromCollection}
+            sx={triggerSx}
+          >
+            {deleting || removingFromCollection ? (
+              <CircularProgress size={18} />
+            ) : iconFontSize ? (
+              <MoreVertIcon sx={{ fontSize: iconFontSize }} />
+            ) : (
+              <MoreVertIcon fontSize="small" />
+            )}
+          </IconButton>
+        </span>
+      </Tooltip>
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem onClick={onDownloadClick} disabled={downloading}>
-          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{t("common:download")}</ListItemText>
-        </MenuItem>
-        <MenuItem onClick={openEdit}>
-          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>{t("common:edit")}</ListItemText>
-        </MenuItem>
         <MenuItem onClick={() => { closeMenu(); setAddToCollectionOpen(true); }}>
           <ListItemIcon><PlaylistAddIcon fontSize="small" /></ListItemIcon>
           <ListItemText>{t("models:detail.addToCollection")}</ListItemText>
@@ -188,6 +190,14 @@ export default function ModelActionsMenu({
             <ListItemText>{t("models:detail.removeFromCollection")}</ListItemText>
           </MenuItem>
         )}
+        <MenuItem onClick={onDownloadClick} disabled={downloading}>
+          <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t("common:download")}</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={openEdit}>
+          <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>{t("common:edit")}</ListItemText>
+        </MenuItem>
         <MenuItem onClick={handleDelete}>
           <ListItemIcon><DeleteIcon fontSize="small" color="error" /></ListItemIcon>
           <ListItemText sx={{ color: "error.main" }}>{t("common:delete")}</ListItemText>

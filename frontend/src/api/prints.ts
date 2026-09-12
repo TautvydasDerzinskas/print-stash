@@ -104,6 +104,7 @@ export const printsApi = {
     tags?: string[];
     category_id?: string | string[];
     collection_id?: string;
+    author_id?: string;
     order_by?: PrintSortMode;
     limit?: number;
     offset?: number;
@@ -115,6 +116,7 @@ export const printsApi = {
       qs.set("category_id", Array.isArray(params.category_id) ? params.category_id.join(",") : params.category_id);
     }
     if (params.collection_id) qs.set("collection_id", params.collection_id);
+    if (params.author_id) qs.set("author_id", params.author_id);
     if (params.order_by) qs.set("orderBy", params.order_by);
     if (typeof params.limit === "number") qs.set("limit", String(params.limit));
     if (typeof params.offset === "number") qs.set("offset", String(params.offset));

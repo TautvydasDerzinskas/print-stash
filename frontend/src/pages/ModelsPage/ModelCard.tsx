@@ -135,23 +135,25 @@ export default function ModelCard({
       </Box>
 
       {providerInfo && (
-        <Box
-          sx={{
-            position: "absolute",
-            top: 8,
-            left: 8,
-            px: 1,
-            py: 0.375,
-            borderRadius: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            lineHeight: 1.4,
-            color: "#fff",
-            bgcolor: providerInfo.color,
-          }}
-        >
-          {providerInfo.label}
-        </Box>
+        <Tooltip title={t("models:card.importedFrom", { provider: providerInfo.label })}>
+          <Box
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              px: 1,
+              py: 0.375,
+              borderRadius: 1,
+              fontSize: 11,
+              fontWeight: 600,
+              lineHeight: 1.4,
+              color: "#fff",
+              bgcolor: providerInfo.color,
+            }}
+          >
+            {providerInfo.label}
+          </Box>
+        </Tooltip>
       )}
 
       <Stack
