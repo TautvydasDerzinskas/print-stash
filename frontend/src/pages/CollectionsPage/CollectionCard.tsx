@@ -168,7 +168,13 @@ export default function CollectionCard({ collection, theme, previewMode, onUpdat
           {collection.system_key && (
             <LockIcon sx={{ fontSize: 14, color: "text.disabled", flexShrink: 0 }} />
           )}
-          <Typography variant="body2" fontWeight={600} noWrap title={displayName}>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            noWrap
+            title={displayName}
+            sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}
+          >
             {displayName}
           </Typography>
         </Stack>

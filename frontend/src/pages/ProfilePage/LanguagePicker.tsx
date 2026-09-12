@@ -13,9 +13,14 @@ export default function LanguagePicker() {
   const { t, i18n } = useTranslation("app");
   return (
     <Box>
-      <Typography variant="subtitle1" fontWeight={600}>{t("profile.language.heading")}</Typography>
+      <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+        {t("profile.language.heading")}
+      </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t("profile.language.subtitle")}</Typography>
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Paper
+        variant="outlined"
+        sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
+      >
         <Stack spacing={1}>
           {SUPPORTED_LANGUAGES.map(lang => {
             const selected = (i18n.resolvedLanguage || i18n.language || "").startsWith(lang.code);

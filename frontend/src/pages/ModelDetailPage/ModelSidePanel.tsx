@@ -91,6 +91,7 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
             sx={{
               width: "fit-content",
               cursor: print.author ? "pointer" : "default",
+              color: (muiTheme) => muiTheme.thingport.headingText,
               ...(print.author ? { "&:hover": { color: "primary.main" } } : undefined),
             }}
             onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
@@ -117,7 +118,7 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
                 py: 0.25,
                 mx: -0.5,
                 gap: 0.75,
-                color: "text.primary",
+                color: (muiTheme) => muiTheme.thingport.headingText,
                 "&:hover": { color: "primary.main" },
               }}
             >

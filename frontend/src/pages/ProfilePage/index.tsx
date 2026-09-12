@@ -36,7 +36,9 @@ export default function ProfilePage({ user, makerworldCookie, onUpdateMakerWorld
           {user?.display_name?.[0]?.toUpperCase()}
         </Avatar>
         <Box>
-          <Typography variant="subtitle1" fontWeight={600}>{user?.display_name}</Typography>
+          <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+            {user?.display_name}
+          </Typography>
           <Typography variant="body2" color="text.secondary">{user?.email}</Typography>
         </Box>
       </Stack>

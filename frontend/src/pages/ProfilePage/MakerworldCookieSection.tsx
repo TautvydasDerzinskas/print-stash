@@ -91,12 +91,17 @@ export default function MakerworldCookieSection({ cookie, onUpdateMakerWorld, on
 
   return (
     <Box>
-      <Typography variant="subtitle1" fontWeight={600}>{t("profile.makerworld.heading")}</Typography>
+      <Typography variant="subtitle1" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+        {t("profile.makerworld.heading")}
+      </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         {t("profile.makerworld.description")}
       </Typography>
 
-      <Paper variant="outlined" sx={{ p: 2.5 }}>
+      <Paper
+        variant="outlined"
+        sx={{ p: 2.5, borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider") }}
+      >
         {editing ? (
           <Stack spacing={1.5}>
             <TextField

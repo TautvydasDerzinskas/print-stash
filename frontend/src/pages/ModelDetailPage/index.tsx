@@ -124,15 +124,42 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
           alignItems: "start",
         }}
       >
-        <Box>
-          <Box sx={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: "12px", overflow: "hidden", bgcolor: "action.hover" }}>
+        {/* minWidth: 0 -- without it, a grid item defaults to min-width: auto, so a preview image
+            with huge intrinsic pixel dimensions could still force this column wider than its "2fr"
+            share (and skew the whole two-column layout) even though the image itself is capped
+            below. */}
+        <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ position: "relative", width: "100%", aspectRatio: "16 / 10", borderRadius: "12px", overflow: "hidden", bgcolor: "background.paper" }}>
             {hasImages ? (
-              <Box
-                component="img"
-                src={printsApi.fileUrl(activeImage.url)}
-                alt={print.title || print.name}
-                sx={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
+              <>
+                {/* A blurred, edge-to-edge crop of the same image behind the sharp contained one --
+                    the common "photo viewer" backdrop that fills the letterboxed bars around any
+                    image whose aspect ratio doesn't match this box's 16:10, instead of showing flat
+                    background color. scale(1.15) pushes the blur's own soft edge outside the box
+                    so no unblurred fringe peeks in. */}
+                <Box
+                  component="img"
+                  src={printsApi.fileUrl(activeImage.url)}
+                  alt=""
+                  aria-hidden="true"
+                  sx={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    maxWidth: "100%",
+                    objectFit: "cover",
+                    filter: "blur(30px)",
+                    transform: "scale(1.15)",
+                  }}
+                />
+                <Box
+                  component="img"
+                  src={printsApi.fileUrl(activeImage.url)}
+                  alt={print.title || print.name}
+                  sx={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "100%", objectFit: "contain" }}
+                />
+              </>
             ) : (
               firstPlate && renderPreviewContent(print, "modal", theme, t, "automatic", firstPlate)
             )}
@@ -212,7 +239,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
                     component="img"
                     src={printsApi.fileUrl(image.url)}
                     alt=""
-                    sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    sx={{ width: "100%", height: "100%", maxWidth: "100%", objectFit: "cover" }}
                   />
                 </ButtonBase>
               ))}
@@ -267,7 +294,18 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
                     size="small"
                     variant="outlined"
                     onClick={() => navigate(`/models/tags/${encodeURIComponent(tag)}`)}
-                    sx={{ bgcolor: "background.paper", borderColor: "divider", color: "text.primary" }}
+                    sx={{
+                      bgcolor: "background.paper",
+                      borderColor: "divider",
+                      color: "text.primary",
+                      // Chip's "clickable" hover/focus/active tint is applied via a same-specificity
+                      // (two-class) selector of its own, so a plain "&:hover" override here loses
+                      // the cascade -- !important is the deliberate escape hatch for that, not an
+                      // accident.
+                      "&:hover, &:focus-visible, &:active": {
+                        backgroundColor: (muiTheme) => `${muiTheme.palette.background.paper} !important`,
+                      },
+                    }}
                   />
                 ))}
               </Stack>

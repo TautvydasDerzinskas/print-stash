@@ -100,7 +100,9 @@ export default function DownloadPage() {
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
         <CableIcon color="primary" sx={{ mt: 0.5 }} />
         <Box>
-          <Typography variant="h6" fontWeight={600}>{t("download.pageTitle")}</Typography>
+          <Typography variant="h6" fontWeight={600} sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}>
+            {t("download.pageTitle")}
+          </Typography>
           <Typography variant="body2" color="text.secondary">{t("download.intro")}</Typography>
         </Box>
       </Stack>
