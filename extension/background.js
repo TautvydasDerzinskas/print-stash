@@ -88,20 +88,27 @@ async function apiCall(method, path, body) {
   return res.json();
 }
 
-/** Reflects configured+enabled state on the toolbar icon (color = active, dark = not) -- see
- *  manifest.json's `action.default_icon` for the inactive default this overrides. */
-async function updateActionIcon() {
-  const config = await getStoredConfig();
-  const active = isConfigured(config) && !config.disabled;
+function iconPaths(active) {
   const prefix = active ? "thingport-icon-color" : "thingport-icon-dark";
-  await chrome.action.setIcon({
-    path: {
-      16: `icons/${prefix}-16.png`,
-      32: `icons/${prefix}-32.png`,
-      48: `icons/${prefix}-48.png`,
-      128: `icons/${prefix}-128.png`,
-    },
-  });
+  return {
+    16: `icons/${prefix}-16.png`,
+    32: `icons/${prefix}-32.png`,
+    48: `icons/${prefix}-48.png`,
+    128: `icons/${prefix}-128.png`,
+  };
+}
+
+/** The toolbar icon is active (color) only for a tab where the floating in-page icon is actually
+ *  showing right now -- configured, enabled, AND the current page is a recognized, not-already-
+ *  imported provider page -- everywhere else it's the dark/inactive one (manifest.json's
+ *  `action.default_icon`, used for any tab this never runs for). content.js reports this once per
+ *  page/navigation via the SET_TAB_ICON_STATE message below; tabs.onUpdated below resets it the
+ *  moment a new navigation starts, so a tab doesn't keep showing "active" after leaving an
+ *  importable page for one this extension never runs on at all (a plain navigation within the
+ *  same content-scripted page re-asserts the correct state itself, see content.js's own
+ *  navigation watcher). */
+async function setTabIconState(tabId, active) {
+  await chrome.action.setIcon({ tabId, path: iconPaths(active) }).catch(() => undefined);
 }
 
 // The host permission for the chosen instance origin is requested by popup.js itself, not here --
@@ -114,15 +121,13 @@ async function handleSaveConfig({ instanceUrl, email, password }) {
   // Validate before persisting -- a typo'd URL or wrong password shouldn't silently save.
   await loginAndStoreToken({ instanceUrl: normalized, email, password });
   await chrome.storage.local.set({ instanceUrl: normalized, email, password, disabled: false });
-  await updateActionIcon();
 }
 
 async function handleSetDisabled(disabled) {
   await chrome.storage.local.set({ disabled: Boolean(disabled) });
-  await updateActionIcon();
 }
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   (async () => {
     try {
       switch (message.type) {
@@ -142,6 +147,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
           await handleSetDisabled(message.payload.disabled);
           sendResponse({ ok: true });
           return;
+        case "SET_TAB_ICON_STATE":
+          // Only content scripts send this, and every content script runs attached to a tab, so
+          // sender.tab is always present here (unlike a message from the popup, which has none).
+          if (sender.tab) await setTabIconState(sender.tab.id, Boolean(message.payload.active));
+          sendResponse({ ok: true });
+          return;
         case "API_CALL": {
           const data = await apiCall(message.payload.method, message.payload.path, message.payload.body);
           sendResponse({ ok: true, data });
@@ -157,5 +168,12 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   return true; // keep the message channel open for the async response above
 });
 
-chrome.runtime.onInstalled.addListener(() => { void updateActionIcon(); });
-chrome.runtime.onStartup.addListener(() => { void updateActionIcon(); });
+// The moment a tab starts a NEW navigation (including away from a provider domain to one this
+// extension never runs on at all, e.g. thingiverse.com -> google.com), reset its icon to inactive
+// first. A per-tab chrome.action.setIcon override otherwise persists forever until something
+// explicitly changes it -- there'd be nothing to reset it if the destination page never runs
+// content.js. If the destination IS a matching provider page, content.js's own init() re-asserts
+// the correct state a moment later via SET_TAB_ICON_STATE.
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (changeInfo.status === "loading") void setTabIconState(tabId, false);
+});

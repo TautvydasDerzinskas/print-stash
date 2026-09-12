@@ -24,6 +24,7 @@
 
   let shadowRoot = null;
   let panelEl = null;
+  let contentEl = null;
   let panelOpen = false;
   /** Set once per page, from the classification + (for a single-model page) whatever
    *  /import/inspect returned -- everything the panel's render functions need to know which
@@ -54,7 +55,28 @@
     panelEl = document.createElement("div");
     panelEl.className = "tg-panel";
     panelEl.hidden = true;
+
+    // Lives outside contentEl (renderPanel's target) so it survives every re-render instead of
+    // needing to be re-added to each step's template -- closing an accidental open shouldn't
+    // depend on which step happened to be showing.
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "tg-close";
+    closeBtn.type = "button";
+    closeBtn.setAttribute("aria-label", "Close");
+    closeBtn.textContent = "×";
+    closeBtn.addEventListener("click", closePanel);
+    panelEl.appendChild(closeBtn);
+
+    contentEl = document.createElement("div");
+    contentEl.className = "tg-panel-content";
+    panelEl.appendChild(contentEl);
+
     shadowRoot.appendChild(panelEl);
+  }
+
+  function closePanel() {
+    panelOpen = false;
+    panelEl.hidden = true;
   }
 
   function togglePanel() {
@@ -67,7 +89,7 @@
   }
 
   function renderPanel(html) {
-    panelEl.innerHTML = html;
+    contentEl.innerHTML = html;
   }
 
   function escapeHtml(value) {
@@ -96,15 +118,37 @@
   //    MakerWorld model link -- and any other generic single link -- goes through /import/inspect
   //    first, mirroring the web app's own useUploadImport.tsx branching exactly) ----------------
 
+  /** Best-effort model name for the "Import ..." heading, read straight from the current page --
+   *  used only for Thingiverse Thing/Printables Model pages, which skip /import/inspect (see
+   *  skipInspect below) and so never get inspect's own resolved `title`. og:title is set
+   *  accurately by both sites without the "... - Thingiverse" site-name suffix document.title
+   *  tends to carry, so it's tried first. */
+  function guessPageTitle() {
+    const og = document.querySelector('meta[property="og:title"]');
+    if (og && og.content && og.content.trim()) return og.content.trim();
+    return document.title.trim() || null;
+  }
+
+  function importHeading() {
+    return context.title ? `Import "${escapeHtml(context.title)}"` : "Import this model";
+  }
+
   async function loadSingleItem() {
     renderPanel(`<div class="tg-status">Checking link…</div>`);
     const { provider, type } = context.classification;
+    // Printables' generic page-fetch flow is Cloudflare-gated (inspectImportLink would just fail)
+    // and a Thingiverse Thing always resolves through its own dedicated API path regardless -- see
+    // useUploadImport.tsx's identical isThingiverseThingUrl/isPrintablesModelUrl special-case.
+    // Neither needs (or can safely use) /import/inspect at all.
     const skipInspect = (provider === "thingiverse" && type === "thing") || (provider === "printables" && type === "model");
 
     let zip = null;
-    if (!skipInspect) {
+    if (skipInspect) {
+      context.title = guessPageTitle();
+    } else {
       try {
         const inspect = await api("POST", "/import/inspect", { url: context.url });
+        context.title = inspect.title || null;
         if (inspect.is_zip) zip = { filename: inspect.filename };
       } catch (err) {
         renderPanel(errorHtml(err));
@@ -126,7 +170,7 @@
   async function readyToImportHtml() {
     const collectionHtml = await collectionOptionsHtml();
     return `
-      <div class="tg-title">Import this model</div>
+      <div class="tg-title">${importHeading()}</div>
       ${collectionHtml}
       <button class="tg-btn" data-action="import">Import</button>
     `;
@@ -135,7 +179,7 @@
   async function zipChoiceHtml(filename) {
     const collectionHtml = await collectionOptionsHtml();
     return `
-      <div class="tg-title">Import this model</div>
+      <div class="tg-title">${importHeading()}</div>
       <div class="tg-hint">${escapeHtml(filename)} contains multiple files.</div>
       ${collectionHtml}
       <button class="tg-btn" data-action="import-as-zip">Import as one model</button>
@@ -327,28 +371,106 @@
     else await loadBatchEntries();
   }
 
+  function unmount() {
+    const host = document.getElementById("thingport-grab-host");
+    if (host) host.remove();
+    shadowRoot = null;
+    panelEl = null;
+    contentEl = null;
+    panelOpen = false;
+    context = null;
+  }
+
   // -- Entry point: decide whether this page gets the icon at all -------------------------------
 
+  // Bumped on every re-init so a status-check/mount still in flight for a page the user has
+  // already navigated away from (see installNavigationWatcher below) discards its result instead
+  // of mounting a stale icon for the wrong URL.
+  let initToken = 0;
+
+  function reportTabIconState(active) {
+    void call("SET_TAB_ICON_STATE", { active });
+  }
+
   async function init() {
+    const myToken = ++initToken;
     const stateRes = await call("GET_STATE");
-    if (!stateRes.ok || !stateRes.data.configured || stateRes.data.disabled) return;
+    if (myToken !== initToken) return;
+    if (!stateRes.ok || !stateRes.data.configured || stateRes.data.disabled) {
+      reportTabIconState(false);
+      return;
+    }
 
     const classification = thingportClassifyUrl(location.href);
-    if (!classification) return;
+    if (!classification) {
+      reportTabIconState(false);
+      return;
+    }
 
     if (classification.kind === "single") {
       try {
         const status = await api("GET", `/import/status?url=${encodeURIComponent(location.href)}`);
-        if (status.already_imported) return;
+        if (myToken !== initToken) return;
+        if (status.already_imported) {
+          reportTabIconState(false);
+          return;
+        }
       } catch {
         // If the status check fails (instance unreachable, bad credentials, etc.) still show the
         // icon -- the panel's own error state will surface the real problem when they try it.
       }
     }
+    if (myToken !== initToken) return;
 
     context = { url: location.href, instanceUrl: stateRes.data.instanceUrl, classification };
     await mount();
+    if (myToken !== initToken) return;
+    reportTabIconState(true);
   }
 
+  // MakerWorld, Printables, and Thingiverse are all client-side-routed SPAs -- navigating from
+  // one model to another (or away from one) changes location.href without a full page load, so
+  // this content script only ever runs once per *tab*, not once per page. Without this, the icon
+  // either never appears on a later model page, or stays stuck showing for a page you've already
+  // left. Patching history.pushState/replaceState covers every router built on the standard History
+  // API (which is all three of these); popstate covers back/forward; the interval is a cheap,
+  // low-frequency safety net for the rare navigation that manages to bypass both.
+  function installNavigationWatcher() {
+    let lastHref = location.href;
+    const onLocationChange = () => {
+      if (location.href === lastHref) return;
+      lastHref = location.href;
+      unmount();
+      void init();
+    };
+
+    const origPushState = history.pushState;
+    history.pushState = function (...args) {
+      const result = origPushState.apply(this, args);
+      onLocationChange();
+      return result;
+    };
+    const origReplaceState = history.replaceState;
+    history.replaceState = function (...args) {
+      const result = origReplaceState.apply(this, args);
+      onLocationChange();
+      return result;
+    };
+    window.addEventListener("popstate", onLocationChange);
+    setInterval(onLocationChange, 1000);
+  }
+
+  // Re-evaluates immediately if the user flips "Disable extension" (or changes the instance URL)
+  // from the popup while already sitting on an importable page -- without this, the floating
+  // icon/panel and the toolbar icon would only catch up on the next navigation.
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local") return;
+    const relevant = ["instanceUrl", "email", "password", "disabled"].some((key) => key in changes);
+    if (!relevant) return;
+    unmount();
+    void init();
+  });
+
+  installNavigationWatcher();
   void init();
 })();
