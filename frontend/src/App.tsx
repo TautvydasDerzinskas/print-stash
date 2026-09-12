@@ -68,7 +68,15 @@ function AppShell({
   onUserUpdated,
 }: AppShellProps) {
   const navigate = useNavigate();
-  const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  // Lazily seeded from the current URL (not just null) so a direct load/refresh of
+  // /models?category=<id> already has the right categoryId on its very first render, instead of
+  // starting unfiltered and correcting a moment later once ModelsPage's own URL-sync effect
+  // catches up -- that gap was a real, visible flash of "All" before the filtered view. Only
+  // matters at mount: normal in-app navigation keeps this in sync via onSelectCategory as usual.
+  const [categoryId, setCategoryId] = React.useState<string | null>(() => {
+    if (typeof window === "undefined" || !window.location.pathname.startsWith("/models")) return null;
+    return new URLSearchParams(window.location.search).get("category");
+  });
   const [nonce, setNonce] = React.useState(0);
   const [categoryVersion, setCategoryVersion] = React.useState(0);
 

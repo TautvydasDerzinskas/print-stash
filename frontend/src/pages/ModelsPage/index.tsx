@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import Box from "@mui/material/Box";
@@ -57,20 +57,38 @@ export default function ModelsPage({ categoryId, onSelectCategory, categoriesVer
 
   // Keeps the selected category mirrored into ?category=<id> so the URL is copy-able/bookmarkable
   // and a reload lands back on the same filtered view, while categoryId itself stays lifted to
-  // AppShell (it also needs to survive navigating away to a model and back). Two effects, one per
-  // direction, each a no-op once the two already agree, so they can't loop against each other.
+  // AppShell (it also needs to survive navigating away to a model and back).
+  //
+  // Two effects, one per direction -- but whenever categoryId and the URL start a render already
+  // disagreeing (a cold load of ?category=X while categoryId still defaults to null, or a browser
+  // back/forward that changes the URL out from under an unrelated categoryId), BOTH used to fire
+  // in that same commit, each reading the OTHER's still-stale value: the URL->state effect would
+  // schedule categoryId to catch up to the URL, while the state->URL effect -- seeing that same
+  // stale categoryId one commit longer -- would shove the URL back to match it, undoing the first
+  // effect's work. That handoff repeated every render, each one node lagging the other by exactly
+  // one step, which is the flicker. `syncingFromUrlRef` marks a categoryId change as having
+  // originated from the URL (not a user click), so the state->URL effect knows to skip pushing it
+  // right back.
   const categoryParam = searchParams.get("category");
+  const syncingFromUrlRef = useRef(false);
 
   // URL -> state: adopts ?category on first load and on any navigation that changes it externally
   // (browser back/forward, a pasted link).
   useEffect(() => {
-    if (categoryParam !== categoryId) onSelectCategory(categoryParam);
+    if (categoryParam !== categoryId) {
+      syncingFromUrlRef.current = true;
+      onSelectCategory(categoryParam);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryParam]);
 
   // state -> URL: covers every other way categoryId can change -- clicking a category, or it being
   // cleared out from under the user (e.g. deleteCategory below clearing the active selection).
   useEffect(() => {
+    if (syncingFromUrlRef.current) {
+      syncingFromUrlRef.current = false;
+      return;
+    }
     if ((searchParams.get("category") || null) === categoryId) return;
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
