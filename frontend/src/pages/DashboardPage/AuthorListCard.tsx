@@ -51,10 +51,13 @@ export default function AuthorListCard({ authors }: Props) {
   const modelCountLabel = (count: number) => t("dashboard.topAuthors.modelCount", { count });
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", flexDirection: "column" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2.5, display: "flex", flexDirection: "column", borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider") }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <StarIcon />
-        <Typography variant="h6" fontWeight={700} color="text.primary">{t("dashboard.topAuthors.title")}</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>{t("dashboard.topAuthors.title")}</Typography>
       </Box>
 
       {authors.length === 0 ? (

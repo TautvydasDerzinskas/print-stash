@@ -231,13 +231,33 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
             </Box>
           )}
 
-          <Paper variant="outlined" sx={{ mt: 3, p: 2, borderRadius: "12px" }}>
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>{t("models:detail.description")}</Typography>
+          <Paper
+            variant="outlined"
+            sx={{
+              mt: 3,
+              p: 2,
+              borderRadius: "12px",
+              borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              sx={{ mb: 1, color: (muiTheme) => muiTheme.thingport.headingText }}
+            >
+              {t("models:detail.description")}
+            </Typography>
             <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", color: print.notes ? "text.primary" : "text.disabled" }}>
               {print.notes || t("models:detail.noDescription")}
             </Typography>
 
-            <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 2.5, mb: 1 }}>{t("models:detail.tags")}</Typography>
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              sx={{ mt: 2.5, mb: 1, color: (muiTheme) => muiTheme.thingport.headingText }}
+            >
+              {t("models:detail.tags")}
+            </Typography>
             {print.tags.length ? (
               <Stack direction="row" flexWrap="wrap" useFlexGap spacing={1}>
                 {print.tags.map(tag => (

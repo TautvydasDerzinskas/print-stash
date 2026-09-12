@@ -37,6 +37,10 @@ declare module "@mui/material/styles" {
       /** Selected nav row label/icon color -- the brand accent in dark mode, unchanged
        *  (inherited) text color in light mode. */
       selectedNavText: string;
+      /** Heading/emphasis text (dashboard stat numbers and pane headers, a model card's title,
+       *  the model detail page's "Description"/"Tags" headlines, etc.) -- plain white in dark
+       *  mode for contrast against those panes' backgrounds, unchanged (text.primary) in light. */
+      headingText: string;
     };
   }
   interface ThemeOptions {
@@ -48,6 +52,7 @@ declare module "@mui/material/styles" {
       navInactiveText: string;
       selectedNavBackground: string;
       selectedNavText: string;
+      headingText: string;
     };
   }
 }
@@ -73,6 +78,7 @@ type ThemeDef = {
   navInactiveText: string;
   selectedNavBackground: string;
   selectedNavText: string;
+  headingText: string;
 };
 
 // Values ported 1:1 from the original CSS custom properties so the visual identity of each
@@ -100,6 +106,7 @@ const THEME_DEFS: Record<ResolvedTheme, ThemeDef> = {
     selectedNavBackground: alpha("#5be584", 0.2),
     // Matches the pre-existing collapsed-rail icon treatment (selected -> primary.main).
     selectedNavText: "#00b800",
+    headingText: "#1f1f1f", // == text above; unused in light mode's actual styling either way
   },
   dark: {
     mode: "dark",
@@ -122,6 +129,7 @@ const THEME_DEFS: Record<ResolvedTheme, ThemeDef> = {
     navInactiveText: "#969ba0",
     selectedNavBackground: "linear-gradient(to right, rgb(24, 31, 57) 0%, rgba(49, 206, 255, 0) 100%)",
     selectedNavText: "#00b800",
+    headingText: "#ffffff",
   },
 };
 
@@ -160,7 +168,12 @@ export function buildTheme(id: ResolvedTheme): Theme {
       // of an !important global rule reaches all of them; MuiCssBaseline's styleOverrides is
       // exactly the escape hatch for page-level CSS the theme needs to own like this.
       ...(d.mode === "dark"
-        ? { MuiCssBaseline: { styleOverrides: "*, *::before, *::after { border-radius: 0 !important; }" } }
+        ? {
+            MuiCssBaseline: { styleOverrides: "*, *::before, *::after { border-radius: 0 !important; }" },
+            // A success toast (see ToastProvider) should read as "this worked" in the brand
+            // green, not MUI's own default success palette -- e.g. favoriting a model.
+            MuiAlert: { styleOverrides: { filledSuccess: { backgroundColor: d.accent, color: d.accentContrast } } },
+          }
         : {}),
     },
     thingport: {
@@ -171,6 +184,7 @@ export function buildTheme(id: ResolvedTheme): Theme {
       navInactiveText: d.navInactiveText,
       selectedNavBackground: d.selectedNavBackground,
       selectedNavText: d.selectedNavText,
+      headingText: d.headingText,
     },
   };
   return createTheme(options);

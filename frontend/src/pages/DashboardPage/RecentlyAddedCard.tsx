@@ -38,10 +38,13 @@ export default function RecentlyAddedCard({ models }: Props) {
   const navigate = useNavigate();
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", flexDirection: "column" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2.5, display: "flex", flexDirection: "column", borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider") }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <NewReleasesIcon />
-        <Typography variant="h6" fontWeight={700} color="text.primary">{t("dashboard.recentlyAdded.title")}</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>{t("dashboard.recentlyAdded.title")}</Typography>
       </Box>
 
       {models.length === 0 ? (

@@ -40,7 +40,17 @@ function rowSx(active: boolean) {
     borderRadius: 1.5,
     mb: 0.25,
     background: (theme: Theme) => (active ? theme.thingport.selectedNavBackground : "transparent"),
-    "&:hover": { bgcolor: "action.hover" },
+    ...(active
+      ? { "&:hover": { background: (theme: Theme) => theme.thingport.selectedNavBackground } }
+      : {
+          // Dark mode only: hovering an inactive row shouldn't tint its background -- just
+          // brighten its label (and chevron, for a root row) to white. Light mode keeps the
+          // existing action.hover tint.
+          "&:hover": (theme: Theme) =>
+            theme.palette.mode === "dark"
+              ? { backgroundColor: "transparent", "& .MuiListItemText-primary, & .MuiSvgIcon-root": { color: "#fff" } }
+              : { bgcolor: "action.hover" },
+        }),
   };
 }
 function rowTextSx(active: boolean, extra?: object) {

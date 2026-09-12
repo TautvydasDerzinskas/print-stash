@@ -55,10 +55,13 @@ export default function ModelListCard({ icon, title, models, valueOf, valueLabel
   const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", flexDirection: "column" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2.5, display: "flex", flexDirection: "column", borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider") }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         {icon}
-        <Typography variant="h6" fontWeight={700} color="text.primary">{title}</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>{title}</Typography>
       </Box>
 
       {models.length === 0 ? (

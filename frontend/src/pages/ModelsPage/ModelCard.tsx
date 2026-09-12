@@ -177,7 +177,13 @@ export default function ModelCard({
         />
       </Stack>
       <Box sx={{ p: 1.5 }}>
-        <Typography variant="body2" fontWeight={600} noWrap title={item.title || item.name}>
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          noWrap
+          title={item.title || item.name}
+          sx={{ color: (muiTheme) => muiTheme.thingport.headingText }}
+        >
           {item.title || item.name}
         </Typography>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 0.75 }}>

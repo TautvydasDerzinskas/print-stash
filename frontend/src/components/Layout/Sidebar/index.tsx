@@ -42,12 +42,22 @@ function navRowSx(selected: boolean) {
   return {
     color,
     "& .MuiListItemIcon-root": { color },
-    ...(selected && {
-      background: (theme: Theme) => theme.thingport.selectedNavBackground,
-      "&.Mui-selected, &.Mui-selected:hover": {
-        background: (theme: Theme) => theme.thingport.selectedNavBackground,
-      },
-    }),
+    ...(selected
+      ? {
+          background: (theme: Theme) => theme.thingport.selectedNavBackground,
+          "&.Mui-selected, &.Mui-selected:hover": {
+            background: (theme: Theme) => theme.thingport.selectedNavBackground,
+          },
+        }
+      : {
+          // Dark mode only: hovering an inactive row shouldn't tint its background (unlike
+          // MUI's own default hover overlay, which light mode still gets, unchanged) -- just
+          // brighten the label/icon to white. Returning {} for light leaves that default alone.
+          "&:hover": (theme: Theme) =>
+            theme.palette.mode === "dark"
+              ? { backgroundColor: "transparent", color: "#fff", "& .MuiListItemIcon-root": { color: "#fff" } }
+              : {},
+        }),
   };
 }
 

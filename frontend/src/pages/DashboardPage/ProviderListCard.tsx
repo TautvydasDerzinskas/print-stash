@@ -34,10 +34,13 @@ export default function ProviderListCard({ providers }: Props) {
   const { t } = useTranslation("app");
 
   return (
-    <Paper variant="outlined" sx={{ p: 2.5, display: "flex", flexDirection: "column" }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 2.5, display: "flex", flexDirection: "column", borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider") }}
+    >
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1, color: "primary.main" }}>
         <PublicIcon />
-        <Typography variant="h6" fontWeight={700} color="text.primary">{t("dashboard.topProviders.title")}</Typography>
+        <Typography variant="h6" fontWeight={700} sx={{ color: (theme) => theme.thingport.headingText }}>{t("dashboard.topProviders.title")}</Typography>
       </Box>
 
       {providers.length === 0 ? (
