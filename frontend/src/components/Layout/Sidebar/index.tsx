@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
+import type { Theme } from "@mui/material/styles";
 import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import Stack from "@mui/material/Stack";
@@ -32,6 +33,24 @@ const SIDEBAR_WIDTH = 240;
 const SIDEBAR_COLLAPSED_WIDTH = 72;
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "thingport_sidebar_collapsed";
 
+/** Shared color/background logic for every nav row (both the expanded ListItemButton and the
+ *  collapsed icon-only variant below) -- selected rows get the theme's nav-selected background
+ *  (a flat tint in light mode, a left-to-right gradient in dark) and text/icon color, unselected
+ *  ones get the theme's dedicated (narrower-than-text.secondary) inactive nav color. */
+function navRowSx(selected: boolean) {
+  const color = (theme: Theme) => (selected ? theme.thingport.selectedNavText : theme.thingport.navInactiveText);
+  return {
+    color,
+    "& .MuiListItemIcon-root": { color },
+    ...(selected && {
+      background: (theme: Theme) => theme.thingport.selectedNavBackground,
+      "&.Mui-selected, &.Mui-selected:hover": {
+        background: (theme: Theme) => theme.thingport.selectedNavBackground,
+      },
+    }),
+  };
+}
+
 /** Icon-only rail row used for every nav item once the sidebar is collapsed -- a tooltip stands
  *  in for the label. */
 function CollapsedNavIcon({ icon, label, selected, onClick }: {
@@ -45,9 +64,9 @@ function CollapsedNavIcon({ icon, label, selected, onClick }: {
       <ListItemButton
         selected={selected}
         onClick={onClick}
-        sx={{ borderRadius: 1, mb: 0.5, justifyContent: "center", px: 0 }}
+        sx={{ borderRadius: 1, mb: 0.5, justifyContent: "center", px: 0, ...navRowSx(selected) }}
       >
-        <ListItemIcon sx={{ minWidth: 0, color: selected ? "primary.main" : "text.secondary" }}>
+        <ListItemIcon sx={{ minWidth: 0 }}>
           {icon}
         </ListItemIcon>
       </ListItemButton>
@@ -116,8 +135,6 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
         top: 0,
         display: "flex",
         flexDirection: "column",
-        borderRight: "1px solid",
-        borderColor: "divider",
         bgcolor: "background.paper",
         overflow: "hidden",
         transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),
@@ -156,7 +173,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
               onClick={() => navigate("/")}
             />
           ) : (
-            <ListItemButton selected={onDashboard} onClick={() => navigate("/")} sx={{ borderRadius: 1, mb: 0.5 }}>
+            <ListItemButton selected={onDashboard} onClick={() => navigate("/")} sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onDashboard) }}>
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <SpaceDashboardIcon fontSize="small" />
               </ListItemIcon>
@@ -175,7 +192,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
             <ListItemButton
               selected={onModels}
               onClick={goToModelsRoot}
-              sx={{ borderRadius: 1, mb: 0.5 }}
+              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onModels) }}
             >
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <ViewInArIcon fontSize="small" />
@@ -195,7 +212,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
             <ListItemButton
               selected={onCollections}
               onClick={() => navigate("/models/collections")}
-              sx={{ borderRadius: 1, mb: 0.5 }}
+              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onCollections) }}
             >
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <CollectionsIcon fontSize="small" />
@@ -215,7 +232,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
             <ListItemButton
               selected={onDownload}
               onClick={() => navigate("/downloads")}
-              sx={{ borderRadius: 1, mb: 0.5 }}
+              sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onDownload) }}
             >
               <ListItemIcon sx={{ minWidth: 30 }}>
                 <DownloadIcon fontSize="small" />
@@ -265,7 +282,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                   <ListItemButton
                     selected={false}
                     onClick={() => setAdminExpanded(v => !v)}
-                    sx={{ borderRadius: 1, mb: 0.5 }}
+                    sx={{ borderRadius: 1, mb: 0.5, ...navRowSx(onAdmin) }}
                   >
                     <ListItemIcon sx={{ minWidth: 30 }}>
                       <AdminPanelSettingsIcon fontSize="small" />
@@ -278,7 +295,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                       <ListItemButton
                         selected={onAdminSettings}
                         onClick={() => navigate("/admin-settings")}
-                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4, ...navRowSx(onAdminSettings) }}
                       >
                         <ListItemIcon sx={{ minWidth: 30 }}>
                           <SettingsIcon fontSize="small" />
@@ -288,7 +305,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                       <ListItemButton
                         selected={onAdminUsers}
                         onClick={() => navigate("/admin-users")}
-                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4, ...navRowSx(onAdminUsers) }}
                       >
                         <ListItemIcon sx={{ minWidth: 30 }}>
                           <PeopleIcon fontSize="small" />
@@ -298,7 +315,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                       <ListItemButton
                         selected={onAdminLogs}
                         onClick={() => navigate("/admin-logs")}
-                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4, ...navRowSx(onAdminLogs) }}
                       >
                         <ListItemIcon sx={{ minWidth: 30 }}>
                           <HistoryIcon fontSize="small" />
@@ -308,7 +325,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                       <ListItemButton
                         selected={onAdminTriggers}
                         onClick={() => navigate("/admin-triggers")}
-                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4, ...navRowSx(onAdminTriggers) }}
                       >
                         <ListItemIcon sx={{ minWidth: 30 }}>
                           <BoltIcon fontSize="small" />
@@ -318,7 +335,7 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
                       <ListItemButton
                         selected={onAdminConnections}
                         onClick={() => navigate("/admin-connections")}
-                        sx={{ borderRadius: 1, mb: 0.5, pl: 4 }}
+                        sx={{ borderRadius: 1, mb: 0.5, pl: 4, ...navRowSx(onAdminConnections) }}
                       >
                         <ListItemIcon sx={{ minWidth: 30 }}>
                           <CableIcon fontSize="small" />

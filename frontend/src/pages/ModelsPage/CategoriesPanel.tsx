@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { Theme } from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
@@ -27,6 +28,31 @@ type Props = {
   onReorder: (categoryIds: string[]) => Promise<void>;
   onUpdateMeta: (id: string, meta: CategoryMetaInput) => Promise<void>;
 };
+
+// Every row (the pinned "All" row, a root category, or one of its children) is either the active
+// filter (the theme's nav-selected gradient + accent text) or not (transparent, the theme's
+// dedicated nav-inactive gray) -- a plain two-state system, rather than the extra "expanded but
+// not the active one" light-grey/dark-grey tiers this used to hardcode, which were literal
+// light-theme hex values (#ffffff, #5c5c5c, #212b36, #a3a3a3, and a translucent near-white row
+// background) that read as invisible or wrong against a dark background.
+function rowSx(active: boolean) {
+  return {
+    borderRadius: 1.5,
+    mb: 0.25,
+    background: (theme: Theme) => (active ? theme.thingport.selectedNavBackground : "transparent"),
+    "&:hover": { bgcolor: "action.hover" },
+  };
+}
+function rowTextSx(active: boolean, extra?: object) {
+  return {
+    noWrap: true,
+    variant: "body2" as const,
+    sx: {
+      color: (theme: Theme) => (active ? theme.thingport.selectedNavText : theme.thingport.navInactiveText),
+      ...extra,
+    },
+  };
+}
 
 /** The Models page's own category browser: a pinned "All" row, then a strictly two-level tree --
  *  top-level categories expand to reveal their subcategories AND select themselves, filtering the
@@ -71,7 +97,7 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
   return (
     <>
       <Paper
-        variant="outlined"
+        elevation={0}
         sx={{
           width: 260,
           flexShrink: 0,
@@ -91,16 +117,11 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
         </Stack>
 
         <List disablePadding>
-          <ListItemButton
-            onClick={() => onSelect(null)}
-            sx={{
-              borderRadius: 1.5,
-              mb: 0.25,
-              bgcolor: selectedId === null ? "action.selected" : "transparent",
-              "&:hover": { bgcolor: "background.default" },
-            }}
-          >
-            <ListItemText primary={t("models:categories.all")} primaryTypographyProps={{ variant: "body2", fontWeight: 600 }} />
+          <ListItemButton onClick={() => onSelect(null)} sx={rowSx(selectedId === null)}>
+            <ListItemText
+              primary={t("models:categories.all")}
+              primaryTypographyProps={rowTextSx(selectedId === null, { fontWeight: 600 })}
+            />
           </ListItemButton>
 
           {loading && (
@@ -115,23 +136,10 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
             const isRootActive = isOpen && selectedId === root.id;
             return (
               <Stack key={root.id}>
-                <ListItemButton
-                  onClick={() => handleRootClick(root.id)}
-                  sx={{
-                    borderRadius: 1.5,
-                    mb: 0.25,
-                    bgcolor: isOpen ? (isRootActive ? "rgba(0, 174, 66, 0.08)" : "#ffffff") : "transparent",
-                    "&:hover": { bgcolor: isRootActive ? "rgba(0, 174, 66, 0.08)" : "background.default" },
-                  }}
-                >
+                <ListItemButton onClick={() => handleRootClick(root.id)} sx={rowSx(isRootActive)}>
                   <ListItemText
                     primary={displayName(root) || untitledLabel}
-                    primaryTypographyProps={{
-                      noWrap: true,
-                      variant: "body2",
-                      fontWeight: 600,
-                      sx: { color: isOpen ? (isRootActive ? "primary.main" : "#5c5c5c") : "#212b36" },
-                    }}
+                    primaryTypographyProps={rowTextSx(isRootActive, { fontWeight: 600 })}
                   />
                   <ChevronRightIcon
                     fontSize="small"
@@ -140,7 +148,7 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
                       flexShrink: 0,
                       transform: isOpen ? "rotate(90deg)" : "none",
                       transition: "transform 0.15s",
-                      color: isOpen ? (isRootActive ? "primary.main" : "#a3a3a3") : "#a3a3a3",
+                      color: (theme) => (isRootActive ? theme.thingport.selectedNavText : theme.thingport.navInactiveText),
                     }}
                   />
                 </ListItemButton>
@@ -152,21 +160,11 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
                         <ListItemButton
                           key={child.id}
                           onClick={() => onSelect(child.id)}
-                          sx={{
-                            pl: 4,
-                            borderRadius: 1.5,
-                            mb: 0.25,
-                            bgcolor: "rgba(242, 242, 242, 0.3)",
-                            "&:hover": { bgcolor: "background.default" },
-                          }}
+                          sx={{ pl: 4, ...rowSx(isChildSelected) }}
                         >
                           <ListItemText
                             primary={displayName(child) || untitledLabel}
-                            primaryTypographyProps={{
-                              noWrap: true,
-                              variant: "body2",
-                              sx: isChildSelected ? { color: "primary.main", fontWeight: 700 } : undefined,
-                            }}
+                            primaryTypographyProps={rowTextSx(isChildSelected, isChildSelected ? { fontWeight: 700 } : undefined)}
                           />
                         </ListItemButton>
                       );

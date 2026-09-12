@@ -100,7 +100,7 @@ export default function ModelCard({
         overflow: "hidden",
         borderRadius: "12px",
         borderColor: "transparent",
-        bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.palette.grey[800] : muiTheme.palette.grey[100]),
+        bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100]),
         transition: "background-color .15s ease, box-shadow .15s ease, transform .15s ease",
         "&:hover": {
           bgcolor: "background.paper",
@@ -115,7 +115,7 @@ export default function ModelCard({
         sx={{
           width: "100%",
           aspectRatio: "4 / 3",
-          bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.palette.grey[900] : muiTheme.palette.grey[200]),
+          bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[200]),
         }}
       >
         {renderPreviewContent(item, "card", theme, t, previewMode)}

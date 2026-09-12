@@ -88,7 +88,7 @@ export default function CollectionCard({ collection, theme, previewMode, onUpdat
         overflow: "hidden",
         borderRadius: "12px",
         borderColor: "divider",
-        bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.palette.grey[800] : muiTheme.palette.grey[100]),
+        bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[100]),
         "&:hover .collection-card-actions": { opacity: 1 },
       }}
     >
@@ -96,7 +96,7 @@ export default function CollectionCard({ collection, theme, previewMode, onUpdat
         sx={{
           width: "100%",
           aspectRatio: "4 / 3",
-          bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.palette.grey[900] : muiTheme.palette.grey[200]),
+          bgcolor: (muiTheme) => (muiTheme.palette.mode === "dark" ? muiTheme.thingport.pageBackground : muiTheme.palette.grey[200]),
         }}
       >
         {coverItems.length === 0 && (

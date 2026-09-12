@@ -1,4 +1,4 @@
-import { alpha, createTheme, darken, lighten, type Theme, type ThemeOptions } from "@mui/material/styles";
+import { alpha, createTheme, darken, type Theme, type ThemeOptions } from "@mui/material/styles";
 import type { ResolvedTheme } from "./constants/settingsOptions";
 
 export type { ResolvedTheme };
@@ -26,6 +26,17 @@ declare module "@mui/material/styles" {
        *  (e.g. an attention/alert-style label) -- not one of MUI's error/warning palette
        *  roles, just a second brand-adjacent color for cases that call for it. */
       altText: string;
+      /** Unselected nav-row label/icon color for the Sidebar rail and the Models page's
+       *  Categories box -- narrower than text.secondary (which is used all over for ordinary
+       *  muted text) so recoloring nav rows can't leak into unrelated UI. */
+      navInactiveText: string;
+      /** Selected nav row background (Sidebar rail rows, Categories box rows) -- a `background`
+       *  (not `bgcolor`) value since dark mode's is a left-to-right gradient, not a flat color;
+       *  light mode's is still just a flat tint expressed the same way. */
+      selectedNavBackground: string;
+      /** Selected nav row label/icon color -- the brand accent in dark mode, unchanged
+       *  (inherited) text color in light mode. */
+      selectedNavText: string;
     };
   }
   interface ThemeOptions {
@@ -34,6 +45,9 @@ declare module "@mui/material/styles" {
       modelColor: string;
       modelEmissive: string;
       altText: string;
+      navInactiveText: string;
+      selectedNavBackground: string;
+      selectedNavText: string;
     };
   }
 }
@@ -56,6 +70,9 @@ type ThemeDef = {
   altText: string;
   modelColor: string;
   modelEmissive: string;
+  navInactiveText: string;
+  selectedNavBackground: string;
+  selectedNavText: string;
 };
 
 // Values ported 1:1 from the original CSS custom properties so the visual identity of each
@@ -79,25 +96,32 @@ const THEME_DEFS: Record<ResolvedTheme, ThemeDef> = {
     altText: "rgb(255, 114, 32)",
     modelColor: "#cbd5e1",
     modelEmissive: "#94a3b8",
+    navInactiveText: "#858585",
+    selectedNavBackground: alpha("#5be584", 0.2),
+    // Matches the pre-existing collapsed-rail icon treatment (selected -> primary.main).
+    selectedNavText: "#00b800",
   },
   dark: {
     mode: "dark",
-    pageBackground: "#0a0b0c",
-    panel: "rgba(15, 23, 42, 0.86)",
-    panelStrong: "#0f172a",
-    border: "#1f2937",
-    borderStrong: "#334155",
-    text: "#f8fafc",
-    textMuted: "#94a3b8",
-    textSubtle: "#64748b",
-    accent: "#34d399",
-    accentLight: lighten("#34d399", 0.25),
-    accentStrong: "#10b981",
-    accentSoft: "rgba(16, 185, 129, 0.2)",
+    pageBackground: "#181f39",
+    panel: "#1e2746",
+    panelStrong: "#1e2746",
+    border: "#333a54",
+    borderStrong: "#333a54",
+    text: "#828690",
+    textMuted: "#828690",
+    textSubtle: "#828690",
+    accent: "#00b800",
+    accentLight: "#5be584",
+    accentStrong: darken("#00b800", 0.15),
+    accentSoft: alpha("#00b800", 0.16),
     accentContrast: "#ffffff",
     altText: "rgb(255, 114, 32)",
     modelColor: "#e2e8f0",
     modelEmissive: "#475569",
+    navInactiveText: "#969ba0",
+    selectedNavBackground: "linear-gradient(to right, rgb(24, 31, 57) 0%, rgba(49, 206, 255, 0) 100%)",
+    selectedNavText: "#00b800",
   },
 };
 
@@ -106,7 +130,7 @@ export function buildTheme(id: ResolvedTheme): Theme {
   const options: ThemeOptions = {
     palette: {
       mode: d.mode,
-      background: { default: d.mode === "light" ? d.pageBackground : d.panelStrong, paper: d.panel },
+      background: { default: d.pageBackground, paper: d.panel },
       primary: { main: d.accent, light: d.accentLight, dark: d.accentStrong, contrastText: d.accentContrast },
       text: { primary: d.text, secondary: d.textMuted },
       divider: d.border,
@@ -115,7 +139,7 @@ export function buildTheme(id: ResolvedTheme): Theme {
         hover: alpha(d.accent, 0.08),
       },
     },
-    shape: { borderRadius: 10 },
+    shape: { borderRadius: d.mode === "dark" ? 0 : 10 },
     typography: {
       fontSize: 13,
       fontFamily: BODY_FONT_STACK,
@@ -130,12 +154,23 @@ export function buildTheme(id: ResolvedTheme): Theme {
       MuiButton: { styleOverrides: { root: { borderRadius: 8 } } },
       MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
       MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: d.panelStrong, color: d.text } } },
+      // Dark mode is deliberately square everywhere -- corners, chips, avatars, the back-to-top
+      // FAB, all of it. `sx`-set radii (the vast majority of them: cards, panels, the info box,
+      // etc.) beat theme.shape.borderRadius and component styleOverrides alike, so nothing short
+      // of an !important global rule reaches all of them; MuiCssBaseline's styleOverrides is
+      // exactly the escape hatch for page-level CSS the theme needs to own like this.
+      ...(d.mode === "dark"
+        ? { MuiCssBaseline: { styleOverrides: "*, *::before, *::after { border-radius: 0 !important; }" } }
+        : {}),
     },
     thingport: {
       pageBackground: d.pageBackground,
       modelColor: d.modelColor,
       modelEmissive: d.modelEmissive,
       altText: d.altText,
+      navInactiveText: d.navInactiveText,
+      selectedNavBackground: d.selectedNavBackground,
+      selectedNavText: d.selectedNavText,
     },
   };
   return createTheme(options);

@@ -60,7 +60,7 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
 
   return (
     <Paper
-      variant="outlined"
+      elevation={0}
       sx={{
         p: 2.5,
         borderRadius: "12px",
