@@ -49,8 +49,8 @@ type Props = {
   onClick: () => void;
   disabled?: boolean;
   ariaLabel: string;
-  /** The pen's own accent was an arbitrary demo purple (#ca12ea) -- gold reads as "starred"
-   *  without needing to look up what an app-specific brand purple would even mean here. */
+  /** The pen's own accent was an arbitrary demo purple (#ca12ea) -- this app's brand orange reads
+   *  as "starred" instead. */
   activeColor?: string;
   /** Needs to be readable against whatever backdrop this instance sits on -- e.g. white over
    *  ModelCard's dark hover scrim, vs. a neutral grey over FavoriteButton's plain page bg. */
@@ -73,7 +73,7 @@ export default function StarToggle({
   onClick,
   disabled,
   ariaLabel,
-  activeColor = "#e0a52c",
+  activeColor = "#f6a800",
   inactiveColor = "text.disabled",
   size = 20,
   sx,

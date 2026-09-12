@@ -162,18 +162,17 @@ export function buildTheme(id: ResolvedTheme): Theme {
       MuiButton: { styleOverrides: { root: { borderRadius: 8 } } },
       MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
       MuiTooltip: { styleOverrides: { tooltip: { backgroundColor: d.panelStrong, color: d.text } } },
+      // A success toast (see ToastProvider) should always read as "this worked" in the brand
+      // green (#00b800) with white text -- e.g. favoriting a model -- not MUI's own default
+      // success palette, in either theme.
+      MuiAlert: { styleOverrides: { filledSuccess: { backgroundColor: d.accent, color: d.accentContrast } } },
       // Dark mode is deliberately square everywhere -- corners, chips, avatars, the back-to-top
       // FAB, all of it. `sx`-set radii (the vast majority of them: cards, panels, the info box,
       // etc.) beat theme.shape.borderRadius and component styleOverrides alike, so nothing short
       // of an !important global rule reaches all of them; MuiCssBaseline's styleOverrides is
       // exactly the escape hatch for page-level CSS the theme needs to own like this.
       ...(d.mode === "dark"
-        ? {
-            MuiCssBaseline: { styleOverrides: "*, *::before, *::after { border-radius: 0 !important; }" },
-            // A success toast (see ToastProvider) should read as "this worked" in the brand
-            // green, not MUI's own default success palette -- e.g. favoriting a model.
-            MuiAlert: { styleOverrides: { filledSuccess: { backgroundColor: d.accent, color: d.accentContrast } } },
-          }
+        ? { MuiCssBaseline: { styleOverrides: "*, *::before, *::after { border-radius: 0 !important; }" } }
         : {}),
     },
     thingport: {

@@ -49,7 +49,12 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
   const goToCategory = () => {
     if (!print.category_id) return;
     onSelectCategory(print.category_id);
-    navigate("/models");
+    // Carries the category straight into the URL instead of navigating to plain "/models" and
+    // letting ModelsPage's mount-time effects reconcile categoryId against the (momentarily
+    // absent) ?category= param -- those two effects each only no-op once state and URL already
+    // agree, so landing with them disagreeing made the grid flicker between the category and
+    // "All" for a render or two before settling.
+    navigate(`/models?category=${print.category_id}`);
   };
 
   const importedDate = print.source_provider

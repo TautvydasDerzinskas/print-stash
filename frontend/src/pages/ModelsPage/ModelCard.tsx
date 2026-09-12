@@ -45,6 +45,9 @@ const overlayButtonSx = {
   padding: 0,
   borderRadius: "50%",
   bgcolor: "background.paper",
+  // IconButton's own hover state otherwise tints its background on top of this -- keep it flat
+  // no matter which state (hover, focus-visible, actively pressed) triggers that.
+  "&:hover, &.Mui-focusVisible, &:active": { bgcolor: "background.paper" },
 } as const;
 
 export default function ModelCard({
