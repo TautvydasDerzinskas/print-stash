@@ -145,6 +145,8 @@ export default function Sidebar({ isAdmin, onSelectCategory }: Props) {
         top: 0,
         display: "flex",
         flexDirection: "column",
+        borderRight: "1px solid",
+        borderColor: (theme) => (theme.palette.mode === "dark" ? "transparent" : "divider"),
         bgcolor: "background.paper",
         overflow: "hidden",
         transition: (theme) => theme.transitions.create("width", { duration: theme.transitions.duration.shortest }),

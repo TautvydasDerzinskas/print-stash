@@ -9,6 +9,7 @@ import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type Collection, collectionsApi } from "../../api/collections";
 import { type PreviewMode } from "../../api/settings";
+import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
@@ -22,6 +23,7 @@ type Props = {
   theme: ResolvedTheme;
   previewMode: PreviewMode;
   onUnauthorized?: () => void;
+  viewer?: AuthUser | null;
 };
 
 /** Same list/grid/sort/infinite-scroll shape as CollectionDetailPage, but for a tag: tags aren't
@@ -29,7 +31,7 @@ type Props = {
  *  fetch-by-id step (or "not found" state) -- the page header title comes directly from the
  *  route param and the list is prints filtered by that tag, plus (since collections can carry
  *  tags too) any collections carrying it, shown first in the same grid as CollectionCards. */
-export default function TagDetailPage({ theme, previewMode, onUnauthorized }: Props) {
+export default function TagDetailPage({ theme, previewMode, onUnauthorized, viewer }: Props) {
   const { tagName } = useParams<{ tagName: string }>();
   const tag = tagName ? decodeURIComponent(tagName) : "";
   const { t } = useTranslation(["models", "common"]);
@@ -173,6 +175,7 @@ export default function TagDetailPage({ theme, previewMode, onUnauthorized }: Pr
                 onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUpdated={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUnauthorized={onUnauthorized}
+                viewer={viewer}
               />
             ))}
           </Box>

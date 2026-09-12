@@ -15,12 +15,14 @@ import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { UnauthorizedError } from "../../api/client";
 import { type Print, printsApi } from "../../api/prints";
+import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { MODEL_EXTS } from "../../constants/fileTypes";
 import { extOf } from "../../utils/fileExtensions";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
 import { ModelSnapshot } from "../../components/media/ModelViewer/ModelSnapshot";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
+import { useSmartBack } from "../../components/Layout/NavigationHistoryContext";
 import Model3DPreviewModal from "./Model3DPreviewModal";
 import ModelActionsMenu from "./ModelActionsMenu";
 import FavoriteButton from "./FavoriteButton";
@@ -30,9 +32,10 @@ type Props = {
   theme: ResolvedTheme;
   onSelectCategory: (id: string) => void;
   onUnauthorized?: () => void;
+  viewer?: AuthUser | null;
 };
 
-export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorized }: Props) {
+export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorized, viewer }: Props) {
   const { printId } = useParams<{ printId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["models", "common", "library"]);
@@ -44,8 +47,10 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
 
   // Back always returns wherever the user came from (the models grid, filtered to whichever
   // category they'd selected, or an author page) -- browser history already carries that, so this
-  // is also what a post-delete redirect below reuses.
-  const goBack = () => navigate(-1);
+  // is also what a post-delete redirect below reuses. useSmartBack skips over any history entry
+  // that's the same route as this one (e.g. a sort-tab change re-pushing the same list page)
+  // instead of requiring an extra click to actually leave.
+  const goBack = useSmartBack();
 
   usePageHeader({
     title: print ? (print.title || print.name) : undefined,
@@ -320,7 +325,7 @@ export default function ModelDetailPage({ theme, onSelectCategory, onUnauthorize
             it room to travel as the page scrolls instead of being stuck the moment its own
             (short) content ends. */}
         <Box sx={{ alignSelf: "stretch" }}>
-          <ModelSidePanel print={print} onSelectCategory={onSelectCategory} onUnauthorized={onUnauthorized} />
+          <ModelSidePanel print={print} onSelectCategory={onSelectCategory} onUnauthorized={onUnauthorized} viewer={viewer} />
         </Box>
       </Box>
 

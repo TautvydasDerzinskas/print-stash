@@ -7,24 +7,12 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import Chip from "@mui/material/Chip";
 import PublicIcon from "@mui/icons-material/Public";
-import { IMPORT_PROVIDER_INFO } from "../../constants/importProviders";
+import { printProviderInfo } from "../../constants/importProviders";
 import type { DashboardProvider } from "../../api/dashboard";
 
 type Props = {
   providers: DashboardProvider[];
 };
-
-const OWN_UPLOAD_LABEL = "Thingport";
-
-// Reuses the exact same brand colors as the provider badge shown on a model's card thumbnail
-// (see constants/importProviders.ts) -- a direct upload/zip import has no import-source badge
-// there (sourceProvider is null), so it falls back to the app's own primary color here instead
-// of a fixed brand hex.
-function chipSx(provider: string): { label: string; sx: object } {
-  const info = IMPORT_PROVIDER_INFO[provider];
-  if (info) return { label: info.label, sx: { bgcolor: info.color, color: "#fff", fontWeight: 600 } };
-  return { label: OWN_UPLOAD_LABEL, sx: { bgcolor: "primary.main", color: "primary.contrastText", fontWeight: 600 } };
-}
 
 /** Top Providers -- how many of this user's models came from each source (MakerWorld,
  *  Thingiverse, or a direct Thingport upload). A fixed, small set in practice, so unlike the
@@ -48,11 +36,15 @@ export default function ProviderListCard({ providers }: Props) {
       ) : (
         <List dense disablePadding>
           {providers.map((p) => {
-            const { label, sx } = chipSx(p.provider);
+            const info = printProviderInfo(p.provider);
             return (
               <ListItem key={p.provider} sx={{ px: 1 }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: "100%" }}>
-                  <Chip label={label} size="small" sx={sx} />
+                  <Chip
+                    label={info.label}
+                    size="small"
+                    sx={{ bgcolor: info.color, color: info.textColor ?? "#fff", fontWeight: 600 }}
+                  />
                   <Typography variant="body2" color="text.secondary" sx={{ flexShrink: 0, pl: 1 }}>
                     {t("dashboard.topProviders.modelCount", { count: p.model_count })}
                   </Typography>

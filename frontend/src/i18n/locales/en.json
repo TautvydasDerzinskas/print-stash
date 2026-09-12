@@ -63,7 +63,9 @@
       "uploadFailed": "Failed to upload: {{files}}",
       "multiplateImportFailedWithMessage": "Multi-plate import ({{message}})",
       "multiplateImportFailed": "Multi-plate import",
-      "imported": "Imported \"{{name}}\""
+      "imported": "Imported \"{{name}}\"",
+      "uploaded": "Uploaded \"{{name}}\"",
+      "uploadedMultiple": "Uploaded {{count}} models"
     },
     "zipImport": {
       "title": "Import zip",
@@ -1008,7 +1010,8 @@
       "unknownAuthor": "Unknown",
       "addedToFavorites": "Added \"{{name}}\" to Favourites",
       "removedFromFavorites": "Removed \"{{name}}\" from Favourites",
-      "importedFrom": "Imported from {{provider}}"
+      "importedFrom": "Imported from {{provider}}",
+      "uploadedDirectly": "Uploaded directly to Thingport"
     },
     "detail": {
       "preview3d": "3D Preview",

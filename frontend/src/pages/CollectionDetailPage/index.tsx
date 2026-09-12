@@ -9,6 +9,7 @@ import { UnauthorizedError } from "../../api/client";
 import { type Collection, collectionsApi } from "../../api/collections";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type PreviewMode } from "../../api/settings";
+import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
@@ -23,9 +24,10 @@ type Props = {
   theme: ResolvedTheme;
   previewMode: PreviewMode;
   onUnauthorized?: () => void;
+  viewer?: AuthUser | null;
 };
 
-export default function CollectionDetailPage({ theme, previewMode, onUnauthorized }: Props) {
+export default function CollectionDetailPage({ theme, previewMode, onUnauthorized, viewer }: Props) {
   const { collectionId } = useParams<{ collectionId: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation(["models", "common"]);
@@ -178,6 +180,7 @@ export default function CollectionDetailPage({ theme, previewMode, onUnauthorize
                 onRemovedFromCollection={removedId => setItems(prev => prev.filter(i => i.id !== removedId))}
                 onUpdated={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                 onUnauthorized={onUnauthorized}
+                viewer={viewer}
               />
             ))}
           </Box>

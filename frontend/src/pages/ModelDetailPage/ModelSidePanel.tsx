@@ -14,9 +14,11 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import PrintIcon from "@mui/icons-material/Print";
 import type { Print } from "../../api/prints";
 import { printsApi } from "../../api/prints";
+import type { AuthUser } from "../../api/auth";
 import { slicerLaunchUrl } from "../../utils/slicerLaunch";
 import { SLICER_OPTIONS } from "../../constants/settingsOptions";
 import { useSlicerPreference } from "../../hooks/useSlicerPreference";
+import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 import { useDownloadPrint } from "./useDownloadPrint";
 import DownloadPickerDialog from "./DownloadPickerDialog";
 
@@ -24,6 +26,10 @@ type Props = {
   print: Print;
   onSelectCategory: (id: string) => void;
   onUnauthorized?: () => void;
+  /** Only used as a fallback when the print has neither an Author nor a plain `creator` string --
+   *  a direct upload has no import-source author at all, so it shows the viewer's own identity
+   *  instead of "Unknown", since every print here is the viewer's own. */
+  viewer?: AuthUser | null;
 };
 
 /** The model detail page's right-hand summary card, sticky so it stays in view while the
@@ -33,10 +39,11 @@ type Props = {
  *  "Download model files" (the same picker-or-direct-download flow as ModelActionsMenu's
  *  Download, via useDownloadPrint so the two can't drift), view/print counts, and -- only for an
  *  actually-imported print, per source_provider -- when it was imported. */
-export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized }: Props) {
+export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized, viewer }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
   const slicerPreference = useSlicerPreference();
+  const viewerAvatarUrl = useGravatarUrl(viewer?.email, 56);
   const { pickerOpen, setPickerOpen, downloading, handleDownload, downloadPlate, downloadAllZip, sortedPlates } =
     useDownloadPrint(print, onUnauthorized);
 
@@ -61,14 +68,19 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
     ? new Date(print.created_at).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
     : null;
 
-  const authorName = print.author?.name || print.author?.handle || print.creator || null;
+  const showViewerAsAuthor =
+    !print.author?.name && !print.author?.handle && !print.creator && !print.source_provider && Boolean(viewer);
+  const authorName =
+    print.author?.name || print.author?.handle || print.creator || (showViewerAsAuthor ? viewer!.display_name : null);
+  const authorAvatarUrl = print.author?.avatar_url || (showViewerAsAuthor ? viewerAvatarUrl : undefined);
 
   return (
     <Paper
-      elevation={0}
+      variant="outlined"
       sx={{
         p: 2.5,
         borderRadius: "12px",
+        borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
         position: { xs: "static", md: "sticky" },
         // TopBar is sticky too (see its own doc comment) and sits above this in stacking order --
         // sticking at a fixed offset from the viewport top would land this panel right underneath
@@ -96,7 +108,7 @@ export default function ModelSidePanel({ print, onSelectCategory, onUnauthorized
             }}
             onClick={() => print.author && navigate(`/authors/${print.author.id}`)}
           >
-            <Avatar src={print.author?.avatar_url || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
+            <Avatar src={authorAvatarUrl || undefined} sx={{ width: 28, height: 28, fontSize: 13, color: "inherit !important" }}>
               {(authorName || "?").slice(0, 1).toUpperCase()}
             </Avatar>
             <Typography variant="body2" sx={{ color: "inherit" }}>

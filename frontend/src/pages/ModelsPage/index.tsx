@@ -9,6 +9,7 @@ import { UnauthorizedError } from "../../api/client";
 import { type Print, type PrintSortMode, printsApi } from "../../api/prints";
 import { type Category, type CategoryMetaInput, categoriesApi } from "../../api/categories";
 import { type PreviewMode } from "../../api/settings";
+import type { AuthUser } from "../../api/auth";
 import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { usePageHeader } from "../../components/Layout/PageHeaderContext";
 import { useInfiniteScroll } from "../../hooks/useInfiniteScroll";
@@ -31,9 +32,10 @@ type Props = {
   onUnauthorized?: () => void;
   theme: ResolvedTheme;
   previewMode: PreviewMode;
+  viewer?: AuthUser | null;
 };
 
-export default function ModelsPage({ categoryId, onSelectCategory, categoriesVersion, onCategoriesChanged, printsVersion, onUnauthorized, theme, previewMode }: Props) {
+export default function ModelsPage({ categoryId, onSelectCategory, categoriesVersion, onCategoriesChanged, printsVersion, onUnauthorized, theme, previewMode, viewer }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -281,6 +283,7 @@ export default function ModelsPage({ categoryId, onSelectCategory, categoriesVer
                     onFavoriteChange={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                     onUpdated={updated => setItems(prev => prev.map(i => (i.id === updated.id ? updated : i)))}
                     onUnauthorized={onUnauthorized}
+                    viewer={viewer}
                   />
                 ))}
               </Box>

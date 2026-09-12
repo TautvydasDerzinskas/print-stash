@@ -12,6 +12,7 @@ import BackToTopButton from "./BackToTopButton";
 import { ConfirmProvider } from "../ConfirmProvider";
 import { ToastProvider } from "../ToastProvider";
 import { PageHeaderContext, type PageHeader } from "./PageHeaderContext";
+import { NavigationHistoryProvider, useSmartBack } from "./NavigationHistoryContext";
 import { ImportJobProvider } from "./ImportJobContext";
 import { NotificationsProvider, useNotifications } from "./NotificationsContext";
 import type { ThemeSelection } from "../../constants/settingsOptions";
@@ -48,6 +49,7 @@ function useRouteChrome() {
   const { t } = useTranslation(["app", "models", "common"]);
   const location = useLocation();
   const navigate = useNavigate();
+  const goBack = useSmartBack();
   const path = location.pathname;
 
   let title = t("sidebar.dashboard");
@@ -60,23 +62,23 @@ function useRouteChrome() {
   } else if (path.startsWith("/models/collections/")) {
     // Overridden by CollectionDetailPage's usePageHeader once the collection loads.
     title = t("models:collections.pageTitle");
-    onBack = () => navigate(-1);
+    onBack = goBack;
   } else if (path.startsWith("/models/tags/")) {
     // The tag name is already known from the URL (unlike a collection, a tag isn't a fetched
     // entity), so this is set directly rather than waiting on TagDetailPage's usePageHeader --
     // avoids a "Models" title flash before that effect runs.
     const tagName = path.slice("/models/tags/".length);
     title = tagName ? t("models:tags.detail.title", { name: decodeURIComponent(tagName) }) : t("models:pageTitle");
-    onBack = () => navigate(-1);
+    onBack = goBack;
   } else if (path.startsWith("/models/")) {
     title = t("models:pageTitle");
-    onBack = () => navigate(-1);
+    onBack = goBack;
   } else if (path === "/models") {
     title = t("models:pageTitle");
     onBack = () => navigate("/");
   } else if (path.startsWith("/authors/")) {
     title = t("models:author.pageTitle");
-    onBack = () => navigate(-1);
+    onBack = goBack;
   } else if (path === "/profile/email") {
     title = t("profile.changeEmailTitle");
     onBack = () => navigate("/profile");
@@ -85,7 +87,7 @@ function useRouteChrome() {
     onBack = () => navigate("/profile");
   } else if (path === "/profile") {
     title = t("profile.title");
-    onBack = () => navigate(-1);
+    onBack = goBack;
   } else if (path === "/downloads") {
     // Overridden by DownloadPage's usePageHeader once translations resolve.
     title = t("sidebar.downloads");
@@ -188,13 +190,15 @@ export default function AppLayout({ muiTheme, onUnauthorized, ...shellProps }: A
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
-      <ConfirmProvider>
-        <ToastProvider>
-          <NotificationsProvider onUnauthorized={onUnauthorized}>
-            <AppLayoutShell onUnauthorized={onUnauthorized} {...shellProps} />
-          </NotificationsProvider>
-        </ToastProvider>
-      </ConfirmProvider>
+      <NavigationHistoryProvider>
+        <ConfirmProvider>
+          <ToastProvider>
+            <NotificationsProvider onUnauthorized={onUnauthorized}>
+              <AppLayoutShell onUnauthorized={onUnauthorized} {...shellProps} />
+            </NotificationsProvider>
+          </ToastProvider>
+        </ConfirmProvider>
+      </NavigationHistoryProvider>
     </ThemeProvider>
   );
 }

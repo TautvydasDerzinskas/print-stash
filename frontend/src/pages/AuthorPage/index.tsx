@@ -31,8 +31,10 @@ type Props = {
  *  provider chip linking back to their profile on the site they were imported from, and their
  *  bio) beside a wide "Models" grid of every print by them this user has imported -- the models
  *  route's own grid pattern, reused as-is via ModelCard. The whole thing reads as a page of its
- *  own, sidebar-colored and border-free, sitting inside the app shell rather than blending into
- *  it. Author rows are shared across users (not scoped to this account -- see
+ *  own, sidebar-colored, sitting inside the app shell rather than blending into it -- a light-theme
+ *  divider on the profile column's right edge separates it from the models grid (matching the rest
+ *  of the app's light-mode borders, dropped in dark mode where the two columns already contrast).
+ *  Author rows are shared across users (not scoped to this account -- see
  *  authorService.ts's doc comment on the backend), so there's nothing here to edit. */
 export default function AuthorPage({ theme, previewMode, onUnauthorized }: Props) {
   const { authorId } = useParams<{ authorId: string }>();
@@ -48,7 +50,7 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized }: Props
   const displayName = author?.name || author?.handle || t("models:card.unknownAuthor");
 
   // Only overrides the title -- the route's own default onBack (see AppLayout's useRouteChrome,
-  // "/authors/" -> navigate(-1)) already does exactly "back button goes to the previous page".
+  // "/authors/" -> useSmartBack) already does exactly "back button goes to the previous page".
   usePageHeader({
     title: author ? t("models:author.pageTitleWithName", { name: displayName }) : undefined,
   });
@@ -153,7 +155,13 @@ export default function AuthorPage({ theme, previewMode, onUnauthorized }: Props
             alignItems: "start",
           }}
         >
-          <Box>
+          <Box
+            sx={{
+              borderRight: { xs: "none", md: "1px solid" },
+              borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
+              pr: { xs: 0, md: 4 },
+            }}
+          >
             <Avatar src={author.avatar_url ?? undefined} sx={{ width: 112, height: 112, fontSize: 40 }}>
               <PersonIcon fontSize="large" />
             </Avatar>

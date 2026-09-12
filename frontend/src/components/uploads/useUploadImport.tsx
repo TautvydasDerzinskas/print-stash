@@ -1,8 +1,9 @@
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { UnauthorizedError } from "../../api/client";
 import { importsApi } from "../../api/imports";
-import { printsApi } from "../../api/prints";
+import { printsApi, type Print } from "../../api/prints";
 import { entriesFromFileList, uploadEntriesToCategory } from "../../utils/uploadTree";
 import { buildUploadEntriesFromZip, isZipFile, readZipEntries } from "../../utils/zipUtils";
 import { useZipImportPrompt } from "./ZipImportModal";
@@ -119,6 +120,7 @@ type Props = {
 export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUnauthorized }: Props) {
   const { t } = useTranslation("app");
   const showToast = useToast();
+  const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -134,14 +136,21 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
   } = useImportJob();
   const isBusy = uploading || importing || zipPrompt.isOpen || collectionPrompt.isOpen || importModePrompt.isOpen;
 
+  // Sends the user straight into editing a just-created model (per spec: after an upload
+  // finishes, open it and drop into edit mode so the rest of its details can be filled in) --
+  // reuses the same `?edit=<id>` URL param ModelActionsMenu's own "Edit" menu item drives.
+  const openForEditing = (print: Print) => {
+    navigate(`/models/${print.id}?edit=${print.id}`);
+  };
+
   const uploadFlatAsMultiplate = async (files: File[]) => {
     try {
       const result = await printsApi.upload(files, { category_id: categoryId || undefined, mode: "multiplate" });
-      return { uploaded: result.prints.length, failed: [] as string[] };
+      return { uploaded: result.prints.length, failed: [] as string[], prints: result.prints };
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         onUnauthorized?.();
-        return { uploaded: 0, failed: [] as string[] };
+        return { uploaded: 0, failed: [] as string[], prints: [] as Print[] };
       }
       const message = err instanceof Error ? err.message.trim() : "";
       return {
@@ -151,6 +160,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
             ? t("uploadBar.multiplateImportFailedWithMessage", { message })
             : t("uploadBar.multiplateImportFailed"),
         ],
+        prints: [] as Print[],
       };
     }
   };
@@ -162,9 +172,11 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
     const zipEntries = entries.filter(entry => isZipFile(entry.file.name));
     let uploaded = 0;
     const failed: string[] = [];
-    const applyResult = (result: { uploaded: number; failed: string[] }) => {
+    const prints: Print[] = [];
+    const applyResult = (result: { uploaded: number; failed: string[]; prints?: Print[] }) => {
       uploaded += result.uploaded;
       failed.push(...result.failed);
+      if (result.prints) prints.push(...result.prints);
     };
     if (normalEntries.length) {
       if (isFlatFileSet(normalEntries)) {
@@ -211,7 +223,15 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         },
       });
     }
-    if (uploaded) onUploaded();
+    if (uploaded) {
+      onUploaded();
+      if (uploaded === 1 && prints.length === 1) {
+        showToast({ message: t("uploadBar.uploaded", { name: prints[0].title || prints[0].name }) });
+        openForEditing(prints[0]);
+      } else {
+        showToast({ message: t("uploadBar.uploadedMultiple", { count: uploaded }) });
+      }
+    }
     if (failed.length) {
       alert(t("uploadBar.uploadFailed", { files: failed.join(", ") }));
     }
@@ -232,7 +252,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
       type="file"
       onChange={onFilePick}
       multiple
-      accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.svg,.stl,.step,.stp,.3mf,.lbrn,.lbrn2,.zip"
+      accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.svg,.stl,.step,.stp,.3mf,.obj,.f3d,.lbrn,.lbrn2,.zip"
       hidden
     />
   );
@@ -366,6 +386,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         const imported = await importsApi.fromLink(payload);
         showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
+        openForEditing(imported);
         return;
       }
 
@@ -374,6 +395,7 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
         const imported = await importsApi.fromLink(payload);
         showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
         onUploaded();
+        openForEditing(imported);
         return;
       }
       setImporting(false);
@@ -383,6 +405,8 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
           try {
             const imported = await importsApi.fromLink(payload);
             showToast({ message: t("uploadBar.imported", { name: imported.title || imported.name }) });
+            onUploaded();
+            openForEditing(imported);
           } catch (err) {
             if (err instanceof UnauthorizedError) {
               onUnauthorized?.();
@@ -390,7 +414,6 @@ export function useUploadImport({ onUploaded, categoryId, makerworldCookie, onUn
             }
             throw err;
           }
-          onUploaded();
         },
         loadEntries: async () => {
           try {

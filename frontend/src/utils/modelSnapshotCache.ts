@@ -7,6 +7,10 @@ import * as THREE from "three";
 import type { ResolvedTheme } from "../constants/settingsOptions";
 import { applyThemeToObject, disposeObject3D, loadObjectFromAsset, paletteForTheme } from "./modelLoaders";
 
+// Same "three-quarter" viewing angle ModelViewer's fitCameraToBox uses for non-Bambu formats, so
+// the static thumbnail matches the angle a user sees first when they open the live viewer.
+const SNAPSHOT_VIEW_DIRECTION = new THREE.Vector3(0.9, 0.7, 2.1).normalize();
+
 export const snapshotCache = new Map<string, string>();
 
 let snapshotRenderer: THREE.WebGLRenderer | null = null;
@@ -64,6 +68,9 @@ export async function generateModelSnapshot(
   const scene = new THREE.Scene();
   scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.2));
   scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  // near/far start as placeholders -- both get set below from the model's actual bounding radius,
+  // since a fixed 0.1/1000 clips the geometry entirely for models far outside that range (this was
+  // the root cause of blank/background-only thumbnails: the renderer had nothing in view).
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
   const { renderer, release } = await acquireSnapshotRenderer();
   renderer.setSize(width, height, false);
@@ -71,10 +78,20 @@ export async function generateModelSnapshot(
 
   const box = new THREE.Box3().setFromObject(object);
   if (!box.isEmpty()) {
+    // Same distance-solving as ModelViewer's fitCameraToBox: fit to the box's circumscribed
+    // sphere against both vertical and (aspect-derived) horizontal FOV, so the model is framed
+    // fully regardless of its real-world scale or the thumbnail's aspect ratio.
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(size.x, size.y, size.z) || 1;
-    camera.position.copy(center).add(new THREE.Vector3(radius * 1.8, radius * 1.3, radius * 1.6));
+    const radius = Math.max(size.length() / 2, 0.001);
+    const padding = 1.15;
+    const vFov = THREE.MathUtils.degToRad(camera.fov);
+    const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+    const distance = padding * Math.max(radius / Math.sin(vFov / 2), radius / Math.sin(hFov / 2));
+    camera.position.copy(center).addScaledVector(SNAPSHOT_VIEW_DIRECTION, distance);
+    camera.near = Math.max(distance / 1000, 0.01);
+    camera.far = distance + radius * 4;
+    camera.updateProjectionMatrix();
     camera.lookAt(center);
   } else {
     camera.position.set(1, 1, 3);

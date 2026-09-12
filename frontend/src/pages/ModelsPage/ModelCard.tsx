@@ -16,9 +16,11 @@ import { type ResolvedTheme } from "../../constants/settingsOptions";
 import { UnauthorizedError } from "../../api/client";
 import { useToast } from "../../components/ToastProvider";
 import { renderPreviewContent } from "../../components/media/renderPreviewContent";
-import { importProviderInfo } from "../../constants/importProviders";
+import { printProviderInfo } from "../../constants/importProviders";
+import { useGravatarUrl } from "../../hooks/useGravatarUrl";
 import StarToggle from "../../components/StarToggle";
 import ModelActionsMenu from "../ModelDetailPage/ModelActionsMenu";
+import type { AuthUser } from "../../api/auth";
 
 type Props = {
   item: Print;
@@ -32,6 +34,12 @@ type Props = {
    *  "Remove from collection" in the card's "..." menu. See ModelActionsMenu's doc comment. */
   collectionId?: string;
   onRemovedFromCollection?: (id: string) => void;
+  /** Only used as a fallback when the print has neither an Author nor a plain `creator` string --
+   *  a direct upload has no import-source author at all, so it shows the viewer's own identity
+   *  instead of "Unknown" (every print in this per-user app is, after all, the viewer's own).
+   *  Not passed down from AuthorPage: a print reachable from there always has a real Author, so
+   *  the fallback never applies there. */
+  viewer?: AuthUser | null;
 };
 
 // The star/"..." hover icons sit on a plain neutral circle -- readable over any thumbnail color
@@ -60,6 +68,7 @@ export default function ModelCard({
   onUnauthorized,
   collectionId,
   onRemovedFromCollection,
+  viewer,
 }: Props) {
   const { t } = useTranslation(["models", "common"]);
   const navigate = useNavigate();
@@ -76,8 +85,15 @@ export default function ModelCard({
   const [isFavorite, setIsFavorite] = useState(item.is_favorite);
   const favoritePendingRef = useRef(false);
   const author = item.author;
-  const authorName = author?.name || author?.handle || item.creator || null;
-  const providerInfo = importProviderInfo(item.source_provider);
+  const viewerAvatarUrl = useGravatarUrl(viewer?.email, 40);
+  // Direct uploads have no Author row and usually no `creator` string either -- fall back to the
+  // viewer's own identity rather than "Unknown", since every print here is the viewer's own.
+  // Deliberately NOT clickable to an author page (see the click handler below, still keyed off
+  // the real `author` object): there's no Author id behind this fallback to navigate to.
+  const showViewerAsAuthor = !author?.name && !author?.handle && !item.creator && !item.source_provider && Boolean(viewer);
+  const authorName = author?.name || author?.handle || item.creator || (showViewerAsAuthor ? viewer!.display_name : null);
+  const authorAvatarUrl = author?.avatar_url || (showViewerAsAuthor ? viewerAvatarUrl : undefined);
+  const providerInfo = printProviderInfo(item.source_provider);
 
   useEffect(() => { setIsFavorite(item.is_favorite); }, [item.is_favorite]);
 
@@ -134,27 +150,31 @@ export default function ModelCard({
         {renderPreviewContent(item, "card", theme, t, previewMode)}
       </Box>
 
-      {providerInfo && (
-        <Tooltip title={t("models:card.importedFrom", { provider: providerInfo.label })}>
-          <Box
-            sx={{
-              position: "absolute",
-              top: 8,
-              left: 8,
-              px: 1,
-              py: 0.375,
-              borderRadius: 1,
-              fontSize: 11,
-              fontWeight: 600,
-              lineHeight: 1.4,
-              color: "#fff",
-              bgcolor: providerInfo.color,
-            }}
-          >
-            {providerInfo.label}
-          </Box>
-        </Tooltip>
-      )}
+      <Tooltip
+        title={
+          item.source_provider
+            ? t("models:card.importedFrom", { provider: providerInfo.label })
+            : t("models:card.uploadedDirectly")
+        }
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: 8,
+            left: 8,
+            px: 1,
+            py: 0.375,
+            borderRadius: 1,
+            fontSize: 11,
+            fontWeight: 600,
+            lineHeight: 1.4,
+            color: providerInfo.textColor ?? "#fff",
+            bgcolor: providerInfo.color,
+          }}
+        >
+          {providerInfo.label}
+        </Box>
+      </Tooltip>
 
       <Stack
         className="model-card-actions"
@@ -218,7 +238,7 @@ export default function ModelCard({
               navigate(`/authors/${author.id}`);
             }}
           >
-            <Avatar src={author?.avatar_url || undefined} sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}>
+            <Avatar src={authorAvatarUrl || undefined} sx={{ width: 20, height: 20, fontSize: 11, color: "inherit !important" }}>
               {(authorName || "?").slice(0, 1).toUpperCase()}
             </Avatar>
             <Typography variant="caption" noWrap sx={{ color: "inherit" }}>

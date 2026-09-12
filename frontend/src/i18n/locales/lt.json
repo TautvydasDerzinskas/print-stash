@@ -63,7 +63,9 @@
       "uploadFailed": "Nepavyko įkelti: {{files}}",
       "multiplateImportFailedWithMessage": "Kelių plokščių importas ({{message}})",
       "multiplateImportFailed": "Kelių plokščių importas",
-      "imported": "Importuota „{{name}}“"
+      "imported": "Importuota „{{name}}“",
+      "uploaded": "Įkelta „{{name}}“",
+      "uploadedMultiple": "Įkelta {{count}} modelių"
     },
     "zipImport": {
       "title": "Importuoti zip",
@@ -1008,7 +1010,8 @@
       "unknownAuthor": "Nežinomas",
       "addedToFavorites": "\"{{name}}\" pridėtas prie Mėgstamiausių",
       "removedFromFavorites": "\"{{name}}\" pašalintas iš Mėgstamiausių",
-      "importedFrom": "Importuota iš {{provider}}"
+      "importedFrom": "Importuota iš {{provider}}",
+      "uploadedDirectly": "Įkelta tiesiai į Thingport"
     },
     "detail": {
       "preview3d": "3D peržiūra",

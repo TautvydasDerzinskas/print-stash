@@ -1,6 +1,6 @@
 import { UnauthorizedError } from "../api/client";
 import { categoriesApi } from "../api/categories";
-import { printsApi } from "../api/prints";
+import { printsApi, type Print } from "../api/prints";
 
 export type UploadEntry = {
   file: File;
@@ -94,6 +94,7 @@ export async function uploadEntriesToCategory(
   let uploaded = 0;
   let aborted = false;
   const uploadedEntries: UploadEntry[] = [];
+  const prints: Print[] = [];
   const categoryCache = new Map<string, string>();
   const baseKey = parentCategoryId || "root";
 
@@ -136,9 +137,10 @@ export async function uploadEntriesToCategory(
       // Every leaf of a folder tree (dropped folder or webkitdirectory picker)
       // is always its own single-plate print, so this is always a one-file
       // upload -- the separate/multiplate mode never applies here.
-      await printsApi.upload([entry.file], { category_id: targetCategoryId || undefined });
+      const result = await printsApi.upload([entry.file], { category_id: targetCategoryId || undefined });
       uploaded += 1;
       uploadedEntries.push(entry);
+      prints.push(...result.prints);
     } catch (err) {
       if (err instanceof UnauthorizedError) {
         onUnauthorized?.();
@@ -150,5 +152,5 @@ export async function uploadEntriesToCategory(
       failed.push(message && message !== "Upload failed" ? `${entry.file.name} (${message})` : entry.file.name);
     }
   }
-  return { uploaded, failed, uploadedEntries };
+  return { uploaded, failed, uploadedEntries, prints };
 }

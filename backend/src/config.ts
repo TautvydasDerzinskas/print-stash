@@ -45,6 +45,11 @@ export const AUTH_ALGO = "HS256" as const;
 export const INITIAL_ADMIN_EMAIL = (process.env.INITIAL_ADMIN_EMAIL || "").trim().toLowerCase();
 
 export const IMPORT_ALLOWED_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj", ".lbrn", ".lbrn2", ".zip"]);
+// Extensions the 3D viewer can actually render as a Plate -- mirrors frontend's MODEL_EXTS
+// (constants/fileTypes.ts). A multiplate upload splits on this: only these become Plates, and
+// anything else (e.g. a bundled .f3d source file) is attached as a SUPPORTING PrintFile instead
+// of being force-rendered as an unviewable "plate".
+export const RENDERABLE_MODEL_EXTS = new Set([".stl", ".3mf", ".step", ".stp", ".obj"]);
 export const IMPORT_EXT_PRIORITY = [".3mf", ".stl", ".step", ".stp", ".lbrn2", ".lbrn", ".zip"];
 export const IMPORT_BLOCKED_EXTS = new Set([
   ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".jfif", ".tif", ".tiff",

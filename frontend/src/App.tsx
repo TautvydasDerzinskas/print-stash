@@ -118,6 +118,7 @@ function AppShell({
               onUnauthorized={onUnauthorized}
               theme={resolvedTheme}
               previewMode={previewMode}
+              viewer={user}
             />
           }
         />
@@ -127,15 +128,15 @@ function AppShell({
         />
         <Route
           path="/models/collections/:collectionId"
-          element={<CollectionDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+          element={<CollectionDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} viewer={user} />}
         />
         <Route
           path="/models/tags/:tagName"
-          element={<TagDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} />}
+          element={<TagDetailPage theme={resolvedTheme} previewMode={previewMode} onUnauthorized={onUnauthorized} viewer={user} />}
         />
         <Route
           path="/models/:printId"
-          element={<ModelDetailPage theme={resolvedTheme} onSelectCategory={setCategoryId} onUnauthorized={onUnauthorized} />}
+          element={<ModelDetailPage theme={resolvedTheme} onSelectCategory={setCategoryId} onUnauthorized={onUnauthorized} viewer={user} />}
         />
         <Route
           path="/authors/:authorId"

@@ -121,7 +121,7 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
   return (
     <>
       <Paper
-        elevation={0}
+        variant="outlined"
         sx={{
           width: 260,
           flexShrink: 0,
@@ -129,6 +129,7 @@ export default function CategoriesPanel({ categories, loading, selectedId, onSel
           p: 1.5,
           alignSelf: "flex-start",
           bgcolor: "background.paper",
+          borderColor: (muiTheme) => (muiTheme.palette.mode === "dark" ? "transparent" : "divider"),
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ px: 0.5, pb: 1 }}>

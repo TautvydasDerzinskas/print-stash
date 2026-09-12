@@ -14,7 +14,8 @@ import { previewImagePath, deleteAllPreviewImages } from "../services/previewIma
 import { deleteAuthorIfOrphaned } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
-import { deleteAllPrintFiles } from "../services/printFileService";
+import { deleteAllPrintFiles, saveFileFromTemp } from "../services/printFileService";
+import { RENDERABLE_MODEL_EXTS } from "../config";
 import { sendPrintsZip } from "../services/downloadZip";
 import { systemCollectionKeyForId } from "../services/collectionService";
 import { createLog } from "../services/auditLog";
@@ -40,6 +41,10 @@ function matchesTagList(printTags: string[], tagList: string[]): boolean {
   if (!tagList.length) return true;
   const printTagsLower = new Set(printTags.map((t) => t.toLowerCase()));
   return tagList.every((t) => printTagsLower.has(t.toLowerCase()));
+}
+
+function isRenderableUpload(f: Express.Multer.File): boolean {
+  return RENDERABLE_MODEL_EXTS.has(path.extname(f.originalname).toLowerCase());
 }
 
 function buildPrintWhere(req: Request): Prisma.PrintWhereInput {
@@ -111,13 +116,27 @@ router.post(
           void createLog({ userId: req.userId!, action: "model_uploaded", targetId: print.id, details: { name: print.name } });
         }
       } else {
-        const plateInputs: NewPlateInput[] = files.map((f) => {
+        // Only files the 3D viewer can actually render become Plates -- anything else (e.g. a
+        // bundled .f3d source) is attached as a SUPPORTING file below instead, so it doesn't show
+        // up as an unviewable "plate" in the plate switcher. If nothing in the batch is
+        // renderable, fall back to the old all-as-plates behavior so createPrint still gets at
+        // least one plate.
+        const renderableFiles = files.filter(isRenderableUpload);
+        const supportingFiles = renderableFiles.length ? files.filter((f) => !isRenderableUpload(f)) : [];
+        const plateFiles = renderableFiles.length ? renderableFiles : files;
+
+        const plateInputs: NewPlateInput[] = plateFiles.map((f) => {
           const safeName = sanitizeFilename(f.originalname);
           return { filename: safeName, mime: mimeFromContentType(f.mimetype, safeName), tempFilePath: f.path };
         });
         const nameHint = path.parse(plateInputs[0].filename).name;
-        const { print, plates } = await createPrint(req.userId!, meta, nameHint, plateInputs);
-        printsOut.push(toPrintOut(print, plates, [], null));
+        const { print } = await createPrint(req.userId!, meta, nameHint, plateInputs);
+
+        for (const f of supportingFiles) {
+          await saveFileFromTemp(req.userId!, print.id, f.path, f.originalname, f.mimetype);
+        }
+
+        printsOut.push(await printOutById(req.userId!, print.id));
         void createLog({ userId: req.userId!, action: "model_uploaded", targetId: print.id, details: { name: print.name } });
       }
       res.json({ prints: printsOut });
