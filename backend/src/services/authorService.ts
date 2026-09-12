@@ -43,3 +43,14 @@ export async function upsertAuthorFromImport(info: ImportedAuthorInfo | null): P
     return null;
   }
 }
+
+/** Deletes an Author row once nothing references it any more. Author rows aren't user-scoped --
+ * two different users importing the same MakerWorld/Thingiverse/Printables creator share one row
+ * -- so this checks Print.authorId across every user, not just the caller's. Used after clearing
+ * a print's authorId (the Edit modal's "reset author" action) to avoid leaving an orphaned Author
+ * behind once the last print referencing it has been detached. */
+export async function deleteAuthorIfOrphaned(authorId: string): Promise<void> {
+  const remaining = await prisma.print.count({ where: { authorId } });
+  if (remaining > 0) return;
+  await prisma.author.delete({ where: { id: authorId } }).catch(() => undefined);
+}

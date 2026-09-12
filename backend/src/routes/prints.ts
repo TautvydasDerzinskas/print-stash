@@ -11,6 +11,7 @@ import { modelUpload } from "../uploadMiddleware";
 import { createPrint, deletePlateFiles, resolvePlateFilePath, type NewPlateInput } from "../services/printCreation";
 import { plateThumbPath, relocatePrint, uniqueModelName } from "../services/printService";
 import { previewImagePath, deleteAllPreviewImages } from "../services/previewImageService";
+import { deleteAuthorIfOrphaned } from "../services/authorService";
 import { toPrintOut } from "../dto";
 import { loadFullPrint, printOutById } from "../services/printLoader";
 import { deleteAllPrintFiles } from "../services/printFileService";
@@ -466,7 +467,8 @@ router.post(
 // Clears the imported author/creator and import-source linkage, so the print reads exactly like
 // one this user uploaded themselves (a plain upload never sets authorId/creator/sourceProvider/
 // sourceExternalId -- see createPrint in printCreation.ts). Used by the Edit modal's "reset
-// author" action.
+// author" action. If that was the last print anywhere referencing this Author, the row itself is
+// deleted too (see deleteAuthorIfOrphaned) rather than left behind with nothing pointing to it.
 router.post(
   "/print/:id/author-reset",
   asyncHandler(async (req, res) => {
@@ -476,6 +478,7 @@ router.post(
       where: { id: print.id },
       data: { authorId: null, creator: null, sourceProvider: null, sourceExternalId: null },
     });
+    if (print.authorId) await deleteAuthorIfOrphaned(print.authorId);
     res.json({ print: await printOutById(req.userId!, print.id) });
     void createLog({ userId: req.userId!, action: "model_edited", targetId: print.id, details: { field: "author_reset", name: print.name } });
   }),
