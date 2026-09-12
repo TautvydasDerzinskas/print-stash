@@ -45,6 +45,14 @@ const importRequestSchema = z.object({
   category_id: z.string().nullable().optional(),
   filename: z.string().nullable().optional(),
   makerworld_cookie: z.string().nullable().optional(),
+  // Set by the Thingport Grab browser extension for MakerWorld imports: it reads __NEXT_DATA__
+  // off the live model page and resolves this itself via a fetch() made from that page's own
+  // context (real cookies attached automatically, looks like organic browsing) -- see
+  // openImportResponse's use of it in importService.ts. When present, the backend skips both of
+  // its own resolution paths (the api.bambulab.com cloud API and the api/v1 HTML-scrape
+  // fallback) entirely, since those are the only two call sites that can trip MakerWorld's
+  // CAPTCHA and its 2-hour blanket cooloff (see makerworldCaptcha.ts).
+  resolved_download_url: z.string().nullable().optional(),
 });
 
 // The frontend normally sends the browser's own locally-stored MakerWorld cookie on every

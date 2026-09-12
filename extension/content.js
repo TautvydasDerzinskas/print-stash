@@ -243,25 +243,169 @@
   // renderPanel's own guard for that).
   async function runDirectImport(opts) {
     const collectionId = selectedCollectionId();
-    const { url, instanceUrl } = context;
+    const { url, instanceUrl, classification } = context;
     renderPanel(`<div class="tg-status">Importing…</div>`);
+    // Only meaningful for a MakerWorld model page -- see resolveMakerworldDownloadUrlFromPage's
+    // own doc comment for why resolving it here beats leaving it to the backend. Read from
+    // `classification` (captured above, before any await) rather than `context.classification`
+    // afterward, for the same reason `url`/`instanceUrl` are destructured up front: an SPA nav
+    // mid-flight nulls `context` out from under this still-running function.
+    const resolvedDownloadUrl =
+      classification.provider === "makerworld" && classification.type === "model"
+        ? await resolveMakerworldDownloadUrl().catch(() => null)
+        : null;
     try {
       // One message, not two -- import (and, per collectionId, filing the result into a
       // collection) both run to completion inside the background service worker regardless of
       // whether this tab/page is still around by the time it finishes (see background.js's
       // handleImportSingle for why that matters: a content script's own execution ends the
       // moment the page navigates or fully reloads, but the service worker doesn't).
-      const print = await call("IMPORT_SINGLE", { url, entries: opts && opts.entries, collectionId }).then(unwrap);
+      const print = await call("IMPORT_SINGLE", { url, entries: opts && opts.entries, collectionId, resolvedDownloadUrl }).then(unwrap);
       renderPanel(successHtml(print ? `${instanceUrl}/models/${print.id}` : `${instanceUrl}/models`));
     } catch (err) {
       renderPanel(errorHtml(err));
     }
   }
 
+  // -- MakerWorld client-side download-URL resolution --------------------------------------------
+  //
+  // Resolves a model's actual downloadable file URL directly from the live page instead of
+  // asking the backend to (see importService.ts's tryMakerworldCloudApi/resolveMakerworldDownloadUrl
+  // -- both call MakerWorld's own resolution APIs, and both are the only two places able to trip
+  // its CAPTCHA and the resulting 2-hour account-wide lockout, see makerworldCaptcha.ts). Doing it
+  // here instead has two real advantages, not just one fewer server-side call: the fetch() below
+  // is same-origin (this page and the API are both on makerworld.com), so the browser attaches the
+  // real, currently-valid session cookie automatically -- no bearer-token extraction, no stale
+  // cookie risk -- and the request looks exactly like the page's own JS making it, not a batch of
+  // requests arriving from one server IP. Falls through to null on any failure (page structure
+  // changed, not logged into MakerWorld, a transient error) -- this is a pure enhancement; the
+  // caller just omits resolved_download_url and the backend resolves it exactly as it always has.
+
+  function readMakerworldNextData() {
+    const el = document.getElementById("__NEXT_DATA__");
+    if (!el || !el.textContent) return null;
+    try {
+      return JSON.parse(el.textContent);
+    } catch {
+      return null;
+    }
+  }
+
+  function getPath(obj, ...keys) {
+    let current = obj;
+    for (const key of keys) {
+      if (!current || typeof current !== "object") return undefined;
+      current = current[key];
+    }
+    return current;
+  }
+
+  /** Same field shape the backend's extractDownloadUrlFromResponse checks -- a plain
+   *  {url|downloadUrl|download_url}, optionally nested one level under `data`. */
+  function extractDownloadUrlFromJson(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    for (const key of ["url", "downloadUrl", "download_url"]) {
+      const value = data[key];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    const inner = data.data;
+    if (inner && typeof inner === "object" && !Array.isArray(inner)) {
+      for (const key of ["url", "downloadUrl", "download_url"]) {
+        const value = inner[key];
+        if (typeof value === "string" && value.trim()) return value.trim();
+      }
+    }
+    return null;
+  }
+
+  async function fetchMakerworldApiJson(url, nonce) {
+    try {
+      const headers = { Accept: "application/json" };
+      if (nonce) headers["X-Nonce"] = nonce;
+      // credentials default to "same-origin" -- the real session cookie rides along automatically.
+      const res = await fetch(url, { headers });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
+  }
+
+  /** Best-effort match for the page's own real "Download" button -- text-based (not a class name
+   *  or test-id, which MakerWorld's build could change at any time), restricted to a visible
+   *  element so an off-screen/hidden duplicate (e.g. inside an unopened dropdown) isn't clicked
+   *  instead of the real one. Multiple design "instances" can each have their own download
+   *  control; this returns whichever matches first, i.e. the default/selected one. */
+  function findMakerworldDownloadButton() {
+    for (const el of document.querySelectorAll("button, a")) {
+      if (!/^download$/i.test((el.textContent || "").trim())) continue;
+      if (el.offsetParent === null) continue; // hidden (display:none or detached)
+      return el;
+    }
+    return null;
+  }
+
+  /** Clicks the page's own real Download button and captures the resulting browser download's
+   *  resolved URL, canceling it immediately -- see background.js's armDownloadCapture/
+   *  onCreated.addListener doc comment for the full reasoning (this sidesteps guessing
+   *  MakerWorld's resolution API shape entirely, since whatever request the button's own click
+   *  handler makes is the one that gets captured). Returns null on anything not working out
+   *  (no button found, nothing captured within the timeout, or a blob: URL that isn't independently
+   *  fetchable) -- always a graceful "try the fallback instead", never a thrown error. */
+  async function captureDownloadUrlViaRealClick() {
+    const button = findMakerworldDownloadButton();
+    if (!button) return null;
+    const armed = await call("ARM_DOWNLOAD_CAPTURE");
+    if (!armed || !armed.ok) return null;
+    button.click();
+    const res = await call("AWAIT_DOWNLOAD_CAPTURE");
+    return res && res.ok ? res.downloadUrl : null;
+  }
+
+  /** The single entry point every caller below uses: tries the real-click capture first (far
+   *  higher fidelity, since it's not a guess), falling back to reconstructing the API call
+   *  ourselves only if that didn't pan out. */
+  async function resolveMakerworldDownloadUrl() {
+    const viaClick = await captureDownloadUrlViaRealClick().catch(() => null);
+    if (viaClick) return viaClick;
+    return resolveMakerworldDownloadUrlFromPage().catch(() => null);
+  }
+
+  /** Mirrors the backend's own two-step MakerWorld resolution (importResolvers.ts's
+   *  resolveMakerworldDownloadUrl) -- instance-scoped endpoint first, model-scoped as a fallback
+   *  -- just run from the page itself instead of the server. Fallback only -- see
+   *  resolveMakerworldDownloadUrl above, which tries the real-click capture first. */
+  async function resolveMakerworldDownloadUrlFromPage() {
+    const nextData = readMakerworldNextData();
+    if (!nextData) return null;
+    const design = getPath(nextData, "props", "pageProps", "design");
+    if (!design || typeof design !== "object") return null;
+    const nonce = getPath(nextData, "props", "pageProps", "x-nonce");
+    const validNonce = typeof nonce === "string" && nonce.trim() ? nonce : null;
+
+    let instanceId = design.defaultInstanceId ? String(design.defaultInstanceId) : null;
+    if (!instanceId && Array.isArray(design.instances)) {
+      const first = design.instances.find((inst) => inst && inst.id);
+      if (first) instanceId = String(first.id);
+    }
+    if (instanceId) {
+      const apiUrl = `https://makerworld.com/api/v1/design-service/instance/${instanceId}/f3mf?type=download&fileType=`;
+      const data = await fetchMakerworldApiJson(apiUrl, validNonce);
+      const url = extractDownloadUrlFromJson(data);
+      if (url) return url;
+    }
+
+    const modelId = design.id ? String(design.id) : null;
+    if (!modelId) return null;
+    const apiUrl = `https://makerworld.com/api/v1/models/${modelId}/download`;
+    return extractDownloadUrlFromJson(await fetchMakerworldApiJson(apiUrl, validNonce));
+  }
+
   // -- Batch flow (a collection/Likes listing page) ---------------------------------------------
 
+  // MakerWorld collections don't use this one -- see loadMakerworldGuidedCollection below, which
+  // scrapes the page's own DOM instead of calling this endpoint at all.
   const BATCH_ENTRIES_PATH = {
-    "makerworld:collection": "/import/collection/entries",
     "thingiverse:likes": "/import/thingiverse-likes/entries",
     "thingiverse:collection": "/import/thingiverse-collection/entries",
     "printables:collection": "/import/printables-collection/entries",
@@ -287,59 +431,149 @@
   //
   // MakerWorld specifically (not the other providers below) trips a multi-hour account-wide
   // CAPTCHA lockout from a burst of collection-import API calls, even with pacing -- see
-  // background.js's startMakerworldCollectionJob for the full reasoning. Rather than the generic
-  // "pick entries, start a background job" flow every other batch provider uses, this drives the
-  // tab through each not-yet-imported model's own page one at a time. There's no entry-selection
-  // step here (unlike loadBatchEntries below) -- every not-yet-imported model gets queued.
+  // background.js's startMakerworldCollectionJob for the full reasoning. This avoids MakerWorld's
+  // own collection-listing API entirely (unlike the generic batch flow below): every model id
+  // comes from scraping the page's own DOM instead, after scrolling it to the end -- the exact
+  // same requests MakerWorld's own site already makes for a person scrolling through it by hand,
+  // and nothing our own backend has to ask for on top of that. There's no entry-selection step
+  // here (unlike loadBatchEntries below) -- every not-yet-imported model gets queued.
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /** True once MakerWorld's own "No more data" end-of-list marker is showing anywhere on the
+   *  page. Matched on rendered text, not a class name -- MakerWorld's CSS-module class names are
+   *  build-specific hashes that can (and do) change on any redeploy, while the actual displayed
+   *  text is far more stable. */
+  function hasNoMoreDataMarker() {
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (node.textContent && node.textContent.trim() === "No more data") return true;
+    }
+    return false;
+  }
+
+  /** Every distinct MakerWorld design id linked from the current DOM -- a model card's link looks
+   *  like "/en/models/1954043-screw-measuring-tool-...", so the id is just the leading digits
+   *  after "/models/". */
+  function extractMakerworldModelIds() {
+    const ids = new Set();
+    for (const a of document.querySelectorAll('a[href*="/models/"]')) {
+      const match = (a.getAttribute("href") || "").match(/\/models\/(\d+)/);
+      if (match) ids.add(match[1]);
+    }
+    return [...ids];
+  }
+
+  /** Repeatedly scrolls the last loaded model card into view -- the standard way to nudge an
+   *  intersection-observer-driven infinite scroll into fetching its next page, more reliable
+   *  than blindly scrolling the window when the actual scroll container might be some nested
+   *  element instead. Stops on the "No more data" marker, or once the model count has stopped
+   *  growing for several rounds in a row as a safety net if that marker's wording ever changes
+   *  (never loops forever regardless). */
+  async function scrollMakerworldCollectionToEnd(onProgress) {
+    const MAX_ROUNDS = 300; // generous: 153 models at ~20/page is ~8 loads
+    const STAGNANT_LIMIT = 6;
+    let lastCount = -1;
+    let stagnantRounds = 0;
+    for (let round = 0; round < MAX_ROUNDS; round++) {
+      if (hasNoMoreDataMarker()) return;
+      const links = document.querySelectorAll('a[href*="/models/"]');
+      const lastLink = links[links.length - 1];
+      if (lastLink) lastLink.scrollIntoView({ block: "end" });
+      else window.scrollTo(0, document.body.scrollHeight);
+      await sleep(700);
+      const count = extractMakerworldModelIds().length;
+      if (onProgress) onProgress(count);
+      if (count === lastCount) {
+        stagnantRounds += 1;
+        if (stagnantRounds >= STAGNANT_LIMIT) return;
+      } else {
+        stagnantRounds = 0;
+      }
+      lastCount = count;
+    }
+  }
+
+  /** Finds this user's Thingport collection whose name matches (case-insensitively, same as the
+   *  backend's own uniqueness check) the given MakerWorld collection title, creating one if none
+   *  exists yet. Returns null (best-effort) on any failure -- the import still proceeds, it just
+   *  won't have anywhere to file into. */
+  async function findOrCreateThingportCollection(name) {
+    const trimmed = (name || "").trim();
+    if (!trimmed) return null;
+    const normalized = trimmed.toLowerCase();
+    try {
+      const collections = await api("GET", "/collections");
+      const existing = collections.find((c) => !c.system_key && (c.name || "").trim().toLowerCase() === normalized);
+      if (existing) return existing.id;
+      const created = await api("POST", "/collections", { name: trimmed });
+      return created.id;
+    } catch {
+      return null;
+    }
+  }
 
   async function loadMakerworldGuidedCollection() {
-    renderPanel(`<div class="tg-status">Loading models…</div>`);
-    let result;
-    try {
-      result = await api("POST", BATCH_ENTRIES_PATH["makerworld:collection"], { url: context.url });
-    } catch (err) {
-      renderPanel(errorHtml(err));
+    renderPanel(`<div class="tg-status">Scrolling to load all models…</div>`);
+    const h1 = document.getElementsByTagName("h1")[0];
+    const collectionTitle = h1 && h1.innerText ? h1.innerText.trim() : null;
+
+    await scrollMakerworldCollectionToEnd((count) => {
+      renderPanel(`<div class="tg-status">Scrolling to load all models… (${count} found so far)</div>`);
+    });
+
+    const ids = extractMakerworldModelIds();
+    if (!ids.length) {
+      renderPanel(errorHtml(new Error("Couldn't find any models on this page -- MakerWorld may have changed its page layout.")));
       return;
     }
-    const toImport = result.entries.filter((e) => !e.already_imported);
-    const alreadyImported = result.entries.filter((e) => e.already_imported);
-    const collectionHtml = await collectionOptionsHtml();
+
+    renderPanel(`<div class="tg-status">Checking ${ids.length} models against your library…</div>`);
+    const statuses = await Promise.all(
+      ids.map(async (id) => {
+        const url = thingportMakerworldModelUrl(id);
+        try {
+          const status = await api("GET", `/import/status?url=${encodeURIComponent(url)}`);
+          return { url, already_imported: status.already_imported, print_id: status.print_id };
+        } catch {
+          return { url, already_imported: false, print_id: null };
+        }
+      }),
+    );
+    const toImport = statuses.filter((s) => !s.already_imported);
+    const alreadyImported = statuses.filter((s) => s.already_imported);
+
     const parts = [];
     if (toImport.length) parts.push(`${toImport.length} new model${toImport.length === 1 ? "" : "s"} to import`);
     if (alreadyImported.length) parts.push(`${alreadyImported.length} already in your library`);
     renderPanel(`
-      <div class="tg-title">${escapeHtml(result.title || "Import collection")}</div>
-      <div class="tg-hint">
-        ${parts.join(", ") || "No models found."}${result.truncated ? " (more available on the site)" : ""}
-      </div>
-      ${collectionHtml}
-      <button class="tg-btn" data-action="start" ${toImport.length || alreadyImported.length ? "" : "disabled"}>Start import</button>
+      <div class="tg-title">${escapeHtml(collectionTitle || "Import collection")}</div>
+      <div class="tg-hint">${parts.join(", ") || "No models found."}</div>
+      <button class="tg-btn" data-action="start">Start import</button>
       <div class="tg-hint" style="margin-top:8px">
-        New models are imported one page visit at a time, pacing itself to avoid MakerWorld's rate
+        ${collectionTitle ? `Models go into a Thingport collection named "${escapeHtml(collectionTitle)}" (created if it doesn't exist yet). ` : ""}New
+        models are imported one page visit at a time, pacing itself to avoid MakerWorld's rate
         limiting -- this can take a while for a large collection.
       </div>
     `);
     const startBtn = panelEl.querySelector("[data-action=start]");
-    if (startBtn) startBtn.addEventListener("click", () => void startMakerworldGuidedImport(toImport, alreadyImported));
+    if (startBtn) startBtn.addEventListener("click", () => void startMakerworldGuidedImport(toImport, alreadyImported, collectionTitle));
   }
 
-  async function startMakerworldGuidedImport(toImport, alreadyImported) {
-    const collectionId = selectedCollectionId();
+  async function startMakerworldGuidedImport(toImport, alreadyImported, collectionTitle) {
     const originalUrl = context.url;
+    renderPanel(`<div class="tg-status">Preparing your collection…</div>`);
+    const collectionId = await findOrCreateThingportCollection(collectionTitle);
 
     if (alreadyImported.length && collectionId) {
       renderPanel(
         `<div class="tg-status">Adding ${alreadyImported.length} existing model${alreadyImported.length === 1 ? "" : "s"} to your collection…</div>`,
       );
       for (const entry of alreadyImported) {
-        try {
-          const modelUrl = thingportMakerworldModelUrl(entry.design_id);
-          const status = await api("GET", `/import/status?url=${encodeURIComponent(modelUrl)}`);
-          if (status.print_id) {
-            await api("POST", `/collection/${collectionId}/items/${status.print_id}`).catch(() => undefined);
-          }
-        } catch {
-          // Best-effort -- one failed lookup shouldn't block filing the rest, or the new imports.
+        if (entry.print_id) {
+          await api("POST", `/collection/${collectionId}/items/${entry.print_id}`).catch(() => undefined);
         }
       }
     }
@@ -350,7 +584,7 @@
     }
 
     renderPanel(`<div class="tg-status">Starting guided import…</div>`);
-    const urls = toImport.map((e) => thingportMakerworldModelUrl(e.design_id));
+    const urls = toImport.map((e) => e.url);
     await call("START_MAKERWORLD_COLLECTION_JOB", { urls, collectionId, originalUrl });
     // The tab is about to navigate to the first model's page (background just kicked that off) --
     // nothing more to render here; the full-page overlay (mountJobOverlay) takes over from there.
@@ -599,6 +833,19 @@
     if (!relevant) return;
     unmount();
     void init();
+  });
+
+  // Answers background.js's advanceMakerworldJob (the guided MakerWorld collection import loop):
+  // once it navigates this tab to a model's page, it asks whoever's running here to resolve that
+  // model's download URL directly (see resolveMakerworldDownloadUrlFromPage) rather than leaving
+  // the backend to do it for every single model in the run -- this is exactly the repeated,
+  // back-to-back resolution pattern most likely to trip MakerWorld's CAPTCHA.
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || message.type !== "RESOLVE_MAKERWORLD_DOWNLOAD_URL") return undefined;
+    resolveMakerworldDownloadUrl()
+      .then((downloadUrl) => sendResponse({ ok: true, downloadUrl }))
+      .catch(() => sendResponse({ ok: true, downloadUrl: null }));
+    return true; // keep the message channel open for the async sendResponse above
   });
 
   installNavigationWatcher();

@@ -65,6 +65,11 @@ export type ImportRequestBody = ImportCookies & {
   tags?: string[];
   category_id?: string | null;
   filename?: string | null;
+  /** Set by the Thingport Grab browser extension for a MakerWorld import: the actual download
+   *  URL, already resolved client-side (from the live page's own __NEXT_DATA__ + a fetch() made
+   *  in that page's context, so real cookies attach automatically). When present, openImportResponse
+   *  skips both of its own resolution paths for this url -- see its use there. */
+  resolved_download_url?: string | null;
   /** Internal only -- never comes from the request body/schema. Set by runCollectionImportJob
    *  on each per-design body it builds for a MakerWorld collection batch import, and read
    *  wherever a MakerWorld-bound call happens along this whole chain (tryMakerworldCloudApi,
@@ -212,7 +217,10 @@ export async function openImportResponse(
   // Cloudflare, no cookie-gated web session, no HTML scraping -- see makerworldCloudApi.ts).
   // Only at the top of the chain, so a URL this already resolved down to (e.g. the signed S3
   // download link) doesn't get reinterpreted as a fresh model page on the recursive call.
-  if (depth === 0 && host.endsWith("makerworld.com")) {
+  // Skipped entirely when the caller (the Thingport Grab extension) already resolved the
+  // download URL itself -- this call is one of the only two places that can trip MakerWorld's
+  // CAPTCHA cooloff, so there's no reason to risk it for a resolution we don't need.
+  if (depth === 0 && host.endsWith("makerworld.com") && !body.resolved_download_url) {
     const cloudResolved = await tryMakerworldCloudApi(validatedUrl, body);
     if (cloudResolved) {
       return openImportResponse(cloudResolved.downloadUrl, body, validatedUrl, depth + 1, cloudResolved.meta);
@@ -262,8 +270,15 @@ export async function openImportResponse(
       categorySite: extracted.categorySite ?? inheritedMeta.categorySite,
     };
     if (pageHost.endsWith("makerworld.com")) {
-      if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
-      downloadUrl = await resolveMakerworldDownloadUrl(html, finalUrl, makerworldCookie);
+      // Same short-circuit as the cloud API above -- resolveMakerworldDownloadUrl's own
+      // api/v1/design-service and api/v1/models calls are the other place that can trip the
+      // CAPTCHA cooloff, so a client-supplied resolution skips it rather than resolving twice.
+      if (body.resolved_download_url) {
+        downloadUrl = body.resolved_download_url;
+      } else {
+        if (!makerworldCookie) makerworldCookie = resolveMakerworldCookie(body);
+        downloadUrl = await resolveMakerworldDownloadUrl(html, finalUrl, makerworldCookie);
+      }
     }
     if (!downloadUrl) {
       downloadUrl = findDownloadUrl(html, finalUrl);

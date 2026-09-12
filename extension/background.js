@@ -167,21 +167,84 @@ async function pollJobToCompletion(jobId) {
  *  the import (and any collection filing) runs to completion regardless of what the calling page
  *  does next -- only the reply back to a since-destroyed content script can get lost, never the
  *  work itself. */
-async function handleImportSingle({ url, entries, collectionId }) {
+async function handleImportSingle({ url, entries, collectionId, resolvedDownloadUrl }) {
+  // For a MakerWorld model, content.js resolves the actual download URL itself, straight from
+  // the live page (see its resolveMakerworldDownloadUrlFromPage) -- passing it through as
+  // resolved_download_url lets the backend skip its own resolution entirely (both its
+  // api.bambulab.com cloud-API call and its api/v1 HTML-scrape fallback), which are the only two
+  // places able to trip MakerWorld's CAPTCHA and the resulting 2-hour account-wide lockout. Left
+  // undefined/null for anything else, or when the page-side resolution didn't find one -- the
+  // backend then falls back to resolving it exactly as before.
+  const extra = resolvedDownloadUrl ? { resolved_download_url: resolvedDownloadUrl } : null;
   let print;
   if (entries) {
-    const { job_id } = await apiCall("POST", "/import/zip", { url, entries });
+    const { job_id } = await apiCall("POST", "/import/zip", { url, entries, ...extra });
     const job = await pollJobToCompletion(job_id);
     if (job.status === "ERROR") throw new Error(job.error_message || "Import failed");
     print = job.result_print_id ? { id: job.result_print_id } : null;
   } else {
-    print = await apiCall("POST", "/import", { url });
+    print = await apiCall("POST", "/import", { url, ...extra });
   }
   if (collectionId && print && print.id) {
     await apiCall("POST", `/collection/${collectionId}/items/${print.id}`).catch(() => undefined);
   }
   return print;
 }
+
+// -- MakerWorld click-and-capture download resolution ------------------------------------------
+//
+// An alternative to guessing MakerWorld's own resolution API shape (see content.js's
+// resolveMakerworldDownloadUrlFromPage, kept as a fallback) -- content.js clicks the model page's
+// own real "Download" button, and this captures the browser download that click triggers,
+// cancels it immediately, and reads the resolved URL off it before erasing it from the downloads
+// list. This sidesteps every guess about query params/nonce/headers entirely: whatever request
+// MakerWorld's own page JS actually makes when a real person clicks Download is the one that gets
+// captured here. Requires the "downloads" permission.
+
+const DOWNLOAD_CAPTURE_TIMEOUT_MS = 8000;
+// Only one of these is ever in flight at a time -- single-model imports and the guided
+// collection loop both resolve one model at a time, never concurrently.
+let pendingDownloadCapture = null; // { resolve, timeoutId }
+
+chrome.downloads.onCreated.addListener((item) => {
+  if (!pendingDownloadCapture) return;
+  const { resolve, timeoutId } = pendingDownloadCapture;
+  pendingDownloadCapture = null;
+  clearTimeout(timeoutId);
+  chrome.downloads.cancel(item.id).catch(() => undefined);
+  chrome.downloads.erase({ id: item.id }).catch(() => undefined);
+  // A blob: URL means the page resolved/fetched the file itself (fetch + URL.createObjectURL)
+  // rather than navigating straight to a real remote URL -- not independently fetchable by the
+  // backend, so this is treated the same as "nothing captured" and the caller falls back.
+  resolve(/^https?:\/\//i.test(item.url) ? item.url : null);
+});
+
+/** Arms the capture (registers a fresh pending promise + safety timeout) and returns immediately
+ *  -- called right before content.js clicks the real Download button, so the onCreated listener
+ *  above is already primed by the time that click's resulting download fires. */
+function armDownloadCapture() {
+  if (pendingDownloadCapture) {
+    clearTimeout(pendingDownloadCapture.timeoutId);
+    pendingDownloadCapture.resolve(null);
+  }
+  let resolveFn;
+  const promise = new Promise((resolve) => {
+    resolveFn = resolve;
+  });
+  const timeoutId = setTimeout(() => {
+    if (pendingDownloadCapture && pendingDownloadCapture.resolve === resolveFn) {
+      pendingDownloadCapture = null;
+      resolveFn(null);
+    }
+  }, DOWNLOAD_CAPTURE_TIMEOUT_MS);
+  pendingDownloadCapture = { resolve: resolveFn, timeoutId };
+  return promise;
+}
+
+// Holds the promise armDownloadCapture returned, for AWAIT_DOWNLOAD_CAPTURE (a separate message)
+// to await -- split into two messages, rather than one, because the actual button click has to
+// happen in content.js between arming and awaiting, and a single message can only get one reply.
+let currentDownloadCapturePromise = null;
 
 // -- MakerWorld guided collection import ---------------------------------------------------------
 //
@@ -200,10 +263,10 @@ async function handleImportSingle({ url, entries, collectionId }) {
 // re-reads this instead of having "remembered" anything.
 
 const MAKERWORLD_JOB_STORAGE_KEY = "makerworldCollectionJob";
-// "A couple of seconds" of pacing after each import, on top of however long the model page itself
-// took to load -- deliberately not configurable/hidden away, since a shorter value would undercut
-// the entire point of this feature.
-const MAKERWORLD_JOB_STEP_DELAY_MS = 3000;
+// Pacing after each import, on top of however long the model page itself took to load --
+// deliberately not configurable/hidden away, since a shorter value would undercut the entire
+// point of this feature.
+const MAKERWORLD_JOB_STEP_DELAY_MS = 5000;
 
 async function getMakerworldJob() {
   const { [MAKERWORLD_JOB_STORAGE_KEY]: job } = await chrome.storage.local.get(MAKERWORLD_JOB_STORAGE_KEY);
@@ -261,8 +324,22 @@ async function advanceMakerworldJob(tabId) {
   await setMakerworldJob(job);
 
   const currentUrl = job.urls[job.index];
+  // Ask the content script sitting on the model page we just navigated to (it's the one with
+  // DOM access to __NEXT_DATA__ and a same-origin fetch that carries the real session cookie) to
+  // resolve the download URL itself -- see content.js's resolveMakerworldDownloadUrlFromPage.
+  // This matters most right here, not just for a plain single-model import: it's this per-model
+  // loop that fires MakerWorld resolution calls back-to-back, exactly the pattern that trips its
+  // CAPTCHA. Best-effort -- if the content script isn't ready yet or the page structure doesn't
+  // match, resolvedDownloadUrl stays null and the backend just resolves it the old way.
+  let resolvedDownloadUrl = null;
   try {
-    await handleImportSingle({ url: currentUrl, collectionId: job.collectionId });
+    const res = await chrome.tabs.sendMessage(tabId, { type: "RESOLVE_MAKERWORLD_DOWNLOAD_URL" });
+    if (res && res.ok) resolvedDownloadUrl = res.downloadUrl;
+  } catch {
+    // No listener yet, or the tab navigated away already -- fine, see above.
+  }
+  try {
+    await handleImportSingle({ url: currentUrl, collectionId: job.collectionId, resolvedDownloadUrl });
   } catch (err) {
     await setMakerworldJob(null);
     await chrome.storage.local.set({
@@ -373,6 +450,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           if (sender.tab) await abortMakerworldJob(sender.tab.id);
           sendResponse({ ok: true });
           return;
+        case "ARM_DOWNLOAD_CAPTURE":
+          currentDownloadCapturePromise = armDownloadCapture();
+          sendResponse({ ok: true });
+          return;
+        case "AWAIT_DOWNLOAD_CAPTURE": {
+          const downloadUrl = await (currentDownloadCapturePromise || Promise.resolve(null));
+          sendResponse({ ok: true, downloadUrl });
+          return;
+        }
         case "GET_MAKERWORLD_JOB": {
           const job = sender.tab ? await getMakerworldJob() : null;
           const forThisTab = job && sender.tab && job.tabId === sender.tab.id ? job : null;
