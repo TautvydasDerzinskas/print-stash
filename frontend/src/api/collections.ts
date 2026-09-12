@@ -24,6 +24,14 @@ export type CollectionInput = {
   tags?: string[];
 };
 
+/** One row of the "Add to collection" picker -- a real (non-system) collection this user owns,
+ *  flagged with whether the print being edited is currently a member. */
+export type CollectionMembership = {
+  id: string;
+  name: string;
+  in_collection: boolean;
+};
+
 export const collectionsApi = {
   list: async (): Promise<Collection[]> => {
     const res = await fetch(`${apiBase()}/collections`, { headers: authHeaders() });
@@ -71,5 +79,23 @@ export const collectionsApi = {
       headers: authHeaders(),
     });
     assertOk(res, "Remove from collection failed");
+  },
+
+  /** Adds one print to a (real, non-system) collection -- the reverse of removeItem. Used by the
+   *  "Add to collection" picker. */
+  addItem: async (collectionId: string, printId: string): Promise<void> => {
+    const res = await fetch(`${apiBase()}/collection/${collectionId}/items/${printId}`, {
+      method: "POST",
+      headers: authHeaders(),
+    });
+    assertOk(res, "Add to collection failed");
+  },
+
+  /** Every real (non-system) collection this user owns, flagged with whether `printId` is
+   *  currently a member -- backs the "Add to collection" picker. */
+  listForPrint: async (printId: string): Promise<CollectionMembership[]> => {
+    const res = await fetch(`${apiBase()}/print/${printId}/collections`, { headers: authHeaders() });
+    assertOk(res, "Failed to list collections");
+    return res.json();
   },
 };

@@ -12,6 +12,7 @@ export type LogAction =
   | "collection_created"
   | "collection_edited"
   | "collection_deleted"
+  | "collection_item_added"
   | "collection_item_removed";
 
 /** Writes one admin-audit-trail entry (see the Log model's schema.prisma doc comment). Always

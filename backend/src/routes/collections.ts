@@ -6,6 +6,7 @@ import { HttpError } from "../utils/fileUtils";
 import { parseBody } from "../utils/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import {
+  addPrintsToCollection,
   assertCollectionNameAvailable,
   isSystemCollectionId,
   listSystemCollectionOuts,
@@ -169,6 +170,47 @@ router.delete(
       targetId: collection.id,
       details: { printId: print.id, name: print.name },
     });
+  }),
+);
+
+// The reverse of the DELETE above -- adds one print to a real collection. Same system-collection
+// restriction: Favourites/Browsing History membership comes from Print.favoritedAt/lastViewedAt,
+// not CollectionItem rows, so the frontend never offers this for them.
+router.post(
+  "/collection/:id/items/:printId",
+  asyncHandler(async (req, res) => {
+    if (isSystemCollectionId(req.params.id)) {
+      throw new HttpError(400, "This collection can't be edited");
+    }
+    const collection = await prisma.collection.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!collection) throw new HttpError(404, "Collection not found");
+    const print = await prisma.print.findFirst({ where: { id: req.params.printId, userId: req.userId } });
+    if (!print) throw new HttpError(404, "Print not found");
+    await addPrintsToCollection(collection.id, [print.id]);
+    res.json({ ok: true });
+    void createLog({
+      userId: req.userId!,
+      action: "collection_item_added",
+      targetId: collection.id,
+      details: { printId: print.id, name: print.name },
+    });
+  }),
+);
+
+// Every real (non-system) collection this user owns, flagged with whether `printId` is currently
+// a member -- backs the "Add to collection" picker opened from ModelActionsMenu. System
+// pseudo-collections are omitted since they can't be toggled this way (see the POST/DELETE above).
+router.get(
+  "/print/:id/collections",
+  asyncHandler(async (req, res) => {
+    const print = await prisma.print.findFirst({ where: { id: req.params.id, userId: req.userId } });
+    if (!print) throw new HttpError(404, "Print not found");
+    const collections = await prisma.collection.findMany({
+      where: { userId: req.userId },
+      orderBy: { createdAt: "desc" },
+      include: { items: { where: { printId: print.id }, select: { id: true } } },
+    });
+    res.json(collections.map((c) => ({ id: c.id, name: c.name, in_collection: c.items.length > 0 })));
   }),
 );
 
