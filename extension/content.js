@@ -318,16 +318,28 @@
     return null;
   }
 
+  // Mirrors every outbound fetch on the backend side (rawFetch/fetchCloudJson in
+  // importService.ts/makerworldCloudApi.ts, all built on an AbortController timeout) -- a plain
+  // fetch() has no default timeout at all, so a MakerWorld endpoint that stalls or holds an
+  // interactive challenge open (observed live: a model with extra download options, like an STL/
+  // "Card files" toggle, got the guided import stuck here indefinitely) would otherwise hang this
+  // resolution -- and everything waiting on it, all the way up to the guided job itself -- forever.
+  const MAKERWORLD_API_FETCH_TIMEOUT_MS = 8000;
+
   async function fetchMakerworldApiJson(url, nonce) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), MAKERWORLD_API_FETCH_TIMEOUT_MS);
     try {
       const headers = { Accept: "application/json" };
       if (nonce) headers["X-Nonce"] = nonce;
       // credentials default to "same-origin" -- the real session cookie rides along automatically.
-      const res = await fetch(url, { headers });
+      const res = await fetch(url, { headers, signal: controller.signal });
       if (!res.ok) return null;
       return await res.json();
     } catch {
       return null;
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -466,6 +478,13 @@
     return [...ids];
   }
 
+  // How long to wait, once asked to start scanning, before the very first scroll/check -- this
+  // page can still be mid-navigation/hydration at that exact moment (most commonly right after a
+  // full-page navigation back from finishing a previous guided import run), and checking too
+  // early can catch zero model cards rendered yet, which the stagnant-round check below would
+  // otherwise mistake for "already reached the end" before the page has shown anything at all.
+  const MAKERWORLD_SCAN_START_DELAY_MS = 1500;
+
   /** Repeatedly scrolls the last loaded model card into view -- the standard way to nudge an
    *  intersection-observer-driven infinite scroll into fetching its next page, more reliable
    *  than blindly scrolling the window when the actual scroll container might be some nested
@@ -477,6 +496,7 @@
     const STAGNANT_LIMIT = 6;
     let lastCount = -1;
     let stagnantRounds = 0;
+    await sleep(MAKERWORLD_SCAN_START_DELAY_MS);
     for (let round = 0; round < MAX_ROUNDS; round++) {
       if (hasNoMoreDataMarker()) return;
       const links = document.querySelectorAll('a[href*="/models/"]');
@@ -515,14 +535,42 @@
     }
   }
 
+  /** Same full-page dark cover as the guided import's own progress overlay (mountJobOverlay) --
+   *  reused here, rather than the small in-panel status line the scroll-to-end step used to show,
+   *  since scrolling the page around while a little bottom-right card silently updates its text is
+   *  easy to miss entirely. Appended into the same shadow root the fab/panel already live in
+   *  (mount() has already run by the time this is called), so it just needs to paint over them,
+   *  not replace them -- removed once scanning finishes and the panel takes back over. */
+  function mountScanOverlay() {
+    const overlay = document.createElement("div");
+    overlay.className = "tg-overlay";
+    overlay.innerHTML = `
+      <div class="tg-overlay-card">
+        <img class="tg-overlay-icon" src="${ICON_URL}" alt="" />
+        <div class="tg-overlay-title">Scanning collection models…</div>
+        <div class="tg-overlay-count" data-role="count">0 found so far</div>
+      </div>
+    `;
+    shadowRoot.appendChild(overlay);
+    return overlay;
+  }
+
+  function updateScanOverlay(overlay, count) {
+    const countEl = overlay.querySelector('[data-role="count"]');
+    if (countEl) countEl.textContent = `${count} found so far`;
+  }
+
+  function unmountScanOverlay(overlay) {
+    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+  }
+
   async function loadMakerworldGuidedCollection() {
-    renderPanel(`<div class="tg-status">Scrolling to load all models…</div>`);
     const h1 = document.getElementsByTagName("h1")[0];
     const collectionTitle = h1 && h1.innerText ? h1.innerText.trim() : null;
 
-    await scrollMakerworldCollectionToEnd((count) => {
-      renderPanel(`<div class="tg-status">Scrolling to load all models… (${count} found so far)</div>`);
-    });
+    const scanOverlay = mountScanOverlay();
+    await scrollMakerworldCollectionToEnd((count) => updateScanOverlay(scanOverlay, count));
+    unmountScanOverlay(scanOverlay);
 
     const ids = extractMakerworldModelIds();
     if (!ids.length) {
@@ -695,6 +743,15 @@
   // mounts fresh each time too, reading the job's current progress from storage rather than
   // carrying any state of its own across pages.
 
+  // How long the overlay waits, with no sign the job has moved on, before it offers the manual
+  // "Import next" escape hatch below -- long enough that it never appears during an ordinary step
+  // (a model page load + import + the job's own pacing delay), short enough that a genuinely
+  // stuck step (see handleForceAdvanceMakerworldJob's own doc comment: most often an unusually
+  // large multi-plate model that took long enough to import for the service worker to get killed
+  // mid-request, silently losing the automatic advance) doesn't leave the user staring at a
+  // motionless progress bar for long before there's something to actually do about it.
+  const MAKERWORLD_JOB_STUCK_REVEAL_MS = 20000;
+
   async function mountJobOverlay(job) {
     const host = document.createElement("div");
     host.id = "thingport-grab-host";
@@ -711,6 +768,7 @@
         <div class="tg-overlay-title">Importing from MakerWorld…</div>
         <div class="tg-overlay-count">${job.imported} / ${job.total} models imported (${percent}%)</div>
         <button class="tg-btn tg-overlay-abort" type="button" data-action="abort">Abort</button>
+        <button class="tg-btn tg-btn-secondary tg-overlay-next" type="button" data-action="next" hidden>Import next</button>
       </div>
     `;
     shadowRoot.appendChild(overlay);
@@ -719,6 +777,20 @@
       btn.disabled = true;
       btn.textContent = "Aborting…";
       void call("ABORT_MAKERWORLD_COLLECTION_JOB");
+    });
+
+    // Cleared automatically the moment this page actually navigates away (the normal, successful
+    // case) -- a full navigation tears this whole script instance down along with its timer, so
+    // there's nothing to clean up explicitly for that path. Only a step that's still sitting here
+    // 20s later ever gets this far.
+    const nextBtn = overlay.querySelector("[data-action=next]");
+    setTimeout(() => {
+      nextBtn.hidden = false;
+    }, MAKERWORLD_JOB_STUCK_REVEAL_MS);
+    nextBtn.addEventListener("click", () => {
+      nextBtn.disabled = true;
+      nextBtn.textContent = "Checking…";
+      void call("FORCE_ADVANCE_MAKERWORLD_JOB");
     });
   }
 

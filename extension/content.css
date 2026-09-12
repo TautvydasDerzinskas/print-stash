@@ -173,3 +173,4 @@
 .tg-overlay-abort { margin-top: 8px; background: transparent; color: #d32f2f; border: 1px solid #d32f2f; }
 .tg-overlay-abort:hover { background: rgba(211, 47, 47, 0.08); }
 .tg-overlay-abort:disabled { color: #6b6b6b; border-color: #e2e2e2; background: transparent; }
+.tg-overlay-next { margin-top: 4px; }

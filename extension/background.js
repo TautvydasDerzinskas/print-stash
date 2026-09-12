@@ -312,6 +312,56 @@ async function abortMakerworldJob(tabId) {
   await chrome.tabs.update(tabId, { url: job.originalUrl });
 }
 
+// chrome.tabs.sendMessage has no built-in timeout -- if the content script's resolution work
+// ever stalls (content.js's own fetch calls are bounded, see MAKERWORLD_API_FETCH_TIMEOUT_MS
+// there, but this is a second, independent backstop against anything else going wrong, e.g. the
+// listener throwing before returning `true` or the tab's execution context stalling for some
+// other reason) this whole guided job would otherwise just sit waiting forever with nothing to
+// show the user but a progress overlay that never moves -- exactly what was observed live on a
+// model with extra download options that made resolution take unusually long.
+// Comfortably above content.js's own worst case (an 8s click-capture timeout, then up to two
+// sequential 8s-bounded fallback fetches) so this backstop never races a legitimate resolution
+// that's just taking the slow path, and only ever fires for a genuinely stuck one.
+const MAKERWORLD_DOWNLOAD_RESOLVE_TIMEOUT_MS = 30000;
+
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((resolve) => setTimeout(() => resolve(null), ms))]);
+}
+
+/** True as long as nothing else (most relevantly, handleForceAdvanceMakerworldJob -- see its own
+ *  doc comment) has already moved the job past the step this call started out on. Both
+ *  advanceMakerworldJob and handleForceAdvanceMakerworldJob can end up racing to finish the same
+ *  step -- a large model (many plates) can take long enough to import that a person clicks
+ *  "Import next" on the overlay before the original request actually comes back -- and this is
+ *  what keeps a late-arriving automatic completion from double-advancing (or clobbering a step the
+ *  manual path already moved past) once that happens. */
+async function isMakerworldJobStillAtStep(tabId, stepIndex) {
+  const current = await getMakerworldJob();
+  return Boolean(current && current.tabId === tabId && current.index === stepIndex);
+}
+
+/** Paces, then moves to the next URL -- or, on the last one, returns to the collection page the
+ *  run started from. Shared by the normal per-step completion (advanceMakerworldJob) and the
+ *  manual "Import next" escape hatch (handleForceAdvanceMakerworldJob). */
+async function moveMakerworldJobForward(tabId, job) {
+  job.index += 1;
+
+  if (job.index >= job.urls.length) {
+    await setMakerworldJob(null);
+    await chrome.tabs.update(tabId, { url: job.originalUrl });
+    return;
+  }
+
+  await setMakerworldJob(job);
+  await new Promise((resolve) => setTimeout(resolve, MAKERWORLD_JOB_STEP_DELAY_MS));
+  // The user may have hit Abort during the pacing delay above -- re-check before navigating on.
+  const stillActive = await getMakerworldJob();
+  if (!stillActive || stillActive.tabId !== tabId) return;
+  job.awaitingLoad = true;
+  await setMakerworldJob(job);
+  await chrome.tabs.update(tabId, { url: job.urls[job.index] });
+}
+
 /** Runs once the tab finishes loading the current step's model page: imports it, paces, and moves
  *  to the next URL -- or, on the last one, returns to the collection page the run started from.
  *  Any import failure stops the whole run rather than skipping past it: this almost always means
@@ -320,10 +370,11 @@ async function abortMakerworldJob(tabId) {
 async function advanceMakerworldJob(tabId) {
   const job = await getMakerworldJob();
   if (!job || job.tabId !== tabId || !job.awaitingLoad) return;
+  const stepIndex = job.index;
   job.awaitingLoad = false;
   await setMakerworldJob(job);
 
-  const currentUrl = job.urls[job.index];
+  const currentUrl = job.urls[stepIndex];
   // Ask the content script sitting on the model page we just navigated to (it's the one with
   // DOM access to __NEXT_DATA__ and a same-origin fetch that carries the real session cookie) to
   // resolve the download URL itself -- see content.js's resolveMakerworldDownloadUrlFromPage.
@@ -333,7 +384,7 @@ async function advanceMakerworldJob(tabId) {
   // match, resolvedDownloadUrl stays null and the backend just resolves it the old way.
   let resolvedDownloadUrl = null;
   try {
-    const res = await chrome.tabs.sendMessage(tabId, { type: "RESOLVE_MAKERWORLD_DOWNLOAD_URL" });
+    const res = await withTimeout(chrome.tabs.sendMessage(tabId, { type: "RESOLVE_MAKERWORLD_DOWNLOAD_URL" }), MAKERWORLD_DOWNLOAD_RESOLVE_TIMEOUT_MS);
     if (res && res.ok) resolvedDownloadUrl = res.downloadUrl;
   } catch {
     // No listener yet, or the tab navigated away already -- fine, see above.
@@ -341,6 +392,10 @@ async function advanceMakerworldJob(tabId) {
   try {
     await handleImportSingle({ url: currentUrl, collectionId: job.collectionId, resolvedDownloadUrl });
   } catch (err) {
+    // A manual "Import next" (see handleForceAdvanceMakerworldJob) may have already moved the job
+    // past this step while this request was still in flight -- if so, this failure is stale and
+    // says nothing about the step the job is actually on now, so don't abort over it.
+    if (!(await isMakerworldJobStillAtStep(tabId, stepIndex))) return;
     await setMakerworldJob(null);
     await chrome.storage.local.set({
       makerworldJobError: { message: err instanceof Error ? err.message : String(err), imported: job.imported, total: job.total },
@@ -349,22 +404,41 @@ async function advanceMakerworldJob(tabId) {
     return;
   }
 
+  // Same staleness check on the success path -- a big multi-plate model can take long enough to
+  // import that "Import next" already fired and moved on before this ever got here; without this
+  // check, this would double-advance the job (incrementing an index a manual click already moved
+  // past) the moment a slow-but-not-actually-dead request finally comes back.
+  if (!(await isMakerworldJobStillAtStep(tabId, stepIndex))) return;
   job.imported += 1;
-  job.index += 1;
+  await moveMakerworldJobForward(tabId, job);
+}
 
-  if (job.index >= job.urls.length) {
-    await setMakerworldJob(null);
-    await chrome.tabs.update(tabId, { url: job.originalUrl });
-    return;
+/** The overlay's "Import next" button (see content.js's mountJobOverlay) -- a manual escape hatch
+ *  for when the automatic advance above never comes back. The likeliest cause isn't MakerWorld at
+ *  all: a model with an unusually large file (many plates) can take long enough for the backend to
+ *  import that MV3's own service-worker lifecycle limits kill this extension's background page
+ *  mid-request, silently losing the in-flight await above -- the import itself still completes
+ *  server-side regardless, it's only the extension's own bookkeeping that got dropped. Rather than
+ *  just trusting that and blindly moving on, this confirms the stuck step actually landed in
+ *  Thingport first (and files it into the destination collection if that part got skipped too)
+ *  before crediting it and continuing. */
+async function handleForceAdvanceMakerworldJob(tabId) {
+  const job = await getMakerworldJob();
+  if (!job || job.tabId !== tabId) return;
+  const currentUrl = job.urls[job.index];
+  try {
+    const status = await apiCall("GET", `/import/status?url=${encodeURIComponent(currentUrl)}`);
+    if (status.already_imported) {
+      job.imported += 1;
+      if (job.collectionId && status.print_id) {
+        await apiCall("POST", `/collection/${job.collectionId}/items/${status.print_id}`).catch(() => undefined);
+      }
+    }
+  } catch {
+    // Status check failed (instance unreachable, etc.) -- proceed anyway; the user already saw it
+    // land in their library before reaching for this button.
   }
-
-  await new Promise((resolve) => setTimeout(resolve, MAKERWORLD_JOB_STEP_DELAY_MS));
-  // The user may have hit Abort during the pacing delay above -- re-check before navigating on.
-  const stillActive = await getMakerworldJob();
-  if (!stillActive || stillActive.tabId !== tabId) return;
-  job.awaitingLoad = true;
-  await setMakerworldJob(job);
-  await chrome.tabs.update(tabId, { url: job.urls[job.index] });
+  await moveMakerworldJobForward(tabId, job);
 }
 
 function iconPaths(active) {
@@ -448,6 +522,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           return;
         case "ABORT_MAKERWORLD_COLLECTION_JOB":
           if (sender.tab) await abortMakerworldJob(sender.tab.id);
+          sendResponse({ ok: true });
+          return;
+        case "FORCE_ADVANCE_MAKERWORLD_JOB":
+          if (sender.tab) await handleForceAdvanceMakerworldJob(sender.tab.id);
           sendResponse({ ok: true });
           return;
         case "ARM_DOWNLOAD_CAPTURE":
